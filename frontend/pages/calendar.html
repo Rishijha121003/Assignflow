@@ -1,0 +1,40 @@
+<!-- ================================================================ -->
+        <!-- CALENDAR VIEW (Deadlines Timeline & Schedule)                    -->
+        <!-- ================================================================ -->
+        <div id="calendarView" class="page-view calendar-view-content" style="display: none;">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">Calendar & Deadlines</h1>
+              <p class="page-subtitle">Track upcoming deadlines, schedule, and assignment timelines.</p>
+            </div>
+            <div class="header-actions-group">
+              <button class="btn btn-secondary" id="calendarViewAssignmentsBtn">
+                <span>Go to Assignments</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="calendar-layout-grid">
+            <!-- Left: Deadlines Agenda Timeline List -->
+            <div class="card calendar-agenda-card">
+              <div class="dash-card-header">
+                <h2 class="dash-card-title">Deadlines Agenda</h2>
+                <span class="user-role" id="calendarCurrentMonthLabel">Upcoming</span>
+              </div>
+              <div class="calendar-timeline-list" id="calendarDeadlinesList">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Right: Mini calendar / Schedule overview -->
+            <div class="card calendar-mini-month-card">
+              <div class="dash-card-header">
+                <h2 class="dash-card-title">Schedule Overview</h2>
+              </div>
+              <div id="calendarMiniMonthContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>

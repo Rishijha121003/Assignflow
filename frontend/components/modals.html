@@ -1,0 +1,776 @@
+<!-- Delete Confirmation Modal -->
+  <div class="modal-backdrop" id="deleteModalBackdrop" style="display: none;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div class="modal-icon-danger">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </div>
+        <h3 class="modal-title" id="modalTitle">Delete Assignment</h3>
+      </div>
+      <p class="modal-body">
+        Are you sure you want to delete <strong id="deleteAssignmentTitle">this assignment</strong>? This action will remove the record permanently from the database.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Mobile Floating Action Button (FAB) -->
+  <button class="mobile-fab" id="mobileFabBtn" aria-label="Create Assignment" title="Create Assignment">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+  <!-- Authentication Modal (Sign In / Register) -->
+  <div class="modal-backdrop" id="authModalBackdrop" style="display: none;">
+    <div class="modal-card auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="auth-modal-header">
+        <div class="auth-brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10"></path>
+            <path d="M6 10h10"></path>
+            <path d="M6 14h6"></path>
+          </svg>
+        </div>
+        <div class="auth-header-text">
+          <h2 class="auth-modal-title" id="authModalTitle">AssignFlow Account</h2>
+          <p class="auth-modal-subtitle">Sign in or register to access assignments</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAuthModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Segmented Tabs: Sign In / Register -->
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab-btn active" id="tabSignIn" role="tab" aria-selected="true">Sign In</button>
+        <button type="button" class="auth-tab-btn" id="tabRegister" role="tab" aria-selected="false">Create Account</button>
+      </div>
+
+      <!-- Feedback alert container -->
+      <div class="auth-alert" id="authAlert" style="display: none;"></div>
+
+      <!-- 1. Sign In Form -->
+      <form id="signInForm" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">Email Address</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary auth-submit-btn" id="loginSubmitBtn">
+          <span class="btn-spinner" id="loginSpinner" style="display: none;"></span>
+          <span id="loginBtnText">Sign In</span>
+        </button>
+      </form>
+
+      <!-- 2. Register Form -->
+      <form id="registerForm" class="auth-form" style="display: none;" novalidate>
+        <div class="form-group">
+          <label for="regFullName" class="form-label">Full Name</label>
+          <input type="text" id="regFullName" class="form-input" placeholder="e.g. Dr. Jane Smith" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label for="regEmail" class="form-label">Email Address</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="regPassword" class="form-label">
+            <span>Password</span>
+            <span class="field-hint">(min 8 characters)</span>
+          </label>
+          <input type="password" id="regPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password" required minlength="8">
+        </div>
+        
+        <!-- Role Selector -->
+        <div class="form-group role-form-group">
+          <label class="form-label">Account Role</label>
+          <div class="role-selector-grid">
+            <label class="role-option-card active" id="roleTeacherCard">
+              <input type="radio" name="accountRole" value="teacher" checked class="sr-only">
+              <div class="role-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+              </div>
+              <div class="role-card-text">
+                <span class="role-card-title">Teacher</span>
+                <span class="role-card-desc">Create assignments & upload PDFs</span>
+              </div>
+            </label>
+            <label class="role-option-card" id="roleStudentCard">
+              <input type="radio" name="accountRole" value="student" class="sr-only">
+              <div class="role-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/></svg>
+              </div>
+              <div class="role-card-text">
+                <span class="role-card-title">Student</span>
+                <span class="role-card-desc">View & download assignments</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit-btn" id="regSubmitBtn">
+          <span class="btn-spinner" id="regSpinner" style="display: none;"></span>
+          <span id="regBtnText">Create Account</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Classes Modal (Teacher Manage / Student Join) -->
+  <div class="modal-backdrop" id="classesModalBackdrop" style="display: none;">
+    <div class="modal-card classes-modal-card" role="dialog" aria-modal="true" aria-labelledby="classesModalTitle">
+      <div class="modal-header classes-modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M6 6h10"></path>
+              <path d="M6 10h10"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="classesModalTitle">Classes</h3>
+            <p class="modal-subtitle" id="classesModalSubtitle">Manage courses and enrollment access</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeClassesModalBtn" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Classes Alert box -->
+      <div class="auth-alert" id="classesAlert" style="display: none;"></div>
+
+      <!-- 1. Teacher Class View -->
+      <div id="teacherClassesView" style="display: none;">
+        <!-- Create Class Form -->
+        <div class="class-section-box">
+          <h4 class="class-section-title">Create New Class</h4>
+          <form id="createClassForm" class="create-class-inline-form">
+            <div class="form-row-2col">
+              <input type="text" id="newClassName" class="form-input" placeholder="Class Name (e.g. CS101: Data Structures)" required>
+              <input type="text" id="newClassDesc" class="form-input" placeholder="Optional Description">
+            </div>
+            <button type="submit" class="btn btn-primary" id="btnCreateClass" style="margin-top: 0.65rem;">
+              <span id="btnCreateClassText">+ Create Class</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Teacher's Classes List -->
+        <div class="class-section-box" style="margin-top: 1rem;">
+          <h4 class="class-section-title">Your Classes (<span id="teacherClassesCount">0</span>)</h4>
+          <div class="classes-scroll-list" id="teacherClassesListContainer">
+            <!-- Dynamically populated class cards -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Student Class View -->
+      <div id="studentClassesView" style="display: none;">
+        <!-- Join Class Form -->
+        <div class="class-section-box">
+          <h4 class="class-section-title">Join a Class</h4>
+          <p class="class-section-hint">Enter the unique join code provided by your teacher.</p>
+          <form id="joinClassForm" class="join-class-inline-form">
+            <div class="join-code-input-group">
+              <input type="text" id="studentJoinCode" class="form-input join-code-input" placeholder="e.g. ABC7XYZ" maxlength="12" required>
+              <button type="submit" class="btn btn-primary" id="btnJoinClass">Join Class</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Student's Enrolled Classes List -->
+        <div class="class-section-box" style="margin-top: 1rem;">
+          <h4 class="class-section-title">Enrolled Classes (<span id="studentClassesCount">0</span>)</h4>
+          <div class="classes-scroll-list" id="studentClassesListContainer">
+            <!-- Dynamically populated enrolled class cards -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Enrolled Students View (Opened when teacher clicks 'View Students') -->
+      <div id="classStudentsView" style="display: none;">
+        <div class="students-view-header">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnBackToClasses">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Back to Classes</span>
+          </button>
+          <h4 class="class-students-title" id="classStudentsTitle">Enrolled Students</h4>
+        </div>
+        <div class="students-table-container" id="studentsTableContainer">
+          <!-- Dynamically populated table of students -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 1. Submit Work Modal (Student) -->
+  <div class="modal-backdrop" id="submitWorkModalBackdrop" style="display: none;">
+    <div class="modal-card submit-work-modal-card" role="dialog" aria-modal="true" aria-labelledby="submitWorkModalTitle">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="submitWorkModalTitle">Submit Assignment Work</h3>
+            <p class="modal-subtitle" id="submitWorkModalSubtitle">Upload your completed solution</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeSubmitWorkModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Feedback alert box -->
+      <div class="auth-alert" id="submitWorkAlert" style="display: none;"></div>
+
+      <form id="submitWorkForm" class="submit-work-form" novalidate>
+        <!-- Assignment Info Banner -->
+        <div class="assignment-info-banner" id="submitWorkAssignmentBanner">
+          <div class="info-banner-title" id="submitWorkAssignmentName">Assignment Title</div>
+          <div class="info-banner-meta">
+            <span id="submitWorkCourseName">Course</span> &bull; 
+            <span>Due: <strong id="submitWorkDueDate">Date</strong></span>
+          </div>
+        </div>
+
+        <!-- File Upload Dropzone -->
+        <div class="form-group">
+          <label class="form-label" for="submissionFileInput">
+            <span>Completed Work File <span class="required">*</span></span>
+            <span class="field-hint">(PDF, DOCX, DOC, TXT, or ZIP &bull; Max 10MB)</span>
+          </label>
+          <div class="file-dropzone" id="submissionDropzone">
+            <input type="file" id="submissionFileInput" class="file-input-hidden" accept=".pdf,.docx,.doc,.txt,.zip" required>
+            <div class="dropzone-content" id="submissionDropzoneContent">
+              <div class="dropzone-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <p class="dropzone-title">Click to upload or drag & drop</p>
+              <p class="dropzone-desc">Select your completed assignment file</p>
+            </div>
+            <div class="selected-file-preview" id="submissionFilePreview" style="display: none;">
+              <span class="file-name-text" id="submissionFileName">file.pdf</span>
+              <span class="file-size-text" id="submissionFileSize">0 KB</span>
+              <button type="button" class="btn-remove-file" id="btnRemoveSubmissionFile" title="Remove file">&times;</button>
+            </div>
+          </div>
+          <span class="field-error" id="submissionFileError"></span>
+        </div>
+
+        <!-- Optional Notes -->
+        <div class="form-group">
+          <label class="form-label" for="submissionNotes">Notes for Teacher <span class="field-hint">(Optional)</span></label>
+          <textarea id="submissionNotes" class="form-textarea" rows="3" placeholder="Add any comments or notes about your solution..."></textarea>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 1rem;">
+          <button type="button" class="btn btn-secondary" id="btnCancelSubmitWork">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitWork">
+            <span class="btn-spinner" id="submitWorkSpinner" style="display: none;"></span>
+            <span id="submitWorkBtnText">Submit Work</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. View Submission Modal (Student) -->
+  <div class="modal-backdrop" id="viewSubmissionModalBackdrop" style="display: none;">
+    <div class="modal-card view-submission-modal-card" role="dialog" aria-modal="true" aria-labelledby="viewSubmissionModalTitle">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-success">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="viewSubmissionModalTitle">Your Submission</h3>
+            <p class="modal-subtitle" id="viewSubmissionModalSubtitle">Submission details and file</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeViewSubmissionModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="view-submission-body">
+        <!-- Grade Results Card (Shown only when grade is released) -->
+        <div class="student-results-card" id="viewSubResultsCard" style="display: none;">
+          <div class="results-header">
+            <div class="results-badge-wrap">
+              <span class="submission-pill status-released">Released</span>
+              <span class="results-grade-label">Grade Result</span>
+            </div>
+            <div class="results-score-display">
+              <span class="score-val" id="viewSubScoreVal">--</span>
+              <span class="score-max">/ <strong id="viewSubScoreMax">100</strong></span>
+              <span class="score-pct" id="viewSubScorePct">(--%)</span>
+            </div>
+          </div>
+          <div class="results-feedback-box" id="viewSubFeedbackBox" style="display: none;">
+            <span class="feedback-title">Teacher Feedback:</span>
+            <p class="feedback-content" id="viewSubFeedbackText"></p>
+          </div>
+        </div>
+
+        <!-- Pending Review Notice (Shown when not yet released) -->
+        <div class="student-pending-banner" id="viewSubPendingBanner" style="display: none;">
+          <div class="pending-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <h4 class="pending-title">Pending Review</h4>
+            <p class="pending-desc">Your submission has been received. Scores and teacher feedback will appear here once released by your teacher.</p>
+          </div>
+        </div>
+
+        <div class="submission-summary-box">
+          <div class="submission-meta-row">
+            <span class="meta-label">Timing:</span>
+            <span id="viewSubStatusPill" class="status-pill status-active">Submitted</span>
+          </div>
+          <div class="submission-meta-row">
+            <span class="meta-label">Submitted:</span>
+            <span id="viewSubDate" class="meta-val">—</span>
+          </div>
+          <div class="submission-meta-row">
+            <span class="meta-label">File Name:</span>
+            <span id="viewSubFileName" class="meta-val" style="font-weight: 600;">—</span>
+          </div>
+          <div class="submission-meta-row">
+            <span class="meta-label">File Size:</span>
+            <span id="viewSubFileSize" class="meta-val">—</span>
+          </div>
+          <div class="submission-notes-box" id="viewSubNotesBox" style="display: none;">
+            <span class="meta-label">Your Notes:</span>
+            <p id="viewSubNotes" class="submission-notes-text"></p>
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <a id="btnDownloadMySubmission" href="#" target="_blank" rel="noopener" class="btn btn-secondary" style="flex: 1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download File</span>
+          </a>
+          <a id="btnPreviewMySubmission" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="flex: 1; display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>Preview Document</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Teacher Submissions Overview Modal -->
+  <div class="modal-backdrop" id="teacherSubmissionsModalBackdrop" style="display: none;">
+    <div class="modal-card teacher-submissions-modal-card" role="dialog" aria-modal="true" aria-labelledby="teacherSubmissionsModalTitle">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="teacherSubmissionsModalTitle">Student Submissions</h3>
+            <p class="modal-subtitle" id="teacherSubmissionsAssignmentTitle">Assignment</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeTeacherSubmissionsModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Alert box -->
+      <div class="auth-alert" id="teacherSubmissionsAlert" style="display: none;"></div>
+
+      <div class="submissions-modal-content">
+        <div class="submissions-counter-banner">
+          <div class="submissions-counter-info">
+            <span>Submissions Received: <strong id="teacherSubmissionsCount">0</strong></span>
+            <span id="teacherSelectedCountBanner" style="display: none; margin-left: 0.75rem; color: var(--brand-primary, #4361ee); font-weight: 600;">
+              (<span id="teacherSelectedCount">0</span> selected)
+            </span>
+          </div>
+          <div class="submissions-actions-group" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" id="teacherExportCsvBtn" type="button" title="Export submissions summary to CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="8" y1="13" x2="16" y2="13"></line>
+                <line x1="8" y1="17" x2="16" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+              Export CSV
+            </button>
+            <button class="btn btn-secondary btn-sm" id="teacherDownloadZipBtn" type="button" title="Download all student submitted files as ZIP">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download ZIP
+            </button>
+            <button class="btn btn-primary btn-sm" id="teacherReleaseAllBtn" type="button" style="display: none;">
+              Release All Graded (<span id="teacherReleaseAllCount">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Submissions Table Container -->
+        <div class="teacher-submissions-table-wrap" id="teacherSubmissionsTableContainer">
+          <table class="students-table" id="teacherSubmissionsTable">
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">
+                  <input type="checkbox" id="teacherSelectAllSubmissions" title="Select all submissions" aria-label="Select all submissions">
+                </th>
+                <th>Student</th>
+                <th>File</th>
+                <th>Submitted At</th>
+                <th>Late</th>
+                <th>Grade</th>
+                <th>Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="teacherSubmissionsTableBody">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State when no submissions -->
+        <div class="state-container" id="teacherSubmissionsEmptyState" style="display: none; padding: 2rem 1rem;">
+          <div class="empty-icon-circle">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h4>No submissions yet</h4>
+          <p>No enrolled students have submitted their completed work for this assignment yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Teacher Grading Workspace Modal (SpeedGrader) -->
+  <div class="modal-backdrop" id="gradingWorkspaceModalBackdrop" style="display: none; z-index: 1050;">
+    <div class="modal-card grading-workspace-modal-card" role="dialog" aria-modal="true" aria-labelledby="gradingWorkspaceTitle">
+      <div class="modal-header grading-workspace-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="gradingWorkspaceTitle">Review &amp; Grade</h3>
+            <p class="modal-subtitle" id="gradingWorkspaceSubtitle">Assignment Title</p>
+          </div>
+        </div>
+        <div class="grading-nav-controls">
+          <button class="btn btn-secondary btn-sm" id="gradingPrevStudentBtn" type="button" title="Previous Student (Alt+Left)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            Prev
+          </button>
+          <span class="grading-student-counter" id="gradingStudentCounter">1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="gradingNextStudentBtn" type="button" title="Next Student (Alt+Right)">
+            Next
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+        <div class="grading-header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+          <a class="btn btn-secondary btn-sm" id="gradingDownloadBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download</span>
+          </a>
+          <button class="modal-close-icon-btn" id="closeGradingWorkspaceBtn" aria-label="Close modal" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-alert" id="gradingWorkspaceAlert" style="display: none;"></div>
+
+      <div class="grading-workspace-layout">
+        <!-- Left Panel: PDF Preview or Non-PDF Fallback -->
+        <div class="grading-preview-panel">
+          <!-- Loading Spinner for PDF preview -->
+          <div class="preview-modal-spinner" id="gradingPdfSpinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading document preview...</p>
+          </div>
+
+          <div class="grading-pdf-container" id="gradingPdfContainer">
+            <iframe class="grading-pdf-frame" id="gradingPdfIframe" src="about:blank" title="Submission Document Preview"></iframe>
+          </div>
+
+          <!-- Non-PDF Fallback Card -->
+          <div class="grading-non-pdf-fallback" id="gradingNonPdfFallback" style="display: none;">
+            <div class="non-pdf-icon-circle">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M12 18v-6"></path>
+                <path d="m9 15 3 3 3-3"></path>
+              </svg>
+            </div>
+            <h4 id="gradingNonPdfFilename">submission_file</h4>
+            <p class="non-pdf-meta" id="gradingNonPdfMeta">Document</p>
+            <p class="non-pdf-notice">In-browser preview is available for PDF and DOCX files. You can securely download this file to review it on your device.</p>
+            <a class="btn btn-primary" id="gradingNonPdfDownloadBtn" href="#" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download Submission
+            </a>
+          </div>
+        </div>
+
+        <!-- Right Panel: Student info, Marks entry, Feedback, Actions -->
+        <div class="grading-sidebar-panel">
+          <div class="grading-student-card">
+            <div class="grading-student-header">
+              <div>
+                <div class="grading-student-name" id="gradingStudentName">Student Name</div>
+                <div class="grading-student-email" id="gradingStudentEmail">student@example.com</div>
+              </div>
+              <span id="gradingLateBadge" class="submission-pill status-ontime">On Time</span>
+            </div>
+            <div class="grading-meta-item">
+              <span class="meta-label">Submitted:</span>
+              <span class="meta-val" id="gradingSubmittedAt">Oct 16, 2026, 10:00 AM</span>
+            </div>
+            <div class="grading-student-notes-wrap">
+              <span class="meta-label">Student Notes:</span>
+              <div class="grading-student-notes-content" id="gradingStudentNotes">—</div>
+            </div>
+          </div>
+
+          <div class="grading-form-section">
+            <div class="grading-status-row">
+              <span class="meta-label">Current Status:</span>
+              <span id="gradingStatusBadge" class="submission-pill status-ungraded">Ungraded</span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="gradingMarksInput" class="form-label">
+                Marks Obtained <span class="required">*</span>
+              </label>
+              <div class="grading-input-group">
+                <input type="number" step="any" min="0" id="gradingMarksInput" class="form-input" placeholder="0.0" />
+                <span class="grading-max-label">/ <strong id="gradingMaxMarksLabel">100</strong></span>
+              </div>
+              <span class="field-error" id="gradingMarksError" style="display: none;"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="gradingFeedbackInput" class="form-label">Teacher Feedback</label>
+              <textarea id="gradingFeedbackInput" class="form-textarea" rows="4" placeholder="Enter constructive feedback for the student..."></textarea>
+            </div>
+
+            <div class="grading-actions-grid">
+              <button class="btn btn-secondary" id="gradingSaveDraftBtn" type="button">
+                Save Draft
+              </button>
+              <button class="btn btn-primary" id="gradingSaveNextBtn" type="button">
+                Save &amp; Next ›
+              </button>
+            </div>
+
+            <div class="grading-release-container">
+              <button class="btn btn-success" id="gradingReleaseSingleBtn" type="button" style="width: 100%;">
+                Release Grade to Student
+              </button>
+              <p class="grading-release-hint">Released grades are visible immediately to the student.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Single Release Confirmation Modal -->
+  <div class="modal-backdrop" id="singleReleaseConfirmBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="singleReleaseConfirmTitle">
+      <div class="modal-header">
+        <h3 class="modal-title" id="singleReleaseConfirmTitle">Release Grade to Student</h3>
+        <button class="modal-close-icon-btn" id="closeSingleReleaseConfirmBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <div class="modal-body confirm-modal-body">
+        <p id="singleReleaseConfirmMessage">Are you sure you want to release this grade? Once released, the student will immediately see their score and feedback.</p>
+      </div>
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelSingleReleaseBtn" type="button">Cancel</button>
+        <button class="btn btn-success" id="confirmSingleReleaseBtn" type="button">Yes, Release Grade</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Bulk Release Confirmation Modal -->
+  <div class="modal-backdrop" id="bulkReleaseConfirmBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="bulkReleaseConfirmTitle">
+      <div class="modal-header">
+        <h3 class="modal-title" id="bulkReleaseConfirmTitle">Release All Graded Submissions</h3>
+        <button class="modal-close-icon-btn" id="closeBulkReleaseConfirmBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <div class="modal-body confirm-modal-body">
+        <p id="bulkReleaseConfirmMessage">Are you sure you want to release grades for all graded submissions? Ungraded submissions will remain unreleased.</p>
+      </div>
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelBulkReleaseBtn" type="button">Cancel</button>
+        <button class="btn btn-success" id="confirmBulkReleaseBtn" type="button">Yes, Release All Graded</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Submission Document Preview Modal -->
+  <div class="modal-backdrop" id="submissionPreviewModalBackdrop" style="display: none; z-index: 1060;">
+    <div class="modal-card submission-preview-modal-card" role="dialog" aria-modal="true" aria-labelledby="submissionPreviewModalTitle">
+      <div class="modal-header submission-preview-header">
+        <div class="modal-header-left">
+          <div class="modal-icon-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="submissionPreviewModalTitle">Document Preview</h3>
+            <p class="modal-subtitle" id="submissionPreviewSubtitle">Student Name • Assignment Title</p>
+          </div>
+        </div>
+        <div class="modal-header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+          <a class="btn btn-secondary btn-sm" id="submissionPreviewDownloadTopBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download</span>
+          </a>
+          <button class="modal-close-icon-btn" id="closeSubmissionPreviewModalBtn" aria-label="Close modal" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-alert" id="submissionPreviewAlert" style="display: none; margin: 1rem 1.5rem 0 1.5rem;"></div>
+
+      <div class="submission-preview-body" id="submissionPreviewBody">
+        <!-- Loading Spinner -->
+        <div class="preview-modal-spinner" id="submissionPreviewSpinner" style="display: none;">
+          <div class="spinner"></div>
+          <p>Loading document preview...</p>
+        </div>
+
+        <!-- PDF Viewer Container -->
+        <div class="submission-preview-container" id="submissionPreviewContainer">
+          <iframe class="submission-preview-iframe" id="submissionPreviewIframe" src="about:blank" title="Submission Document Preview"></iframe>
+        </div>
+
+        <!-- Non-PDF Fallback Card -->
+        <div class="grading-non-pdf-fallback submission-preview-fallback" id="submissionPreviewFallback" style="display: none;">
+          <div class="non-pdf-icon-circle">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <path d="M12 18v-6"></path>
+              <path d="m9 15 3 3 3-3"></path>
+            </svg>
+          </div>
+          <h4 id="submissionPreviewFallbackFilename">submission_file</h4>
+          <p class="non-pdf-meta" id="submissionPreviewFallbackMeta">Document</p>
+          <p class="non-pdf-notice">In-browser preview is available for PDF and DOCX files. You can securely download this file to review it on your device.</p>
+          <a class="btn btn-primary" id="submissionPreviewFallbackDownloadBtn" href="#" download target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Submission
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>

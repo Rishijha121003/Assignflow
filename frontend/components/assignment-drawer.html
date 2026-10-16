@@ -1,0 +1,121 @@
+<!-- Create / Edit Assignment Right-Side Drawer Panel -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="drawer-panel" id="assignmentDrawer" aria-labelledby="drawerTitle" role="dialog" aria-modal="true">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="drawerTitle">Create New Assignment</h2>
+      <button class="drawer-close-btn" id="drawerCloseBtn" aria-label="Close drawer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <form class="drawer-form" id="assignmentForm" novalidate>
+      <input type="hidden" id="assignmentId" value="">
+
+      <!-- Title -->
+      <div class="form-group">
+        <label for="formTitle" class="form-label">Title <span class="required">*</span></label>
+        <input type="text" id="formTitle" class="form-input" placeholder="Enter assignment title" required>
+        <div class="field-error" id="titleError"></div>
+      </div>
+
+      <!-- Subject -->
+      <div class="form-group">
+        <label for="formSubject" class="form-label">Subject <span class="required">*</span></label>
+        <div class="select-wrapper select-full">
+          <select id="formSubject" class="form-input" required>
+            <option value="" disabled selected>Select subject</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Science">Science</option>
+            <option value="Design">Design</option>
+            <option value="Other">Other</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="field-error" id="subjectError"></div>
+      </div>
+
+      <!-- Publish to Class -->
+      <div class="form-group" id="formClassGroup">
+        <label for="formClass" class="form-label">Publish to Class</label>
+        <div class="select-wrapper select-full">
+          <select id="formClass" class="form-input">
+            <option value="">General / Unassigned</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <!-- Custom Subject Input (if Other selected) -->
+      <div class="form-group" id="customSubjectGroup" style="display: none;">
+        <label for="formCustomSubject" class="form-label">Custom Subject Name</label>
+        <input type="text" id="formCustomSubject" class="form-input" placeholder="Enter subject name">
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label for="formDescription" class="form-label">Description</label>
+        <textarea id="formDescription" class="form-textarea" rows="4" placeholder="Add a detailed description..."></textarea>
+      </div>
+
+      <!-- Question PDF File Upload -->
+      <div class="form-group">
+        <label for="formPdf" class="form-label">
+          Assignment Question PDF <span class="required" id="pdfRequiredStar">*</span>
+        </label>
+        <div class="file-dropzone" id="fileDropzone">
+          <input type="file" id="formPdf" class="file-input-hidden" accept="application/pdf,.pdf">
+          <div class="dropzone-content" id="dropzoneContent">
+            <svg class="dropzone-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+            <span class="dropzone-text" id="dropzoneText">Choose question PDF or drag & drop</span>
+            <span class="dropzone-hint">PDF document only (max 10MB)</span>
+          </div>
+        </div>
+        <div class="current-attachment-box" id="currentAttachmentBox" style="display: none;">
+          <div class="attachment-meta">
+            <span class="attachment-tag">PDF</span>
+            <span class="attachment-name" id="currentAttachmentName"></span>
+          </div>
+          <span class="attachment-note">Select a new PDF above to replace</span>
+        </div>
+        <div class="field-error" id="pdfError"></div>
+      </div>
+
+      <!-- Due Date -->
+      <div class="form-group">
+        <label for="formDueDate" class="form-label">Due Date <span class="required">*</span></label>
+        <input type="datetime-local" id="formDueDate" class="form-input" required>
+        <div class="field-error" id="dueDateError"></div>
+      </div>
+
+      <!-- Status -->
+      <div class="form-group">
+        <label for="formStatus" class="form-label">Status</label>
+        <div class="select-wrapper select-full">
+          <select id="formStatus" class="form-input">
+            <option value="active" selected>Active</option>
+            <option value="draft">Draft</option>
+            <option value="completed">Completed</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <!-- Form Action Buttons -->
+      <div class="drawer-actions">
+        <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">
+          <span class="btn-spinner" id="submitSpinner" style="display: none;"></span>
+          <span id="submitBtnText">Create Assignment</span>
+        </button>
+      </div>
+    </form>
+  </aside>
