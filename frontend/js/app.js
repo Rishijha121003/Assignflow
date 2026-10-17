@@ -2835,6 +2835,12 @@ function renderDashboard(data) {
       ? "Manage your classes, create assignments and track student progress."
       : "Track your assignments, submit work and manage your classes.";
   }
+  const dashHeroQuote = document.getElementById("dashHeroQuote");
+  if (dashHeroQuote) {
+    dashHeroQuote.textContent = isTeacher
+      ? "Small submissions build big futures."
+      : "Progress over perfection.";
+  }
   if (elements.dashHeroCtaBtn) {
     elements.dashHeroCtaBtn.className = isTeacher ? "dash-hero-cta teacher-cta" : "dash-hero-cta student-cta";
   }
