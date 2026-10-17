@@ -41,6 +41,10 @@ class SubmissionResponse(BaseModel):
     graded_at: Optional[datetime] = None
     released_at: Optional[datetime] = None
     max_marks: Optional[float] = None
+    resubmission_allowed: bool = False
+    resubmission_deadline: Optional[datetime] = None
+    resubmission_note: Optional[str] = None
+    attempt_number: int = 1
     download_url: Optional[str] = None
     preview_url: Optional[str] = None
 

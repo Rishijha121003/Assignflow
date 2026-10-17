@@ -311,6 +311,10 @@ def get_dashboard_data(
                     "grade": float(s.grade) if (is_released and s.grade is not None) else None,
                     "max_marks": max_marks,
                     "feedback": s.feedback if is_released else None,
+                    "resubmission_allowed": s.resubmission_allowed or False,
+                    "resubmission_deadline": s.resubmission_deadline.isoformat() if s.resubmission_deadline else None,
+                    "resubmission_note": s.resubmission_note,
+                    "attempt_number": s.attempt_number or 1,
                 }
             )
 

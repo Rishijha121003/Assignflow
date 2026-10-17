@@ -571,6 +571,17 @@ body {
   background: var(--danger-hover);
 }
 
+.btn-warning {
+  background: #f59e0b;
+  color: #ffffff;
+  border-color: #f59e0b;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
 .btn-sm {
   padding: 0.4rem 0.75rem;
   font-size: 0.8rem;
@@ -863,6 +874,18 @@ button:disabled, .btn:disabled {
   border: 1px solid var(--danger-border);
 }
 
+.status-resubmit-allowed {
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+}
+
+.status-resubmit-expired {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
 .subject-badge {
   display: inline-flex;
   align-items: center;
@@ -1014,9 +1037,11 @@ button:disabled, .btn:disabled {
   transition: var(--transition-drawer);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
-.drawer-panel.open {
+.drawer-panel.open,
+.drawer-panel.active {
   transform: translateX(0);
 }
 
@@ -1052,6 +1077,7 @@ button:disabled, .btn:disabled {
 .drawer-form {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -1062,6 +1088,7 @@ button:disabled, .btn:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .form-label {
@@ -1096,7 +1123,10 @@ button:disabled, .btn:disabled {
   font-size: 0.775rem;
   color: var(--danger);
   margin-top: 0.2rem;
+  line-height: 1.35;
+  word-break: break-word;
 }
+
 
 .drawer-actions {
   display: flex;
@@ -1500,6 +1530,12 @@ button:disabled, .btn:disabled {
   border: 1px solid var(--cobalt-border);
 }
 
+.class-pill.unassigned-pill {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+}
+
 .class-card-item {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -1550,10 +1586,14 @@ button:disabled, .btn:disabled {
   font-size: 0.825rem;
 }
 
+.file-input-hidden {
+  display: none !important;
+}
+
 .file-dropzone, #submissionDropzone, #fileDropzone {
   border: 2px dashed #cbd5e1;
   border-radius: var(--radius-lg);
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.25rem;
   text-align: center;
   background: #f8fafc;
   cursor: pointer;
@@ -1562,32 +1602,60 @@ button:disabled, .btn:disabled {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.file-dropzone:hover, #submissionDropzone:hover, #fileDropzone:hover {
+.file-dropzone:hover, #submissionDropzone:hover, #fileDropzone:hover,
+.file-dropzone.dragover, #submissionDropzone.dragover, #fileDropzone.dragover {
   border-color: var(--cobalt);
   background: #eff6ff;
 }
 
+.dropzone-content, #dropzoneContent, #submissionDropzoneContent {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: hidden;
+}
+
 .dropzone-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   color: var(--cobalt);
   margin-bottom: 0.25rem;
+  flex-shrink: 0;
 }
 
 .dropzone-text {
   font-weight: 600;
   color: var(--text-main);
   font-size: 0.925rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  text-align: center;
+  padding: 0 0.5rem;
 }
 
-.dropzone-hint {
+.dropzone-hint, .dropzone-desc {
   font-size: 0.775rem;
   color: var(--text-muted);
+  max-width: 100%;
+  word-break: break-word;
 }
 
-.selected-file-chip, #currentAttachmentBox {
+.selected-file-chip, #currentAttachmentBox, .current-attachment-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1596,6 +1664,97 @@ button:disabled, .btn:disabled {
   border-radius: var(--radius-md);
   margin-top: 0.75rem;
   font-size: 0.825rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  gap: 0.75rem;
+}
+
+.attachment-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.attachment-tag {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.7rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.attachment-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--text-main);
+  text-align: left;
+}
+
+.attachment-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.selected-file-preview, #submissionFilePreview {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.5rem 0.75rem;
+  background: #f1f5f9;
+  border-radius: var(--radius-md);
+}
+
+.file-name-text, #submissionFileName {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+  text-align: left;
+}
+
+.file-size-text, #submissionFileSize {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.btn-remove-file {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.btn-remove-file:hover {
+  color: var(--danger);
+  background: #fee2e2;
 }
 
 /* ==========================================================================
@@ -2448,6 +2607,9 @@ button:disabled, .btn:disabled {
 }
 
 @media (max-width: 480px) {
+  .drawer-panel {
+    width: 100%;
+  }
   .submission-preview-modal-card {
     width: 98vw;
     height: 94vh;
@@ -2502,3 +2664,158 @@ button:disabled, .btn:disabled {
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-canvas);
 }
+
+/* ==========================================================================
+   AssignFlow v0.2.0: Unit & Assessment Structure Styles
+   ========================================================================== */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group-half {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+}
+
+.unit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.725rem;
+  font-weight: 600;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--cobalt);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.marks-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.725rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  margin-left: 0.35rem;
+}
+
+/* Curriculum Units Tree Modal */
+.structure-tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.structure-class-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.structure-class-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.structure-class-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.structure-subjects-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.structure-subject-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.structure-subject-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.structure-units-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.structure-unit-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: var(--transition);
+}
+
+.structure-unit-item:hover {
+  border-color: var(--cobalt);
+  box-shadow: var(--shadow-sm);
+}
+
+.structure-unit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.structure-unit-num {
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--cobalt);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.structure-unit-marks {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.structure-unit-assessment-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.structure-unit-due {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+

@@ -19,13 +19,25 @@
         </div>
 
         <div class="top-bar-right">
-          <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="1 unread notification">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-            </svg>
-            <span class="notification-badge">1</span>
-          </button>
+          <!-- Notification Dropdown -->
+          <div class="notification-dropdown-wrapper" id="notificationDropdownWrapper" style="position: relative;">
+            <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+              </svg>
+              <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown-menu" id="notificationMenu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.5rem; width: 340px; max-width: 90vw; background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: var(--radius-md, 8px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 1050; overflow: hidden;">
+              <div class="notification-menu-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0); background: #f8fafc;">
+                <span style="font-weight: 600; font-size: 0.875rem;">Notifications</span>
+                <button type="button" id="markAllNotificationsReadBtn" class="btn btn-ghost btn-xs" style="font-size: 0.75rem; color: #2563eb; background: transparent; border: none; cursor: pointer;">Mark all read</button>
+              </div>
+              <div class="notification-list" id="notificationList" style="max-height: 360px; overflow-y: auto;">
+                <div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>
+              </div>
+            </div>
+          </div>
 
           <!-- Profile / Account Dropdown -->
           <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">

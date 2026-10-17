@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, CheckConstraint, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, CheckConstraint, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -11,6 +11,7 @@ class Assignment(Base):
     __tablename__ = "assignments"
     __table_args__ = (
         CheckConstraint("max_marks > 0", name="chk_assignment_max_marks"),
+        UniqueConstraint("class_id", "subject", "unit", name="uq_class_subject_unit"),
         {"schema": "assignflow"},
     )
 
@@ -21,6 +22,10 @@ class Assignment(Base):
     due_date = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(50), nullable=False, default="active")
     max_marks = Column(Float, nullable=False, default=100.0)
+    unit = Column(Integer, nullable=False, default=1)
+    grace_period_minutes = Column(Integer, nullable=False, default=0)
+    allow_late = Column(Boolean, nullable=False, default=True)
+    late_penalty_percent = Column(Float, nullable=False, default=0.0)
 
     # Author/Teacher association
     created_by_id = Column(

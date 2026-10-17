@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     SUBMISSIONS_UPLOAD_DIR: Path = BASE_DIR / "backend" / "app" / "uploads" / "submissions"
     MAX_UPLOAD_SIZE_MB: int = 10
 
+    # Email / SMTP configuration (configurable provider with safe fallback)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_TLS: bool = True
+    EMAILS_FROM_EMAIL: str = "noreply@assignflow.edu"
+    EMAILS_FROM_NAME: str = "AssignFlow Notifications"
+
     @property
     def max_upload_size_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

@@ -20,11 +20,37 @@ const API_ENDPOINTS = {
   authLogout: `${API_BASE}/api/auth/logout`,
   classes: `${API_BASE}/api/classes`,
   joinClass: `${API_BASE}/api/classes/join`,
+  notifications: `${API_BASE}/api/notifications`,
+  notificationPreferences: `${API_BASE}/api/notifications/preferences`,
+  notificationMarkAllRead: `${API_BASE}/api/notifications/read-all`,
+  workflow: {
+    extensions: (asgnId) => `${API_BASE}/api/assignments/${asgnId}/extensions`,
+    allowResubmission: (subId) => `${API_BASE}/api/submissions/${subId}/allow-resubmission`,
+    submissionHistory: (subId) => `${API_BASE}/api/submissions/${subId}/history`,
+    correctGrade: (subId) => `${API_BASE}/api/submissions/${subId}/correct-grade`,
+    gradeCorrections: (subId) => `${API_BASE}/api/submissions/${subId}/corrections`,
+    requestReevaluation: (subId) => `${API_BASE}/api/submissions/${subId}/request-reevaluation`,
+    assignmentReevaluations: (asgnId) => `${API_BASE}/api/assignments/${asgnId}/reevaluations`,
+    reevaluationDecision: (reqId) => `${API_BASE}/api/reevaluations/${reqId}/decision`,
+    finalize: (classId, subject) => `${API_BASE}/api/classes/${classId}/subjects/${encodeURIComponent(subject)}/finalize`,
+    finalized: (classId, subject) => `${API_BASE}/api/classes/${classId}/subjects/${encodeURIComponent(subject)}/finalized`,
+  },
+  analytics: {
+    overview: (classId) => `${API_BASE}/api/analytics/classes/${classId}/overview`,
+    rankings: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/subjects/${encodeURIComponent(subject)}/rankings`,
+    leaderboard: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/subjects/${encodeURIComponent(subject)}/leaderboard`,
+    alerts: (classId) => `${API_BASE}/api/analytics/classes/${classId}/alerts`,
+    studentFeedback: `${API_BASE}/api/analytics/student/feedback`,
+    summaryCsv: (classId) => `${API_BASE}/api/analytics/classes/${classId}/reports/summary.csv`,
+    detailedCsv: (classId) => `${API_BASE}/api/analytics/classes/${classId}/reports/detailed.csv`,
+  },
 };
 
 // Application State
 const state = {
   currentUser: null,
+  authEpoch: 0,
+  activeAbortController: null,
   assignments: [],
   filteredAssignments: [],
   classes: [],
@@ -34,12 +60,16 @@ const state = {
     search: "",
     classId: "all",
     subject: "all",
+    unit: "all",
     status: "all",
     sort: "newest",
   },
   editingId: null,
   deletePendingId: null,
   currentSubmittingAssignment: null,
+  currentSubmittingExistingSubmission: null,
+  currentViewingAssignment: null,
+  currentViewingSubmission: null,
   authMode: "signin",
   activeView: "dashboard",
   currentGradingAssignment: null,
@@ -188,6 +218,7 @@ const elements = {
   // Toolbar & Filters
   tableSearchInput: document.getElementById("tableSearchInput"),
   subjectFilter: document.getElementById("subjectFilter"),
+  unitFilter: document.getElementById("unitFilter"),
   statusFilter: document.getElementById("statusFilter"),
   sortFilter: document.getElementById("sortFilter"),
 
@@ -201,6 +232,14 @@ const elements = {
   errorState: document.getElementById("errorState"),
   errorMessageText: document.getElementById("errorMessageText"),
   retryFetchBtn: document.getElementById("retryFetchBtn"),
+
+  // Curriculum Units Structure Modal
+  openStructureModalBtn: document.getElementById("openStructureModalBtn"),
+  closeStructureModalBtn: document.getElementById("closeStructureModalBtn"),
+  structureModalBackdrop: document.getElementById("structureModalBackdrop"),
+  structureTreeContainer: document.getElementById("structureTreeContainer"),
+  structureLoadingSpinner: document.getElementById("structureLoadingSpinner"),
+  structureEmptyState: document.getElementById("structureEmptyState"),
 
   // Drawer / Form
   openCreateDrawerBtn: document.getElementById("openCreateDrawerBtn"),
@@ -231,9 +270,13 @@ const elements = {
   pdfError: document.getElementById("pdfError"),
   formDueDate: document.getElementById("formDueDate"),
   formStatus: document.getElementById("formStatus"),
+  formUnit: document.getElementById("formUnit"),
+  formMaxMarks: document.getElementById("formMaxMarks"),
   titleError: document.getElementById("titleError"),
   subjectError: document.getElementById("subjectError"),
   dueDateError: document.getElementById("dueDateError"),
+  unitError: document.getElementById("unitError"),
+  maxMarksError: document.getElementById("maxMarksError"),
 
   // Delete Modal
   deleteModalBackdrop: document.getElementById("deleteModalBackdrop"),
@@ -311,6 +354,16 @@ const elements = {
   viewSubNotes: document.getElementById("viewSubNotes"),
   btnDownloadMySubmission: document.getElementById("btnDownloadMySubmission"),
   btnPreviewMySubmission: document.getElementById("btnPreviewMySubmission"),
+  btnModalResubmitWork: document.getElementById("btnModalResubmitWork"),
+  btnModalViewHistory: document.getElementById("btnModalViewHistory"),
+  viewSubResubmitBanner: document.getElementById("viewSubResubmitBanner"),
+  viewSubResubmitTitle: document.getElementById("viewSubResubmitTitle"),
+  viewSubResubmitNote: document.getElementById("viewSubResubmitNote"),
+  viewSubResubmitDeadline: document.getElementById("viewSubResubmitDeadline"),
+  submitWorkResubmitBanner: document.getElementById("submitWorkResubmitBanner"),
+  submitWorkResubmitTitle: document.getElementById("submitWorkResubmitTitle"),
+  submitWorkResubmitNote: document.getElementById("submitWorkResubmitNote"),
+  submitWorkResubmitDeadline: document.getElementById("submitWorkResubmitDeadline"),
 
   // Teacher Submissions Roster Modal Elements
   teacherSubmissionsModalBackdrop: document.getElementById("teacherSubmissionsModalBackdrop"),
@@ -392,6 +445,110 @@ const elements = {
 
   // Toasts
   toastContainer: document.getElementById("toastContainer"),
+
+  // Notifications
+  notificationBadge: document.getElementById("notificationBadge"),
+  notificationDropdownWrapper: document.getElementById("notificationDropdownWrapper"),
+  notificationMenu: document.getElementById("notificationMenu"),
+  notificationList: document.getElementById("notificationList"),
+  markAllNotificationsReadBtn: document.getElementById("markAllNotificationsReadBtn"),
+
+  // Assignment Drawer Extensions & Late Rules
+  formGracePeriod: document.getElementById("formGracePeriod"),
+  formLatePenalty: document.getElementById("formLatePenalty"),
+  formAllowLate: document.getElementById("formAllowLate"),
+  drawerExtensionsBtn: document.getElementById("drawerExtensionsBtn"),
+
+  // SpeedGrader Workflow Buttons
+  gradingAllowResubmitBtn: document.getElementById("gradingAllowResubmitBtn"),
+  gradingCorrectGradeBtn: document.getElementById("gradingCorrectGradeBtn"),
+  gradingViewHistoryBtn: document.getElementById("gradingViewHistoryBtn"),
+  gradingReviewReevalBtn: document.getElementById("gradingReviewReevalBtn"),
+
+  // Student Preview Workflow Buttons
+  studentRequestReevalBtn: document.getElementById("studentRequestReevalBtn"),
+  studentViewHistoryBtn: document.getElementById("studentViewHistoryBtn"),
+
+  // Finalize Results Modal
+  finalizeModalBackdrop: document.getElementById("finalizeModalBackdrop"),
+  closeFinalizeModalBtn: document.getElementById("closeFinalizeModalBtn"),
+  finalizeAlert: document.getElementById("finalizeAlert"),
+  finalizeUnitsChecklist: document.getElementById("finalizeUnitsChecklist"),
+  finalizeNotesInput: document.getElementById("finalizeNotesInput"),
+  cancelFinalizeBtn: document.getElementById("cancelFinalizeBtn"),
+  confirmFinalizeBtn: document.getElementById("confirmFinalizeBtn"),
+
+  // Extensions Modal
+  extensionsModalBackdrop: document.getElementById("extensionsModalBackdrop"),
+  closeExtensionsModalBtn: document.getElementById("closeExtensionsModalBtn"),
+  extensionsAlert: document.getElementById("extensionsAlert"),
+  grantExtensionForm: document.getElementById("grantExtensionForm"),
+  extensionStudentSelect: document.getElementById("extensionStudentSelect"),
+  extensionDeadlineInput: document.getElementById("extensionDeadlineInput"),
+  extensionReasonInput: document.getElementById("extensionReasonInput"),
+  grantExtensionSubmitBtn: document.getElementById("grantExtensionSubmitBtn"),
+  extensionsListContainer: document.getElementById("extensionsListContainer"),
+
+  // Grade Correction Modal (Audit Trail)
+  gradeCorrectionModalBackdrop: document.getElementById("gradeCorrectionModalBackdrop"),
+  closeCorrectionModalBtn: document.getElementById("closeCorrectionModalBtn"),
+  correctionAlert: document.getElementById("correctionAlert"),
+  correctionPreviousGrade: document.getElementById("correctionPreviousGrade"),
+  correctionNewGrade: document.getElementById("correctionNewGrade"),
+  correctionReasonInput: document.getElementById("correctionReasonInput"),
+  correctionHistoryList: document.getElementById("correctionHistoryList"),
+  cancelCorrectionBtn: document.getElementById("cancelCorrectionBtn"),
+  confirmCorrectionBtn: document.getElementById("confirmCorrectionBtn"),
+
+  // Resubmission Modal
+  resubmissionModalBackdrop: document.getElementById("resubmissionModalBackdrop"),
+  closeResubmissionModalBtn: document.getElementById("closeResubmissionModalBtn"),
+  resubmissionAlert: document.getElementById("resubmissionAlert"),
+  resubmissionDeadlineInput: document.getElementById("resubmissionDeadlineInput"),
+  resubmissionNotesInput: document.getElementById("resubmissionNotesInput"),
+  cancelResubmissionBtn: document.getElementById("cancelResubmissionBtn"),
+  confirmResubmissionBtn: document.getElementById("confirmResubmissionBtn"),
+
+  // Re-evaluation Modal
+  reevaluationModalBackdrop: document.getElementById("reevaluationModalBackdrop"),
+  closeReevaluationModalBtn: document.getElementById("closeReevaluationModalBtn"),
+  reevaluationAlert: document.getElementById("reevaluationAlert"),
+  reevaluationStudentSection: document.getElementById("reevaluationStudentSection"),
+  reevalReasonInput: document.getElementById("reevalReasonInput"),
+  submitReevaluationRequestBtn: document.getElementById("submitReevaluationRequestBtn"),
+  reevaluationTeacherSection: document.getElementById("reevaluationTeacherSection"),
+  reevaluationTeacherReason: document.getElementById("reevaluationTeacherReason"),
+  reevalDecisionSelect: document.getElementById("reevalDecisionSelect"),
+  reevalRevisedGradeGroup: document.getElementById("reevalRevisedGradeGroup"),
+  reevalRevisedGrade: document.getElementById("reevalRevisedGrade"),
+  reevalDecisionNotes: document.getElementById("reevalDecisionNotes"),
+  submitReevaluationDecisionBtn: document.getElementById("submitReevaluationDecisionBtn"),
+
+  // Submission History Modal
+  submissionHistoryModalBackdrop: document.getElementById("submissionHistoryModalBackdrop"),
+  closeHistoryModalBtn: document.getElementById("closeHistoryModalBtn"),
+  submissionHistoryList: document.getElementById("submissionHistoryList"),
+
+  // Analytics Page Controls
+  analyticsClassSelect: document.getElementById("analyticsClassSelect"),
+  analyticsSubjectSelect: document.getElementById("analyticsSubjectSelect"),
+  btnFinalizeResults: document.getElementById("btnFinalizeResults"),
+  btnExportSummaryCsv: document.getElementById("btnExportSummaryCsv"),
+  btnExportDetailedCsv: document.getElementById("btnExportDetailedCsv"),
+  btnToggleLeaderboard: document.getElementById("btnToggleLeaderboard"),
+  analyticsAlertsContainer: document.getElementById("analyticsAlertsContainer"),
+  analyticsRankingsTable: document.getElementById("analyticsRankingsTable"),
+  analyticsRankingsHead: document.getElementById("analyticsRankingsHead"),
+  analyticsRankingsBody: document.getElementById("analyticsRankingsBody"),
+  analyticsFinalizedBadge: document.getElementById("analyticsFinalizedBadge"),
+  analyticsUnitComparisonsBody: document.getElementById("analyticsUnitComparisonsBody"),
+  analyticsRightCardBody: document.getElementById("analyticsRightCardBody"),
+  analyticsStudentFeedbackCard: document.getElementById("analyticsStudentFeedbackCard"),
+  analyticsStudentFeedbackBody: document.getElementById("analyticsStudentFeedbackBody"),
+  analyticsLeaderboardCard: document.getElementById("analyticsLeaderboardCard"),
+  analyticsLeaderboardTable: document.getElementById("analyticsLeaderboardTable"),
+  analyticsLeaderboardBody: document.getElementById("analyticsLeaderboardBody"),
+  btnCloseLeaderboard: document.getElementById("btnCloseLeaderboard"),
 };
 
 // ==========================================================================
@@ -471,6 +628,13 @@ function setupEventListeners() {
     applyFiltersAndRender();
   });
 
+  if (elements.unitFilter) {
+    elements.unitFilter.addEventListener("change", (e) => {
+      state.filters.unit = e.target.value;
+      applyFiltersAndRender();
+    });
+  }
+
   elements.statusFilter.addEventListener("change", (e) => {
     state.filters.status = e.target.value;
     applyFiltersAndRender();
@@ -480,6 +644,19 @@ function setupEventListeners() {
     state.filters.sort = e.target.value;
     applyFiltersAndRender();
   });
+
+  // Curriculum Units Structure Modal
+  if (elements.openStructureModalBtn) {
+    elements.openStructureModalBtn.addEventListener("click", () => openStructureModal());
+  }
+  if (elements.closeStructureModalBtn) {
+    elements.closeStructureModalBtn.addEventListener("click", () => closeStructureModal());
+  }
+  if (elements.structureModalBackdrop) {
+    elements.structureModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.structureModalBackdrop) closeStructureModal();
+    });
+  }
 
   // Drawer Open / Close
   elements.openCreateDrawerBtn.addEventListener("click", () => openDrawer());
@@ -491,7 +668,7 @@ function setupEventListeners() {
   elements.drawerCancelBtn.addEventListener("click", closeDrawer);
   elements.drawerOverlay.addEventListener("click", closeDrawer);
 
-  // Subject "Other" toggle
+  // Subject "Other" toggle & duplicate validation
   elements.formSubject.addEventListener("change", (e) => {
     if (e.target.value === "Other") {
       elements.customSubjectGroup.style.display = "flex";
@@ -500,13 +677,40 @@ function setupEventListeners() {
       elements.customSubjectGroup.style.display = "none";
       elements.formCustomSubject.value = "";
     }
+    checkDuplicateUnit();
   });
+
+  if (elements.formCustomSubject) {
+    elements.formCustomSubject.addEventListener("input", checkDuplicateUnit);
+  }
+
+  if (elements.formUnit) {
+    elements.formUnit.addEventListener("input", checkDuplicateUnit);
+    elements.formUnit.addEventListener("change", checkDuplicateUnit);
+  }
+
+  if (elements.formClass) {
+    elements.formClass.addEventListener("change", checkDuplicateUnit);
+  }
 
   // Form Submit
   elements.assignmentForm.addEventListener("submit", handleFormSubmit);
 
   // File Dropzone & Input Handlers
   if (elements.fileDropzone && elements.formPdf) {
+    elements.fileDropzone.addEventListener("click", (e) => {
+      if (e.target !== elements.formPdf) {
+        elements.formPdf.click();
+      }
+    });
+
+    elements.fileDropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        elements.formPdf.click();
+      }
+    });
+
     elements.fileDropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
       elements.fileDropzone.classList.add("dragover");
@@ -564,9 +768,9 @@ function setupEventListeners() {
 
   // Profile Menu actions
   if (elements.menuSwitchAccountBtn) {
-    elements.menuSwitchAccountBtn.addEventListener("click", () => {
+    elements.menuSwitchAccountBtn.addEventListener("click", async () => {
       closeProfileMenu();
-      openAuthModal("signin");
+      await handleLogout();
     });
   }
 
@@ -680,8 +884,21 @@ function setupEventListeners() {
     elements.btnRemoveSubmissionFile.addEventListener("click", resetSubmissionDropzone);
   }
 
-  // Submission Dropzone Drag-and-Drop
+  // Submission Dropzone Drag-and-Drop & Click Handlers
   if (elements.submissionDropzone && elements.submissionFileInput) {
+    elements.submissionDropzone.addEventListener("click", (e) => {
+      if (e.target !== elements.submissionFileInput && !e.target.closest("#btnRemoveSubmissionFile")) {
+        elements.submissionFileInput.click();
+      }
+    });
+
+    elements.submissionDropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        elements.submissionFileInput.click();
+      }
+    });
+
     elements.submissionDropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
       elements.submissionDropzone.classList.add("dragover");
@@ -713,6 +930,23 @@ function setupEventListeners() {
   if (elements.viewSubmissionModalBackdrop) {
     elements.viewSubmissionModalBackdrop.addEventListener("click", (e) => {
       if (e.target === elements.viewSubmissionModalBackdrop) closeViewSubmissionModal();
+    });
+  }
+  if (elements.btnModalResubmitWork) {
+    elements.btnModalResubmitWork.addEventListener("click", () => {
+      if (state.currentViewingAssignment) {
+        const assignment = state.currentViewingAssignment;
+        const sub = state.currentViewingSubmission;
+        closeViewSubmissionModal();
+        openSubmitWorkModal(assignment, sub);
+      }
+    });
+  }
+  if (elements.btnModalViewHistory) {
+    elements.btnModalViewHistory.addEventListener("click", () => {
+      if (state.currentViewingSubmission) {
+        openSubmissionHistoryModal(state.currentViewingSubmission);
+      }
     });
   }
 
@@ -830,6 +1064,73 @@ function setupEventListeners() {
         return;
       }
     }
+    // If grade correction modal is open, trap focus and handle Escape
+    if (elements.gradeCorrectionModalBackdrop && elements.gradeCorrectionModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeGradeCorrectionModal();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = [
+          elements.closeCorrectionModalBtn,
+          elements.correctionNewGrade,
+          elements.correctionReasonInput,
+          elements.cancelCorrectionBtn,
+          elements.confirmCorrectionBtn
+        ].filter(el => el && !el.disabled && el.offsetParent !== null);
+        if (focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+            return;
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+            return;
+          }
+        }
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (elements.resubmissionModalBackdrop && elements.resubmissionModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeResubmissionModal();
+        return;
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (elements.reevaluationModalBackdrop && elements.reevaluationModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeReevaluationModal();
+        return;
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (elements.submissionHistoryModalBackdrop && elements.submissionHistoryModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSubmissionHistoryModal();
+        return;
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        return;
+      }
+    }
     // If grading workspace modal is open
     if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
       if (e.key === "Escape") {
@@ -885,6 +1186,171 @@ function setupEventListeners() {
     elements.settingsClearCacheBtn.addEventListener("click", clearSettingsPreferences);
   }
 
+  // ==========================================
+  // ACADEMIC WORKFLOW & ANALYTICS LISTENERS
+  // ==========================================
+
+  // Notifications
+  if (elements.notificationBtn) {
+    elements.notificationBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!elements.notificationMenu) return;
+      const isOpen = elements.notificationMenu.style.display === "block";
+      elements.notificationMenu.style.display = isOpen ? "none" : "block";
+      if (!isOpen) fetchNotifications();
+    });
+  }
+  if (elements.markAllNotificationsReadBtn) {
+    elements.markAllNotificationsReadBtn.addEventListener("click", async () => {
+      try {
+        await fetch(API_ENDPOINTS.notificationMarkAllRead, {
+          method: "PUT",
+          credentials: "same-origin",
+        });
+        await fetchNotifications();
+      } catch (e) {
+        console.error("Mark all read error:", e);
+      }
+    });
+  }
+
+  // Analytics Controls
+  if (elements.analyticsClassSelect) {
+    elements.analyticsClassSelect.addEventListener("change", onAnalyticsClassChanged);
+  }
+  if (elements.analyticsSubjectSelect) {
+    elements.analyticsSubjectSelect.addEventListener("change", (e) => {
+      currentAnalyticsSubject = e.target.value;
+      refreshAnalyticsData();
+    });
+  }
+  if (elements.btnExportSummaryCsv) {
+    elements.btnExportSummaryCsv.addEventListener("click", handleDownloadSummaryCsv);
+  }
+  if (elements.btnExportDetailedCsv) {
+    elements.btnExportDetailedCsv.addEventListener("click", handleDownloadDetailedCsv);
+  }
+  if (elements.btnFinalizeResults) {
+    elements.btnFinalizeResults.addEventListener("click", openFinalizeModal);
+  }
+  if (elements.confirmFinalizeBtn) {
+    elements.confirmFinalizeBtn.addEventListener("click", handleConfirmFinalize);
+  }
+  if (elements.closeFinalizeModalBtn) {
+    elements.closeFinalizeModalBtn.addEventListener("click", () => elements.finalizeModalBackdrop.style.display = "none");
+  }
+  if (elements.cancelFinalizeBtn) {
+    elements.cancelFinalizeBtn.addEventListener("click", () => elements.finalizeModalBackdrop.style.display = "none");
+  }
+  if (elements.btnToggleLeaderboard) {
+    elements.btnToggleLeaderboard.addEventListener("click", toggleLeaderboard);
+  }
+  if (elements.btnCloseLeaderboard) {
+    elements.btnCloseLeaderboard.addEventListener("click", () => elements.analyticsLeaderboardCard.style.display = "none");
+  }
+
+  // Extensions
+  if (elements.drawerExtensionsBtn) {
+    elements.drawerExtensionsBtn.addEventListener("click", () => {
+      if (state.editingId) openExtensionsModal(state.editingId);
+    });
+  }
+  if (elements.closeExtensionsModalBtn) {
+    elements.closeExtensionsModalBtn.addEventListener("click", () => elements.extensionsModalBackdrop.style.display = "none");
+  }
+  if (elements.grantExtensionForm) {
+    elements.grantExtensionForm.addEventListener("submit", handleGrantExtension);
+  }
+
+  // SpeedGrader Workflow Actions
+  if (elements.gradingAllowResubmitBtn) {
+    elements.gradingAllowResubmitBtn.addEventListener("click", () => {
+      const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+      if (sub) openResubmissionModal(sub);
+    });
+  }
+  if (elements.confirmResubmissionBtn) {
+    elements.confirmResubmissionBtn.addEventListener("click", handleConfirmResubmission);
+  }
+  if (elements.closeResubmissionModalBtn) {
+    elements.closeResubmissionModalBtn.addEventListener("click", closeResubmissionModal);
+  }
+  if (elements.cancelResubmissionBtn) {
+    elements.cancelResubmissionBtn.addEventListener("click", closeResubmissionModal);
+  }
+
+  if (elements.gradingCorrectGradeBtn) {
+    elements.gradingCorrectGradeBtn.addEventListener("click", () => {
+      const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+      if (sub) openGradeCorrectionModal(sub);
+    });
+  }
+  if (elements.confirmCorrectionBtn) {
+    elements.confirmCorrectionBtn.addEventListener("click", handleConfirmGradeCorrection);
+  }
+  if (elements.closeCorrectionModalBtn) {
+    elements.closeCorrectionModalBtn.addEventListener("click", closeGradeCorrectionModal);
+  }
+  if (elements.cancelCorrectionBtn) {
+    elements.cancelCorrectionBtn.addEventListener("click", closeGradeCorrectionModal);
+  }
+
+  if (elements.gradingViewHistoryBtn) {
+    elements.gradingViewHistoryBtn.addEventListener("click", () => {
+      const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+      if (sub) openSubmissionHistoryModal(sub);
+    });
+  }
+  if (elements.closeHistoryModalBtn) {
+    elements.closeHistoryModalBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
+
+  // Re-evaluation Actions
+  if (elements.submitReevaluationDecisionBtn) {
+    elements.submitReevaluationDecisionBtn.addEventListener("click", handleSubmitReevaluationDecision);
+  }
+  if (elements.submitReevaluationRequestBtn) {
+    elements.submitReevaluationRequestBtn.addEventListener("click", handleSubmitReevaluationRequest);
+  }
+  if (elements.closeReevaluationModalBtn) {
+    elements.closeReevaluationModalBtn.addEventListener("click", closeReevaluationModal);
+  }
+
+  // Document Click (dismiss menus)
+  document.addEventListener("click", (e) => {
+    if (elements.notificationMenu && elements.notificationDropdownWrapper && !elements.notificationDropdownWrapper.contains(e.target)) {
+      elements.notificationMenu.style.display = "none";
+    }
+  });
+
+  // Modal Backdrop Clicks
+  [
+    elements.finalizeModalBackdrop,
+    elements.extensionsModalBackdrop,
+    elements.gradeCorrectionModalBackdrop,
+    elements.resubmissionModalBackdrop,
+    elements.reevaluationModalBackdrop,
+    elements.submissionHistoryModalBackdrop
+  ].forEach(backdrop => {
+    if (backdrop) {
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) {
+          if (backdrop === elements.gradeCorrectionModalBackdrop) {
+            closeGradeCorrectionModal();
+          } else if (backdrop === elements.resubmissionModalBackdrop) {
+            closeResubmissionModal();
+          } else if (backdrop === elements.reevaluationModalBackdrop) {
+            closeReevaluationModal();
+          } else if (backdrop === elements.submissionHistoryModalBackdrop) {
+            closeSubmissionHistoryModal();
+          } else {
+            backdrop.style.display = "none";
+          }
+        }
+      });
+    }
+  });
+
   // Keyboard Shortcuts (ESC to close modals/drawers)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -896,11 +1362,652 @@ function setupEventListeners() {
       closeSubmitWorkModal();
       closeViewSubmissionModal();
       closeTeacherSubmissionsModal();
+      if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "none";
+      if (elements.extensionsModalBackdrop) elements.extensionsModalBackdrop.style.display = "none";
+      if (elements.gradeCorrectionModalBackdrop) elements.gradeCorrectionModalBackdrop.style.display = "none";
+      if (elements.resubmissionModalBackdrop) elements.resubmissionModalBackdrop.style.display = "none";
+      if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "none";
+      if (elements.submissionHistoryModalBackdrop) elements.submissionHistoryModalBackdrop.style.display = "none";
+      if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
       if (state.currentUser) {
         closeAuthModal();
       }
     }
   });
+}
+
+// ==========================================================================
+// WORKFLOW & NOTIFICATION HELPER FUNCTIONS
+// ==========================================================================
+
+async function fetchNotifications() {
+  if (!state.currentUser) return;
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
+  try {
+    const res = await fetch(API_ENDPOINTS.notifications, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
+    });
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+    if (!res.ok) return;
+    const notifications = await res.json();
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    if (elements.notificationBadge) {
+      if (unreadCount > 0) {
+        elements.notificationBadge.textContent = unreadCount > 9 ? "9+" : unreadCount;
+        elements.notificationBadge.style.display = "block";
+      } else {
+        elements.notificationBadge.style.display = "none";
+      }
+    }
+
+    if (elements.notificationList) {
+      if (!notifications.length) {
+        elements.notificationList.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>`;
+      } else {
+        elements.notificationList.innerHTML = notifications.slice(0, 15).map(n => `
+          <div class="notification-item" data-id="${n.id}" data-link="${escapeHtml(n.link_url || '')}" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; background: ${n.is_read ? 'transparent' : '#f0f9ff'}; display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; font-size: 0.825rem; color: #1e293b;">${escapeHtml(n.title)}</span>
+              <span style="font-size: 0.7rem; color: #94a3b8;">${new Date(n.created_at).toLocaleDateString([], {month:'short', day:'numeric'})}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #475569;">${escapeHtml(n.message)}</div>
+          </div>
+        `).join("");
+
+        elements.notificationList.querySelectorAll(".notification-item").forEach(item => {
+          item.addEventListener("click", async () => {
+            const notifId = item.getAttribute("data-id");
+            const linkUrl = item.getAttribute("data-link");
+            try {
+              await fetch(`${API_ENDPOINTS.notifications}/${notifId}/read`, {
+                method: "PUT",
+                credentials: "same-origin",
+              });
+              await fetchNotifications();
+            } catch (e) {}
+            if (linkUrl) {
+              window.location.hash = linkUrl.replace(/^\//, "");
+            }
+            if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Notifications error:", err);
+  }
+}
+
+// Extensions
+let currentExtensionAssignmentId = null;
+
+async function openExtensionsModal(asgnId) {
+  currentExtensionAssignmentId = asgnId;
+  const asgn = state.assignments.find(a => a.id === asgnId);
+  if (!asgn) return;
+
+  if (elements.extensionsAlert) elements.extensionsAlert.style.display = "none";
+  if (elements.extensionsModalSubtitle) {
+    elements.extensionsModalSubtitle.textContent = `Extensions for: ${asgn.title}`;
+  }
+
+  if (elements.extensionStudentSelect) {
+    elements.extensionStudentSelect.innerHTML = `<option value="">Select student...</option>`;
+    if (asgn.class_id) {
+      try {
+        const res = await fetch(`${API_ENDPOINTS.classes}/${asgn.class_id}/students`, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" }
+        });
+        if (res.ok) {
+          const students = await res.json();
+          elements.extensionStudentSelect.innerHTML += students.map(s => `<option value="${s.id}">${escapeHtml(s.full_name || s.email)}</option>`).join("");
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (elements.extensionDeadlineInput) {
+    const d = new Date(asgn.due_date || Date.now());
+    d.setDate(d.getDate() + 3);
+    elements.extensionDeadlineInput.value = formatInputDate(d);
+  }
+
+  await loadExistingExtensions(asgnId);
+  if (elements.extensionsModalBackdrop) elements.extensionsModalBackdrop.style.display = "flex";
+}
+
+async function loadExistingExtensions(asgnId) {
+  if (!elements.extensionsListContainer) return;
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.extensions(asgnId), {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const exts = await res.json();
+      if (!exts.length) {
+        elements.extensionsListContainer.innerHTML = `<p style="color: #64748b; font-size: 0.85rem;">No active extensions for this assignment.</p>`;
+      } else {
+        elements.extensionsListContainer.innerHTML = exts.map(e => `
+          <div style="padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-weight: 600;">Student #${e.student_id}</span>
+              <div style="font-size: 0.75rem; color: #64748b;">Reason: ${escapeHtml(e.reason || "None")}</div>
+            </div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #2563eb;">
+              Due: ${new Date(e.extended_due_date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+  } catch (err) {
+    console.error("Extensions load error:", err);
+  }
+}
+
+async function handleGrantExtension(e) {
+  e.preventDefault();
+  if (!currentExtensionAssignmentId) return;
+
+  const studentId = parseInt(elements.extensionStudentSelect.value, 10);
+  const deadlineVal = elements.extensionDeadlineInput.value;
+  const reasonVal = elements.extensionReasonInput.value.trim();
+
+  if (!studentId || !deadlineVal || !reasonVal) {
+    showToast("Please fill in all extension fields.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.extensions(currentExtensionAssignmentId), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        student_id: studentId,
+        extended_due_date: new Date(deadlineVal).toISOString(),
+        reason: reasonVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to grant extension.", "error");
+      return;
+    }
+    showToast("Extension granted successfully.", "success");
+    elements.extensionReasonInput.value = "";
+    await loadExistingExtensions(currentExtensionAssignmentId);
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Resubmissions
+let currentWorkflowSubmission = null;
+
+function openResubmissionModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.resubmissionAlert) elements.resubmissionAlert.style.display = "none";
+  if (elements.resubmissionDeadlineInput) elements.resubmissionDeadlineInput.value = "";
+  if (elements.resubmissionNotesInput) elements.resubmissionNotesInput.value = "";
+  if (elements.resubmissionModalBackdrop) elements.resubmissionModalBackdrop.style.display = "flex";
+}
+
+let isAllowingResubmission = false;
+
+async function handleConfirmResubmission() {
+  if (!currentWorkflowSubmission || isAllowingResubmission) return;
+  const deadlineVal = elements.resubmissionDeadlineInput ? elements.resubmissionDeadlineInput.value : null;
+  const isoDeadline = deadlineVal ? new Date(deadlineVal).toISOString() : null;
+  const notes = elements.resubmissionNotesInput ? elements.resubmissionNotesInput.value.trim() : null;
+
+  isAllowingResubmission = true;
+  if (elements.confirmResubmissionBtn) {
+    elements.confirmResubmissionBtn.disabled = true;
+    elements.confirmResubmissionBtn.textContent = "Authorizing...";
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.allowResubmission(currentWorkflowSubmission.id), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        resubmission_deadline: isoDeadline,
+        resubmission_note: notes
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to allow resubmission", "error");
+      return;
+    }
+    showToast("Resubmission permitted for student.", "success");
+    closeResubmissionModal();
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  } finally {
+    isAllowingResubmission = false;
+    if (elements.confirmResubmissionBtn) {
+      elements.confirmResubmissionBtn.disabled = false;
+      elements.confirmResubmissionBtn.textContent = "Confirm Authorization";
+    }
+  }
+}
+
+function closeGradeCorrectionModal() {
+  if (elements.gradeCorrectionModalBackdrop) {
+    elements.gradeCorrectionModalBackdrop.style.display = "none";
+  }
+  if (elements.correctionAlert) {
+    elements.correctionAlert.style.display = "none";
+    elements.correctionAlert.textContent = "";
+  }
+  if (elements.gradingCorrectGradeBtn) {
+    elements.gradingCorrectGradeBtn.focus();
+  }
+}
+
+function closeResubmissionModal() {
+  if (elements.resubmissionModalBackdrop) {
+    elements.resubmissionModalBackdrop.style.display = "none";
+  }
+  if (elements.resubmissionAlert) {
+    elements.resubmissionAlert.style.display = "none";
+    elements.resubmissionAlert.textContent = "";
+  }
+}
+
+function closeReevaluationModal() {
+  if (elements.reevaluationModalBackdrop) {
+    elements.reevaluationModalBackdrop.style.display = "none";
+  }
+  if (elements.reevaluationAlert) {
+    elements.reevaluationAlert.style.display = "none";
+    elements.reevaluationAlert.textContent = "";
+  }
+}
+
+function closeSubmissionHistoryModal() {
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.style.display = "none";
+  }
+}
+
+// Grade Corrections (Audit Trail)
+async function openGradeCorrectionModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.correctionAlert) {
+    elements.correctionAlert.style.display = "none";
+    elements.correctionAlert.textContent = "";
+  }
+
+  // Resolve current active grade without inventing or defaulting to 0:
+  // 1. Saved grade on sub object (number or valid numeric string)
+  // 2. Active grade currently displayed in grading panel input (elements.gradingMarksInput)
+  // 3. Saved grade in active roster item if sub was shallow
+  let currentGrade = null;
+  if (sub && sub.grade !== null && sub.grade !== undefined && sub.grade !== "" && !isNaN(Number(sub.grade))) {
+    currentGrade = Number(sub.grade);
+  } else if (elements.gradingMarksInput && elements.gradingMarksInput.value.trim() !== "") {
+    const parsed = parseFloat(elements.gradingMarksInput.value.trim());
+    if (!isNaN(parsed)) {
+      currentGrade = parsed;
+    }
+  } else if (state.currentGradingSubmissions && sub && sub.id) {
+    const matched = state.currentGradingSubmissions.find((s) => s.id === sub.id);
+    if (matched && matched.grade !== null && matched.grade !== undefined && matched.grade !== "" && !isNaN(Number(matched.grade))) {
+      currentGrade = Number(matched.grade);
+    }
+  }
+
+  if (elements.correctionPreviousGrade) {
+    elements.correctionPreviousGrade.value = currentGrade !== null ? currentGrade : "";
+  }
+  if (elements.correctionNewGrade) {
+    elements.correctionNewGrade.value = currentGrade !== null ? currentGrade : "";
+  }
+  if (elements.correctionReasonInput) {
+    elements.correctionReasonInput.value = "";
+  }
+
+  if (elements.correctionHistoryList) {
+    try {
+      const res = await fetch(API_ENDPOINTS.workflow.gradeCorrections(sub.id), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      });
+      if (res.ok) {
+        const list = await res.json();
+        if (!list.length) {
+          elements.correctionHistoryList.innerHTML = `<p style="color: #64748b; margin: 0;">No prior corrections recorded.</p>`;
+        } else {
+          elements.correctionHistoryList.innerHTML = list.map(c => `
+            <div style="padding: 0.35rem 0; border-bottom: 1px solid var(--border-color);">
+              <span style="font-weight: 600;">${c.previous_grade !== null && c.previous_grade !== undefined ? c.previous_grade : "—"} ➔ ${c.new_grade}</span>
+              <span style="color: #64748b; font-size: 0.75rem; margin-left: 0.5rem;">(${escapeHtml(c.reason)})</span>
+            </div>
+          `).join("");
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (elements.gradeCorrectionModalBackdrop) {
+    elements.gradeCorrectionModalBackdrop.style.display = "flex";
+  }
+
+  // Set focus to the corrected grade input
+  if (elements.correctionNewGrade) {
+    setTimeout(() => {
+      elements.correctionNewGrade.focus();
+      elements.correctionNewGrade.select();
+    }, 50);
+  }
+}
+
+async function handleConfirmGradeCorrection() {
+  if (!currentWorkflowSubmission) return;
+  const newGradeVal = parseFloat(elements.correctionNewGrade.value);
+  const reasonVal = elements.correctionReasonInput.value.trim();
+
+  if (isNaN(newGradeVal)) {
+    showToast("Please enter a valid numeric grade.", "warning");
+    return;
+  }
+  if (!reasonVal) {
+    showToast("Correction reason is required for audit trail.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.correctGrade(currentWorkflowSubmission.id), {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        new_grade: newGradeVal,
+        reason: reasonVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to save grade correction.", "error");
+      return;
+    }
+    showToast("Grade corrected and logged in audit trail.", "success");
+    closeGradeCorrectionModal();
+
+    // Update in-memory state
+    currentWorkflowSubmission.grade = newGradeVal;
+    if (currentWorkflowSubmission.status === "submitted") {
+      currentWorkflowSubmission.status = "graded";
+    }
+    if (state.currentGradingSubmissions && state.currentGradingSubmissions[state.currentGradingIndex]) {
+      state.currentGradingSubmissions[state.currentGradingIndex].grade = newGradeVal;
+      if (state.currentGradingSubmissions[state.currentGradingIndex].status === "submitted") {
+        state.currentGradingSubmissions[state.currentGradingIndex].status = "graded";
+      }
+    }
+    if (elements.gradingMarksInput) {
+      elements.gradingMarksInput.value = newGradeVal;
+    }
+
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Submission History Modal
+async function openSubmissionHistoryModal(sub) {
+  if (!elements.submissionHistoryList) return;
+  elements.submissionHistoryList.innerHTML = `<p style="color: #64748b;">Loading history...</p>`;
+  if (elements.submissionHistoryModalBackdrop) elements.submissionHistoryModalBackdrop.style.display = "flex";
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.submissionHistory(sub.id), {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const history = await res.json();
+      let html = "";
+      html += `
+        <div style="padding: 0.85rem; border: 1.5px solid #2563eb; border-radius: var(--radius-sm); background: #eff6ff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <span style="font-weight: 700; color: #1e3a8a;">Attempt #${sub.attempt_number || 1} (Current Active)</span>
+            <span style="font-size: 0.75rem; color: #64748b;">${new Date(sub.submitted_at).toLocaleString()}</span>
+          </div>
+          <div style="font-size: 0.85rem;">File: <strong>${escapeHtml(sub.file_name || 'submission')}</strong> (${formatBytes(sub.file_size || 0)})</div>
+          <div style="font-size: 0.8rem; color: #475569; margin-top: 0.2rem;">Grade: <strong>${sub.grade !== null ? sub.grade : 'Ungraded'}</strong></div>
+        </div>
+      `;
+
+      if (history.length > 0) {
+        html += `<h5 style="margin: 0.75rem 0 0.4rem; font-size: 0.85rem; color: #64748b;">Prior Attempts:</h5>`;
+        html += history.map(h => `
+          <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <span style="font-weight: 600;">Attempt #${h.attempt_number} (Archived)</span>
+              <span style="font-size: 0.75rem; color: #94a3b8;">${new Date(h.submitted_at).toLocaleString()}</span>
+            </div>
+            <div>File: <strong>${escapeHtml(h.file_name || 'submission')}</strong> (${formatBytes(h.file_size || 0)})</div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">Score at time: ${h.grade !== null ? h.grade : 'Ungraded'} | Feedback: ${escapeHtml(h.feedback || 'None')}</div>
+          </div>
+        `).join("");
+      }
+
+      elements.submissionHistoryList.innerHTML = html;
+    }
+  } catch (e) {
+    elements.submissionHistoryList.innerHTML = `<p style="color: var(--danger);">Failed to load history.</p>`;
+  }
+}
+
+// Re-evaluations
+let currentReevaluationRequest = null;
+
+function openStudentReevaluationModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.reevaluationAlert) elements.reevaluationAlert.style.display = "none";
+  if (elements.reevaluationStudentSection) elements.reevaluationStudentSection.style.display = "block";
+  if (elements.reevaluationTeacherSection) elements.reevaluationTeacherSection.style.display = "none";
+  if (elements.reevalReasonInput) elements.reevalReasonInput.value = "";
+  if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "flex";
+}
+
+function openTeacherReevaluationModal(req) {
+  currentReevaluationRequest = req;
+  if (elements.reevaluationAlert) elements.reevaluationAlert.style.display = "none";
+  if (elements.reevaluationStudentSection) elements.reevaluationStudentSection.style.display = "none";
+  if (elements.reevaluationTeacherSection) elements.reevaluationTeacherSection.style.display = "block";
+  if (elements.reevaluationTeacherReason) elements.reevaluationTeacherReason.textContent = req.reason || "None";
+  if (elements.reevalRevisedGrade) elements.reevalRevisedGrade.value = req.previous_grade !== null ? req.previous_grade : "";
+  if (elements.reevalDecisionNotes) elements.reevalDecisionNotes.value = "";
+  if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "flex";
+}
+
+async function handleSubmitReevaluationRequest() {
+  if (!currentWorkflowSubmission) return;
+  const reasonVal = elements.reevalReasonInput ? elements.reevalReasonInput.value.trim() : "";
+  if (!reasonVal) {
+    showToast("Please provide a reason for re-evaluation.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.requestReevaluation(currentWorkflowSubmission.id), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ reason: reasonVal })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to submit re-evaluation request.", "error");
+      return;
+    }
+    showToast("Re-evaluation request submitted to instructor.", "success");
+    if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "none";
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+async function handleSubmitReevaluationDecision() {
+  if (!currentReevaluationRequest) return;
+  const decisionVal = elements.reevalDecisionSelect ? elements.reevalDecisionSelect.value : "approved";
+  const revisedGradeVal = elements.reevalRevisedGrade ? parseFloat(elements.reevalRevisedGrade.value) : null;
+  const notesVal = elements.reevalDecisionNotes ? elements.reevalDecisionNotes.value.trim() : null;
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.reevaluationDecision(currentReevaluationRequest.id), {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        status: decisionVal,
+        revised_grade: decisionVal === "approved" ? revisedGradeVal : null,
+        decision_notes: notesVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to record decision.", "error");
+      return;
+    }
+    showToast("Re-evaluation decision recorded.", "success");
+    closeReevaluationModal();
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Finalization
+async function openFinalizeModal() {
+  if (!currentAnalyticsClassId || !currentAnalyticsSubject) {
+    showToast("Please select a class and subject first.", "warning");
+    return;
+  }
+  if (elements.finalizeAlert) elements.finalizeAlert.style.display = "none";
+  if (elements.finalizeNotesInput) elements.finalizeNotesInput.value = "";
+
+  const asgns = (state.assignments || []).filter(a => a.class_id == currentAnalyticsClassId && a.subject === currentAnalyticsSubject);
+  const units = [...new Set(asgns.map(a => a.unit || 1))].sort((a,b) => a-b);
+
+  if (elements.finalizeUnitsChecklist) {
+    elements.finalizeUnitsChecklist.innerHTML = units.map(u => `
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+        <input type="checkbox" class="finalize-unit-check" value="${u}" checked>
+        <span>Unit ${u} (Required)</span>
+      </label>
+    `).join("");
+  }
+
+  if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "flex";
+}
+
+async function handleConfirmFinalize() {
+  const checkedUnits = Array.from(document.querySelectorAll(".finalize-unit-check:checked")).map(cb => cb.value).join(",");
+  const auditNotes = elements.finalizeNotesInput ? elements.finalizeNotesInput.value.trim() : null;
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.finalize(currentAnalyticsClassId, currentAnalyticsSubject), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        required_units: checkedUnits || "1",
+        audit_notes: auditNotes
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to finalize results.", "error");
+      return;
+    }
+    showToast("Subject results successfully finalized and locked.", "success");
+    if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "none";
+    await refreshAnalyticsData();
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Leaderboard & Reports
+async function toggleLeaderboard() {
+  if (!elements.analyticsLeaderboardCard) return;
+  const isHidden = elements.analyticsLeaderboardCard.style.display === "none";
+
+  if (isHidden) {
+    try {
+      const res = await fetch(API_ENDPOINTS.analytics.leaderboard(currentAnalyticsClassId, currentAnalyticsSubject), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        const board = Array.isArray(resData) ? resData : (resData.leaderboard || []);
+        if (elements.analyticsLeaderboardBody) {
+          elements.analyticsLeaderboardBody.innerHTML = board.map(b => `
+            <tr style="${(b.is_self || b.is_current_user) ? 'background: #eff6ff; font-weight: 600;' : ''}">
+              <td><strong>#${b.rank}</strong></td>
+              <td>${escapeHtml(b.display_name)}${(b.is_self || b.is_current_user) ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+              <td style="color: #2563eb; font-weight: 700;">${(b.percentage ?? b.score) !== null && (b.percentage ?? b.score) !== undefined ? (b.percentage ?? b.score) + '%' : '—'}</td>
+              <td>${b.units_completed ?? b.completed_units ?? 0}</td>
+            </tr>
+          `).join("");
+        }
+        elements.analyticsLeaderboardCard.style.display = "block";
+      }
+    } catch (e) {
+      showToast("Failed to load class leaderboard", "error");
+    }
+  } else {
+    elements.analyticsLeaderboardCard.style.display = "none";
+  }
+}
+
+function handleDownloadSummaryCsv() {
+  if (!currentAnalyticsClassId) {
+    showToast("Select a class first.", "warning");
+    return;
+  }
+  window.open(API_ENDPOINTS.analytics.summaryCsv(currentAnalyticsClassId), "_blank");
+}
+
+function handleDownloadDetailedCsv() {
+  if (!currentAnalyticsClassId) {
+    showToast("Select a class first.", "warning");
+    return;
+  }
+  window.open(API_ENDPOINTS.analytics.detailedCsv(currentAnalyticsClassId), "_blank");
 }
 
 // ==========================================================================
@@ -913,16 +2020,21 @@ function setupEventListeners() {
 async function fetchAssignments() {
   showLoadingState();
 
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
+
   try {
     const response = await fetch(API_ENDPOINTS.assignments, {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
 
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+
     if (response.status === 401) {
-      state.currentUser = null;
-      updateUserUI(null);
+      clearUserState();
       openAuthModal("signin", "Please sign in to view your assignments.");
       return;
     }
@@ -932,17 +2044,31 @@ async function fetchAssignments() {
     }
 
     const data = await response.json();
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+
     state.assignments = data;
 
     if (state.currentUser && state.currentUser.role === "student") {
       await fetchStudentSubmissions(data);
+      if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
     }
 
     updateSubjectFilterOptions(data);
+    updateUnitFilterOptions(data);
     populateClassFilterOptions(state.classes);
     updateStatistics(data);
     applyFiltersAndRender();
+
+    if (state.pendingResubmitAssignmentId && state.currentUser?.role === "student") {
+      const targetId = state.pendingResubmitAssignmentId;
+      state.pendingResubmitAssignmentId = null;
+      const targetAsgn = state.assignments.find((a) => a.id === targetId);
+      if (targetAsgn) {
+        openSubmitWorkModal(targetAsgn, state.mySubmissions ? state.mySubmissions[targetId] : null);
+      }
+    }
   } catch (error) {
+    if (error.name === "AbortError") return;
     console.error("Error fetching assignments:", error);
     showErrorState(error.message || "Failed to load data from backend server.");
   }
@@ -991,6 +2117,17 @@ async function handleFormSubmit(e) {
   }
   formData.append("due_date", isoDueDate);
   formData.append("status", elements.formStatus.value);
+  formData.append("unit", elements.formUnit ? elements.formUnit.value || "1" : "1");
+  formData.append("max_marks", elements.formMaxMarks ? elements.formMaxMarks.value || "100" : "100");
+  if (elements.formGracePeriod) {
+    formData.append("grace_period_minutes", elements.formGracePeriod.value || "0");
+  }
+  if (elements.formLatePenalty) {
+    formData.append("late_penalty_percent", elements.formLatePenalty.value || "0");
+  }
+  if (elements.formAllowLate) {
+    formData.append("allow_late", elements.formAllowLate.value === "true" ? "true" : "false");
+  }
 
   // Link to Class
   const classVal = elements.formClass ? elements.formClass.value : "";
@@ -1016,14 +2153,22 @@ async function handleFormSubmit(e) {
     });
 
     if (response.status === 401) {
-      state.currentUser = null;
-      updateUserUI(null);
+      clearUserState();
       openAuthModal("signin", "Session expired. Please sign in again.");
       return;
     }
 
     if (response.status === 403) {
       throw new Error("Permission denied: Only teachers can create or update assignments.");
+    }
+
+    if (response.status === 409) {
+      const errorData = await response.json().catch(() => ({}));
+      const detail = errorData.detail || "An assessment already exists for this unit in this subject and class.";
+      if (elements.unitError) elements.unitError.textContent = detail;
+      showToast(detail, "error");
+      setFormLoading(false);
+      return;
     }
 
     if (!response.ok) {
@@ -1084,8 +2229,7 @@ async function handleConfirmDelete() {
     });
 
     if (response.status === 401) {
-      state.currentUser = null;
-      updateUserUI(null);
+      clearUserState();
       openAuthModal("signin", "Session expired. Please sign in again.");
       return;
     }
@@ -1210,6 +2354,12 @@ function applyFiltersAndRender() {
     filtered = filtered.filter((item) => item.subject === subject);
   }
 
+  // 3b. Unit Filter
+  if (state.filters.unit && state.filters.unit !== "all") {
+    const targetUnit = parseInt(state.filters.unit, 10);
+    filtered = filtered.filter((item) => (item.unit || 1) === targetUnit);
+  }
+
   // 4. Status Filter
   if (status !== "all") {
     filtered = filtered.filter((item) => {
@@ -1279,7 +2429,7 @@ function renderTable(assignments) {
     // Class pill badge
     const classBadge = assignment.class_name
       ? `<span class="class-pill" title="Class: ${escapeHtml(assignment.class_name)}">${escapeHtml(assignment.class_name)}</span>`
-      : "";
+      : (isTeacher ? `<span class="class-pill unassigned-pill" title="Private teacher draft: not visible to students until assigned to a class">Unassigned (Draft)</span>` : "");
 
     // PDF attachment chip indicator
     const pdfBadge = assignment.has_attachment
@@ -1335,9 +2485,22 @@ function renderTable(assignments) {
       `;
     } else if (isStudent) {
       if (mySub) {
+        const resubAllowed = Boolean(mySub.resubmission_allowed);
+        let isResubExpired = false;
+        if (resubAllowed && mySub.resubmission_deadline) {
+          isResubExpired = new Date(mySub.resubmission_deadline).getTime() < Date.now();
+        }
+
+        const resubmitBtn = (resubAllowed && !isResubExpired)
+          ? `<button class="btn btn-sm btn-warning resubmit-work-btn" data-id="${assignment.id}" title="Teacher authorized resubmission: click to submit a revised attempt" style="padding: 0.25rem 0.65rem; font-size: 0.775rem; font-weight: 600;">
+               ↻ Resubmit
+             </button>`
+          : "";
+
         actionsHtml = `
           <div class="action-btn-group">
             ${downloadActionBtn}
+            ${resubmitBtn}
             <button class="btn btn-sm btn-outline view-submission-btn" data-id="${assignment.id}" title="View Your Submission" style="padding: 0.25rem 0.65rem; font-size: 0.775rem;">
               View Work
             </button>
@@ -1361,12 +2524,35 @@ function renderTable(assignments) {
 
     let studentSubBadge = "";
     if (isStudent && mySub) {
+      const resubAllowed = Boolean(mySub.resubmission_allowed);
+      let isResubExpired = false;
+      if (resubAllowed && mySub.resubmission_deadline) {
+        isResubExpired = new Date(mySub.resubmission_deadline).getTime() < Date.now();
+      }
+
+      let resubBadge = "";
+      if (resubAllowed) {
+        if (!isResubExpired) {
+          const dlHint = mySub.resubmission_deadline ? ` until ${formatDisplayDate(mySub.resubmission_deadline)}` : "";
+          resubBadge = `<span class="submission-pill status-resubmit-allowed" title="Resubmission permitted by teacher${dlHint}">↻ Resubmission Permitted</span>`;
+        } else {
+          resubBadge = `<span class="submission-pill status-resubmit-expired" title="Resubmission deadline passed on ${formatDisplayDate(mySub.resubmission_deadline)}">Resubmission Expired</span>`;
+        }
+      }
+
+      let gradeBadge = "";
       if (mySub.status === "released" && mySub.grade !== null && mySub.grade !== undefined) {
-        studentSubBadge = `<span class="submission-pill status-released" title="Grade Released: ${mySub.grade}/${mySub.max_marks || 100}">Score: ${mySub.grade}/${mySub.max_marks || 100}</span>`;
+        gradeBadge = `<span class="submission-pill status-released" title="Grade Released: ${mySub.grade}/${mySub.max_marks || 100}">Score: ${mySub.grade}/${mySub.max_marks || 100}</span>`;
       } else {
-        studentSubBadge = mySub.is_late
+        gradeBadge = mySub.is_late
           ? `<span class="submission-pill status-late" title="Submitted Late on ${formatDisplayDate(mySub.submitted_at)}">✓ Late (In Review)</span>`
           : `<span class="submission-pill status-ungraded" title="Submitted on ${formatDisplayDate(mySub.submitted_at)}">✓ Pending Review</span>`;
+      }
+
+      if (resubBadge) {
+        studentSubBadge = `<div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">${gradeBadge}${resubBadge}</div>`;
+      } else {
+        studentSubBadge = gradeBadge;
       }
     }
 
@@ -1374,11 +2560,13 @@ function renderTable(assignments) {
       <td class="col-num">${index + 1}</td>
       <td class="col-title" title="${escapeHtml(assignment.description || assignment.title)}">
         <span class="title-text">${escapeHtml(assignment.title)}</span>
+        <span class="marks-chip" title="Maximum Marks: ${assignment.max_marks || 100}">${assignment.max_marks || 100} pts</span>
         ${pdfBadge}
       </td>
       <td class="col-subject">
         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;">
           <span>${escapeHtml(assignment.subject)}</span>
+          <span class="unit-badge">Unit ${assignment.unit || 1}</span>
           ${classBadge}
         </div>
       </td>
@@ -1401,6 +2589,7 @@ function renderTable(assignments) {
     const deleteBtn = tr.querySelector(".delete-btn");
     const submissionsBtn = tr.querySelector(".submissions-btn");
     const submitWorkBtn = tr.querySelector(".submit-work-btn");
+    const resubmitBtn = tr.querySelector(".resubmit-work-btn");
     const viewSubBtn = tr.querySelector(".view-submission-btn");
     const subPill = tr.querySelector(".submission-pill");
 
@@ -1415,6 +2604,9 @@ function renderTable(assignments) {
     }
     if (submitWorkBtn) {
       submitWorkBtn.addEventListener("click", () => openSubmitWorkModal(assignment));
+    }
+    if (resubmitBtn) {
+      resubmitBtn.addEventListener("click", () => openSubmitWorkModal(assignment, mySub));
     }
     if (viewSubBtn) {
       viewSubBtn.addEventListener("click", () => openViewSubmissionModal(assignment, mySub));
@@ -1433,6 +2625,10 @@ function renderTable(assignments) {
 
 function openDrawer(assignmentToEdit = null) {
   clearFormErrors();
+
+  if (state.classes && state.classes.length > 0 && elements.formClass && elements.formClass.options.length <= 1) {
+    populateFormClassOptions(state.classes);
+  }
 
   if (assignmentToEdit) {
     state.editingId = assignmentToEdit.id;
@@ -1457,21 +2653,46 @@ function openDrawer(assignmentToEdit = null) {
     elements.formDescription.value = assignmentToEdit.description || "";
     elements.formDueDate.value = formatInputDate(assignmentToEdit.due_date);
     elements.formStatus.value = assignmentToEdit.status || "active";
+    if (elements.formUnit) {
+      elements.formUnit.value = assignmentToEdit.unit !== undefined && assignmentToEdit.unit !== null ? assignmentToEdit.unit : 1;
+    }
+    if (elements.formMaxMarks) {
+      elements.formMaxMarks.value = assignmentToEdit.max_marks !== undefined && assignmentToEdit.max_marks !== null ? assignmentToEdit.max_marks : 100;
+    }
     if (elements.formClass) {
       elements.formClass.value = assignmentToEdit.class_id ? String(assignmentToEdit.class_id) : "";
+    }
+    if (elements.formGracePeriod) {
+      elements.formGracePeriod.value = assignmentToEdit.grace_period_minutes !== undefined && assignmentToEdit.grace_period_minutes !== null ? assignmentToEdit.grace_period_minutes : 0;
+    }
+    if (elements.formLatePenalty) {
+      elements.formLatePenalty.value = assignmentToEdit.late_penalty_percent !== undefined && assignmentToEdit.late_penalty_percent !== null ? assignmentToEdit.late_penalty_percent : 0;
+    }
+    if (elements.formAllowLate) {
+      elements.formAllowLate.value = assignmentToEdit.allow_late === false ? "false" : "true";
+    }
+    if (elements.drawerExtensionsBtn) {
+      elements.drawerExtensionsBtn.style.display = "inline-flex";
     }
 
     // Reset file input for edit mode
     elements.formPdf.value = "";
     elements.dropzoneText.textContent = "Choose new PDF to replace (optional)";
+    elements.dropzoneText.title = "";
 
     // Display existing attachment details if attached
     if (assignmentToEdit.has_attachment && assignmentToEdit.file_name) {
       elements.currentAttachmentBox.style.display = "flex";
-      elements.currentAttachmentName.textContent = `${assignmentToEdit.file_name} (${formatBytes(assignmentToEdit.file_size || 0)})`;
+      const attachmentLabel = `${assignmentToEdit.file_name} (${formatBytes(assignmentToEdit.file_size || 0)})`;
+      elements.currentAttachmentName.textContent = attachmentLabel;
+      elements.currentAttachmentName.title = attachmentLabel;
       elements.pdfRequiredStar.style.display = "none";
     } else {
       elements.currentAttachmentBox.style.display = "none";
+      if (elements.currentAttachmentName) {
+        elements.currentAttachmentName.textContent = "";
+        elements.currentAttachmentName.title = "";
+      }
       elements.pdfRequiredStar.style.display = "inline";
     }
   } else {
@@ -1479,13 +2700,37 @@ function openDrawer(assignmentToEdit = null) {
     elements.drawerTitle.textContent = "Create New Assignment";
     elements.submitBtnText.textContent = "Create Assignment";
 
+    clearFormErrors();
     elements.assignmentForm.reset();
     elements.assignmentId.value = "";
     elements.formPdf.value = "";
     elements.dropzoneText.textContent = "Choose question PDF or drag & drop";
+    elements.dropzoneText.title = "";
     elements.currentAttachmentBox.style.display = "none";
+    if (elements.currentAttachmentName) {
+      elements.currentAttachmentName.textContent = "";
+      elements.currentAttachmentName.title = "";
+    }
     elements.pdfRequiredStar.style.display = "inline";
     elements.customSubjectGroup.style.display = "none";
+    if (elements.formUnit) {
+      elements.formUnit.value = "1";
+    }
+    if (elements.formMaxMarks) {
+      elements.formMaxMarks.value = "100";
+    }
+    if (elements.formGracePeriod) {
+      elements.formGracePeriod.value = "0";
+    }
+    if (elements.formLatePenalty) {
+      elements.formLatePenalty.value = "0";
+    }
+    if (elements.formAllowLate) {
+      elements.formAllowLate.value = "true";
+    }
+    if (elements.drawerExtensionsBtn) {
+      elements.drawerExtensionsBtn.style.display = "none";
+    }
 
     // Default due date to 7 days in the future
     const defaultDate = new Date();
@@ -1498,8 +2743,11 @@ function openDrawer(assignmentToEdit = null) {
     }
   }
 
+  // Proactively run duplicate check on initial drawer state
+  checkDuplicateUnit();
+
   elements.drawerOverlay.classList.add("active");
-  elements.assignmentDrawer.classList.add("active");
+  elements.assignmentDrawer.classList.add("active", "open");
   document.body.style.overflow = "hidden";
 
   setTimeout(() => elements.formTitle.focus(), 250);
@@ -1507,7 +2755,7 @@ function openDrawer(assignmentToEdit = null) {
 
 function closeDrawer() {
   elements.drawerOverlay.classList.remove("active");
-  elements.assignmentDrawer.classList.remove("active");
+  elements.assignmentDrawer.classList.remove("active", "open");
   document.body.style.overflow = "";
   state.editingId = null;
   clearFormErrors();
@@ -1537,6 +2785,70 @@ function closeSidebar() {
 // ==========================================================================
 // Form Validation & State
 // ==========================================================================
+
+/**
+ * Proactively checks if an assessment already exists for the given (class, subject, unit).
+ * Updates inline unitError if a duplicate exists, or clears it if valid.
+ * Returns true if valid (no duplicate), false if duplicate exists.
+ */
+function checkDuplicateUnit() {
+  if (!elements.formUnit || !elements.unitError) return true;
+
+  const unitVal = parseInt(elements.formUnit.value, 10);
+  if (isNaN(unitVal) || unitVal < 1) {
+    return false;
+  }
+
+  // Determine Subject
+  let subjectValue = elements.formSubject ? elements.formSubject.value : "";
+  if (subjectValue === "Other" && elements.formCustomSubject) {
+    subjectValue = elements.formCustomSubject.value.trim();
+  }
+  subjectValue = (subjectValue || "").trim();
+
+  // Determine Class ID
+  const classVal = elements.formClass && elements.formClass.value ? elements.formClass.value : "";
+  const targetClassId = classVal ? parseInt(classVal, 10) : null;
+
+  // If no subject or no class selected yet, clear existing duplicate error message if any
+  if (!subjectValue || targetClassId === null) {
+    if (elements.unitError.textContent.includes("already exists for Unit") || elements.unitError.textContent.includes("already exists")) {
+      elements.unitError.textContent = "";
+    }
+    return true;
+  }
+
+  // Search existing assignments in state
+  const assignmentsList = state.assignments || [];
+  const duplicate = assignmentsList.find((a) => {
+    // Skip the assignment currently being edited
+    if (state.editingId && Number(a.id) === Number(state.editingId)) return false;
+
+    // Class matching
+    const aClassId = a.class_id != null ? Number(a.class_id) : null;
+    if (aClassId !== targetClassId) return false;
+
+    // Subject matching: case-insensitive trimmed
+    const aSubject = (a.subject || "").trim().toLowerCase();
+    if (aSubject !== subjectValue.toLowerCase()) return false;
+
+    // Unit matching: default unit is 1 if not set
+    const aUnit = a.unit != null ? Number(a.unit) : 1;
+    return aUnit === unitVal;
+  });
+
+  if (duplicate) {
+    const errorMsg = `An assessment already exists for Unit ${unitVal} in '${subjectValue}' for this class. Each unit contains only one assessment.`;
+    elements.unitError.textContent = errorMsg;
+    return false;
+  } else {
+    // Clear only duplicate unit error if currently displayed
+    if (elements.unitError.textContent.includes("already exists for Unit") || elements.unitError.textContent.includes("already exists")) {
+      elements.unitError.textContent = "";
+    }
+    return true;
+  }
+}
 
 function validateForm() {
   clearFormErrors();
@@ -1578,6 +2890,26 @@ function validateForm() {
     isValid = false;
   }
 
+  // Unit validation (v0.2.0: positive integer & duplicate check)
+  if (elements.formUnit) {
+    const unitVal = parseInt(elements.formUnit.value, 10);
+    if (isNaN(unitVal) || unitVal < 1) {
+      if (elements.unitError) elements.unitError.textContent = "Unit must be a positive integer (>= 1).";
+      isValid = false;
+    } else if (!checkDuplicateUnit()) {
+      isValid = false;
+    }
+  }
+
+  // Maximum Marks validation (v0.2.0: positive number)
+  if (elements.formMaxMarks) {
+    const marksVal = parseFloat(elements.formMaxMarks.value);
+    if (isNaN(marksVal) || marksVal <= 0) {
+      if (elements.maxMarksError) elements.maxMarksError.textContent = "Maximum marks must be greater than 0.";
+      isValid = false;
+    }
+  }
+
   return isValid;
 }
 
@@ -1586,6 +2918,8 @@ function clearFormErrors() {
   elements.subjectError.textContent = "";
   elements.dueDateError.textContent = "";
   if (elements.pdfError) elements.pdfError.textContent = "";
+  if (elements.unitError) elements.unitError.textContent = "";
+  if (elements.maxMarksError) elements.maxMarksError.textContent = "";
 }
 
 function handleFileSelection(file) {
@@ -1593,16 +2927,20 @@ function handleFileSelection(file) {
   if (!file.name.toLowerCase().endsWith(".pdf")) {
     elements.pdfError.textContent = "Please select a valid PDF document (.pdf).";
     elements.dropzoneText.textContent = "Invalid file type (PDF required)";
+    elements.dropzoneText.title = "";
     return;
   }
   const maxSizeBytes = 10 * 1024 * 1024;
   if (file.size > maxSizeBytes) {
     elements.pdfError.textContent = "File size exceeds the 10MB maximum limit.";
     elements.dropzoneText.textContent = "File too large (max 10MB)";
+    elements.dropzoneText.title = "";
     return;
   }
   elements.pdfError.textContent = "";
-  elements.dropzoneText.textContent = `${file.name} (${formatBytes(file.size)})`;
+  const displayLabel = `${file.name} (${formatBytes(file.size)})`;
+  elements.dropzoneText.textContent = displayLabel;
+  elements.dropzoneText.title = displayLabel;
 }
 
 function resetDropzoneText() {
@@ -1611,6 +2949,7 @@ function resetDropzoneText() {
   } else {
     elements.dropzoneText.textContent = "Choose question PDF or drag & drop";
   }
+  elements.dropzoneText.title = "";
 }
 
 function formatBytes(bytes) {
@@ -1679,6 +3018,146 @@ function updateSubjectFilterOptions(assignments) {
       }
       elements.subjectFilter.appendChild(option);
     });
+}
+
+/**
+ * Updates dynamic options in the unit filter dropdown based on loaded data
+ */
+function updateUnitFilterOptions(assignments) {
+  if (!elements.unitFilter) return;
+  const units = new Set();
+  assignments.forEach((a) => {
+    if (a.unit !== undefined && a.unit !== null) {
+      units.add(Number(a.unit));
+    }
+  });
+
+  const currentSelection = elements.unitFilter.value;
+  elements.unitFilter.innerHTML = '<option value="all">All Units</option>';
+
+  Array.from(units)
+    .sort((a, b) => a - b)
+    .forEach((unitNum) => {
+      const option = document.createElement("option");
+      option.value = String(unitNum);
+      option.textContent = `Unit ${unitNum}`;
+      if (String(unitNum) === currentSelection) {
+        option.selected = true;
+      }
+      elements.unitFilter.appendChild(option);
+    });
+}
+
+/**
+ * Opens and renders the Curriculum Units & Assessment Structure modal
+ */
+async function openStructureModal() {
+  if (!elements.structureModalBackdrop) return;
+  elements.structureModalBackdrop.style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "flex";
+  if (elements.structureTreeContainer) elements.structureTreeContainer.innerHTML = "";
+  if (elements.structureEmptyState) elements.structureEmptyState.style.display = "none";
+
+  try {
+    const res = await fetch(`${API_ENDPOINTS.assignments}/structure/units`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to load structure (HTTP ${res.status})`);
+    }
+
+    const structureList = await res.json();
+    if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "none";
+
+    if (!structureList || structureList.length === 0) {
+      if (elements.structureEmptyState) elements.structureEmptyState.style.display = "flex";
+      return;
+    }
+
+    let html = "";
+    structureList.forEach((cls) => {
+      html += `
+        <div class="structure-class-card">
+          <div class="structure-class-header">
+            <div class="structure-class-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                <path d="M6 6h10"></path>
+                <path d="M6 10h10"></path>
+              </svg>
+              <span>${escapeHtml(cls.class_name)}</span>
+            </div>
+            <span class="class-pill">${cls.subjects ? cls.subjects.length : 0} Subjects</span>
+          </div>
+          <div class="structure-subjects-grid">
+      `;
+
+      if (cls.subjects && cls.subjects.length > 0) {
+        cls.subjects.forEach((subj) => {
+          html += `
+            <div class="structure-subject-card">
+              <div class="structure-subject-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span>${escapeHtml(subj.subject)}</span>
+                <span class="unit-badge">${subj.units ? subj.units.length : 0} Units</span>
+              </div>
+              <div class="structure-units-list">
+          `;
+
+          if (subj.units && subj.units.length > 0) {
+            subj.units.forEach((u) => {
+              const dueStr = u.due_date ? formatDisplayDate(u.due_date) : "No deadline";
+              html += `
+                <div class="structure-unit-item">
+                  <div class="structure-unit-header">
+                    <span class="structure-unit-num">Unit ${u.unit}</span>
+                    <span class="structure-unit-marks">${u.max_marks || 100} pts</span>
+                  </div>
+                  <div class="structure-unit-assessment-title">${escapeHtml(u.title)}</div>
+                  <div class="structure-unit-due">Due: ${dueStr}</div>
+                </div>
+              `;
+            });
+          } else {
+            html += `<p style="color: var(--text-muted); font-size: 0.825rem;">No units in this subject.</p>`;
+          }
+
+          html += `
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        html += `<p style="color: var(--text-muted); font-size: 0.85rem;">No subjects configured.</p>`;
+      }
+
+      html += `
+          </div>
+        </div>
+      `;
+    });
+
+    if (elements.structureTreeContainer) elements.structureTreeContainer.innerHTML = html;
+  } catch (err) {
+    console.error("Structure error:", err);
+    if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "none";
+    if (elements.structureTreeContainer) {
+      elements.structureTreeContainer.innerHTML = `<p style="color: var(--danger); font-size: 0.875rem;">Failed to load curriculum units: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+}
+
+function closeStructureModal() {
+  if (elements.structureModalBackdrop) elements.structureModalBackdrop.style.display = "none";
+  document.body.style.overflow = "";
 }
 
 /**
@@ -1767,6 +3246,192 @@ function escapeHtml(str) {
 // ==========================================================================
 
 /**
+ * Role-based route authorization.
+ * Returns true if the user's role has permission to access the target route.
+ */
+function canUserAccessRoute(user, route) {
+  if (!user || !user.role) return false;
+  const normalized = (route || "").toLowerCase().trim();
+  if (!SUPPORTED_VIEWS.includes(normalized)) return false;
+
+  const rolePermissions = {
+    teacher: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
+    student: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
+  };
+
+  const allowedRoutes = rolePermissions[user.role] || ["dashboard"];
+  return allowedRoutes.includes(normalized);
+}
+
+/**
+ * Completely clears all in-memory user-specific state, aborts in-flight requests,
+ * closes all modals/drawers, empties DOM tables/containers, and resets navigation to #dashboard.
+ */
+function clearUserState() {
+  // Invalidate any in-flight asynchronous requests from previous session
+  if (state.activeAbortController) {
+    try {
+      state.activeAbortController.abort();
+    } catch (_) {}
+  }
+  state.activeAbortController = new AbortController();
+  state.authEpoch = (state.authEpoch || 0) + 1;
+
+  // Clear in-memory user-specific state
+  state.currentUser = null;
+  state.assignments = [];
+  state.filteredAssignments = [];
+  state.classes = [];
+  state.mySubmissions = {};
+  state.submissionsData = [];
+  state.editingId = null;
+  state.deletePendingId = null;
+  state.currentSubmittingAssignment = null;
+  state.currentSubmittingExistingSubmission = null;
+  state.currentViewingAssignment = null;
+  state.currentViewingSubmission = null;
+  state.currentGradingAssignment = null;
+  state.currentGradingSubmissions = [];
+  state.currentGradingIndex = 0;
+  state.pendingSingleReleaseSubId = null;
+  state.isGradingSaving = false;
+  if (state.selectedSubmissionIds) {
+    state.selectedSubmissionIds.clear();
+  } else {
+    state.selectedSubmissionIds = new Set();
+  }
+  state.filters = {
+    search: "",
+    classId: "all",
+    subject: "all",
+    unit: "all",
+    status: "all",
+    sort: "newest",
+  };
+
+  // Clear module-level variables
+  currentExtensionAssignmentId = null;
+  currentWorkflowSubmission = null;
+  currentReevaluationRequest = null;
+  currentAnalyticsClassId = null;
+  currentAnalyticsSubject = "";
+
+  // Close all open modals, drawers, and menus to prevent background bleed
+  try { closeProfileMenu(); } catch (_) {}
+  try { closeDrawer(); } catch (_) {}
+  try { closeDeleteModal(); } catch (_) {}
+  try { closeSidebar(); } catch (_) {}
+  try { closeClassesModal(); } catch (_) {}
+  try { closeSubmitWorkModal(); } catch (_) {}
+  try { closeViewSubmissionModal(); } catch (_) {}
+  try { closeTeacherSubmissionsModal(); } catch (_) {}
+  try { closeSubmissionPreviewModal(); } catch (_) {}
+  try {
+    if (elements.gradingWorkspaceModalBackdrop) elements.gradingWorkspaceModalBackdrop.style.display = "none";
+    if (elements.gradingPdfIframe) elements.gradingPdfIframe.src = "about:blank";
+    if (elements.gradingPdfSpinner) elements.gradingPdfSpinner.style.display = "none";
+  } catch (_) {}
+  try { closeGradeCorrectionModal(); } catch (_) {}
+  try { closeResubmissionModal(); } catch (_) {}
+  try { closeReevaluationModal(); } catch (_) {}
+  try { closeSubmissionHistoryModal(); } catch (_) {}
+  try { closeSingleReleaseModal(); } catch (_) {}
+  try { closeBulkReleaseModal(); } catch (_) {}
+  try { closeStructureModal(); } catch (_) {}
+  if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
+
+  // Clear role/user-specific DOM tables and containers
+  if (elements.submissionsTableHead) elements.submissionsTableHead.innerHTML = "";
+  if (elements.submissionsTableBody) elements.submissionsTableBody.innerHTML = "";
+  if (elements.submissionsEmptyState) elements.submissionsEmptyState.style.display = "none";
+  if (elements.submissionsLoadingState) elements.submissionsLoadingState.style.display = "none";
+  if (elements.classesPageContent) elements.classesPageContent.innerHTML = "";
+  if (elements.tableBody) elements.tableBody.innerHTML = "";
+  if (elements.dashMetricsRow) elements.dashMetricsRow.innerHTML = "";
+  if (elements.dashDueAssignmentsList) elements.dashDueAssignmentsList.innerHTML = "";
+  if (elements.dashRecentSubmissionsList) elements.dashRecentSubmissionsList.innerHTML = "";
+  if (elements.analyticsRankingsBody) elements.analyticsRankingsBody.innerHTML = "";
+  if (elements.analyticsUnitComparisonsBody) elements.analyticsUnitComparisonsBody.innerHTML = "";
+  if (elements.analyticsStudentFeedbackBody) elements.analyticsStudentFeedbackBody.innerHTML = "";
+  if (elements.analyticsLeaderboardBody) elements.analyticsLeaderboardBody.innerHTML = "";
+  if (elements.notificationList) {
+    elements.notificationList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>';
+  }
+  if (elements.notificationBadge) elements.notificationBadge.style.display = "none";
+
+  populateClassFilterOptions([]);
+  populateFormClassOptions([]);
+  if (elements.globalSearchInput) elements.globalSearchInput.value = "";
+  if (elements.tableSearchInput) elements.tableSearchInput.value = "";
+
+  updateUserUI(null);
+  renderTable([]);
+  updateStatistics([]);
+
+  // Reset navigation to default dashboard view
+  state.activeView = "dashboard";
+  if (window.location.hash !== "#dashboard" && window.location.hash !== "") {
+    try {
+      history.replaceState(null, "", "#dashboard");
+    } catch (_) {
+      window.location.hash = "#dashboard";
+    }
+  }
+  document.querySelectorAll(".page-view").forEach((viewEl) => {
+    viewEl.style.display = "none";
+  });
+  const dashView = document.getElementById("dashboardView");
+  if (dashView) dashView.style.display = "flex";
+  elements.navLinks.forEach((link) => link.classList.remove("active"));
+  const dashLink = document.querySelector('.nav-link[data-nav="dashboard"]');
+  if (dashLink) dashLink.classList.add("active");
+}
+
+/**
+ * Fully establishes an authenticated user session:
+ * 1. Resolves identity and role
+ * 2. Updates user UI and sidebar elements
+ * 3. Fetches user metadata (classes, notifications)
+ * 4. Checks route authorization and navigates cleanly without refresh
+ */
+async function applyAuthenticatedUserSession(user, preferredRoute = null) {
+  if (!user || !user.role) {
+    throw new Error("Unable to resolve user identity or role.");
+  }
+
+  // Cancel prior in-flight requests and increment auth epoch
+  if (state.activeAbortController) {
+    try {
+      state.activeAbortController.abort();
+    } catch (_) {}
+  }
+  state.activeAbortController = new AbortController();
+  const currentEpoch = (state.authEpoch || 0) + 1;
+  state.authEpoch = currentEpoch;
+
+  state.currentUser = user;
+  updateUserUI(user);
+
+  // Fetch initial classes and notifications
+  await Promise.allSettled([
+    fetchClasses(),
+    fetchNotifications(),
+  ]);
+
+  // Ensure session has not changed during async fetch
+  if (state.authEpoch !== currentEpoch || state.currentUser?.id !== user.id) {
+    return;
+  }
+
+  // Determine target route: check authorization for the role
+  const rawRoute = (preferredRoute || window.location.hash || "").replace(/^#\/?/, "").toLowerCase() || "dashboard";
+  const targetRoute = canUserAccessRoute(user, rawRoute) ? rawRoute : "dashboard";
+
+  // Navigate to resolved route and trigger role-specific view loader
+  navigateToView(targetRoute, true);
+}
+
+/**
  * Checks existing session against GET /api/auth/me
  */
 async function checkCurrentUser() {
@@ -1775,24 +3440,20 @@ async function checkCurrentUser() {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
 
     if (res.ok) {
       const user = await res.json();
-      state.currentUser = user;
-      updateUserUI(user);
-      await fetchClasses();
-      const initialRoute = (window.location.hash || "").replace(/^#\/?/, "").toLowerCase() || "dashboard";
-      navigateToView(initialRoute, false);
+      await applyAuthenticatedUserSession(user);
     } else {
-      state.currentUser = null;
-      updateUserUI(null);
+      clearUserState();
       openAuthModal("signin");
     }
   } catch (err) {
+    if (err.name === "AbortError") return;
     console.error("Auth check failed:", err);
-    state.currentUser = null;
-    updateUserUI(null);
+    clearUserState();
     openAuthModal("signin");
   }
 }
@@ -1874,6 +3535,11 @@ function updateUserUI(user) {
     if (elements.sidebarUserName) elements.sidebarUserName.textContent = "Guest";
     if (elements.sidebarUserRole) elements.sidebarUserRole.textContent = "Not signed in";
 
+    if (elements.navTextAssignments) elements.navTextAssignments.textContent = "Assignments";
+    if (elements.navTextClasses) elements.navTextClasses.textContent = "Classes";
+    if (elements.navTextSubmissions) elements.navTextSubmissions.textContent = "Submissions";
+    if (elements.navTextAnalytics) elements.navTextAnalytics.textContent = "Analytics";
+
     if (elements.openCreateDrawerBtn) elements.openCreateDrawerBtn.style.display = "none";
     if (elements.mobileFabBtn) elements.mobileFabBtn.style.display = "none";
     if (elements.emptyStateCreateBtn) elements.emptyStateCreateBtn.style.display = "none";
@@ -1937,16 +3603,33 @@ const SUPPORTED_VIEWS = ["dashboard", "assignments", "classes", "submissions", "
  * Switch primary view and keep URL hash + sidebar synchronized
  */
 function navigateToView(viewName, updateHash = true) {
-  let targetView = (viewName || "").toLowerCase().trim();
+  const [rawTargetView, queryString] = (viewName || "").split("?");
+  let targetView = (rawTargetView || "").toLowerCase().trim();
   if (!SUPPORTED_VIEWS.includes(targetView)) {
+    targetView = "dashboard";
+  }
+
+  // Enforce role authorization: if user cannot access the target route, redirect to default dashboard
+  if (state.currentUser && !canUserAccessRoute(state.currentUser, targetView)) {
     targetView = "dashboard";
   }
 
   state.activeView = targetView;
 
+  if (queryString) {
+    try {
+      const searchParams = new URLSearchParams(queryString);
+      const resubmitParam = searchParams.get("resubmit");
+      if (resubmitParam) {
+        state.pendingResubmitAssignmentId = parseInt(resubmitParam, 10);
+      }
+    } catch (e) {}
+  }
+
   if (updateHash) {
-    if (window.location.hash !== `#${targetView}`) {
-      window.location.hash = `#${targetView}`;
+    const fullHash = queryString ? `#${targetView}?${queryString}` : `#${targetView}`;
+    if (window.location.hash !== fullHash) {
+      window.location.hash = fullHash;
     }
   }
 
@@ -1973,6 +3656,14 @@ function navigateToView(viewName, updateHash = true) {
     fetchDashboard();
   } else if (targetView === "assignments") {
     fetchAssignments();
+    if (state.pendingResubmitAssignmentId && state.assignments && state.assignments.length) {
+      const targetId = state.pendingResubmitAssignmentId;
+      state.pendingResubmitAssignmentId = null;
+      const targetAsgn = state.assignments.find((a) => a.id === targetId);
+      if (targetAsgn) {
+        openSubmitWorkModal(targetAsgn, state.mySubmissions ? state.mySubmissions[targetId] : null);
+      }
+    }
   } else if (targetView === "classes") {
     loadClassesPageView();
   } else if (targetView === "submissions") {
@@ -2162,25 +3853,34 @@ async function loadSubmissionsPageView() {
   if (elements.submissionsEmptyState) elements.submissionsEmptyState.style.display = "none";
   if (elements.submissionsTableBody) elements.submissionsTableBody.innerHTML = "";
 
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
+
   try {
     const res = await fetch(API_ENDPOINTS.submissions, {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
     if (res.ok) {
       state.submissionsData = await res.json();
+      if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
       filterAndRenderSubmissions();
     } else {
       state.submissionsData = [];
       filterAndRenderSubmissions();
     }
   } catch (err) {
+    if (err.name === "AbortError") return;
     console.error("Submissions load error:", err);
     state.submissionsData = [];
     filterAndRenderSubmissions();
   } finally {
-    if (elements.submissionsLoadingState) elements.submissionsLoadingState.style.display = "none";
+    if (epoch === state.authEpoch && elements.submissionsLoadingState) {
+      elements.submissionsLoadingState.style.display = "none";
+    }
   }
 }
 
@@ -2274,15 +3974,33 @@ function filterAndRenderSubmissions() {
       const timingBadge = s.is_late
         ? `<span class="submission-pill status-late">Late</span>`
         : `<span class="submission-pill status-ontime">On-Time</span>`;
-      const reviewBadge = isReleased
+      let reviewBadge = isReleased
         ? `<span class="submission-pill status-released">Released</span>`
         : `<span class="submission-pill status-ungraded">Pending Review</span>`;
+
+      const resubAllowed = Boolean(s.resubmission_allowed);
+      let isResubExpired = false;
+      if (resubAllowed && s.resubmission_deadline) {
+        isResubExpired = new Date(s.resubmission_deadline).getTime() < Date.now();
+      }
+      if (resubAllowed) {
+        if (!isResubExpired) {
+          reviewBadge += `<div style="margin-top: 0.25rem;"><span class="submission-pill status-resubmit-allowed" title="Resubmission permitted by teacher">↻ Resubmit Allowed</span></div>`;
+        } else {
+          reviewBadge += `<div style="margin-top: 0.25rem;"><span class="submission-pill status-resubmit-expired" title="Resubmission deadline passed">Resubmission Expired</span></div>`;
+        }
+      }
+
+      const resubmitActionBtn = (resubAllowed && !isResubExpired)
+        ? `<button class="btn btn-warning btn-xs submissions-resubmit-btn" data-index="${idx}" type="button" title="Resubmit revised attempt">Resubmit</button>`
+        : "";
+
       const gradeHtml = isReleased
         ? `<strong>${s.grade}</strong> / ${s.max_marks || 100} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">(${Math.round((s.grade / (s.max_marks || 100)) * 100)}%)</span>`
         : `<span style="color: var(--text-muted); font-size: 0.825rem;">Pending Review</span>`;
 
       return `
-        <tr>
+        <tr data-sub-id="${s.id}" data-assignment-id="${s.assignment_id}">
           <td>${idx + 1}</td>
           <td>
             <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(s.assignment_title)}</div>
@@ -2294,10 +4012,11 @@ function filterAndRenderSubmissions() {
           </td>
           <td style="font-size: 0.85rem; color: var(--text-secondary);">${submittedTime}</td>
           <td>${timingBadge}</td>
-          <td>${reviewBadge}</td>
-          <td style="font-size: 0.875rem;">${gradeHtml}</td>
-          <td style="text-align: right; white-space: nowrap;">
+          <td class="col-sub-review-status">${reviewBadge}</td>
+          <td class="col-sub-grade" style="font-size: 0.875rem;">${gradeHtml}</td>
+          <td class="col-sub-actions" style="text-align: right; white-space: nowrap;">
             <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
+              ${resubmitActionBtn}
               <button class="btn btn-secondary btn-xs view-sub-details-btn" data-index="${idx}" type="button">
                 View Details
               </button>
@@ -2352,7 +4071,21 @@ function filterAndRenderSubmissions() {
         });
       });
     } else {
-      // Student details and preview buttons
+      // Student details, resubmit, and preview buttons
+      const resubmitBtns = elements.submissionsTableBody.querySelectorAll(".submissions-resubmit-btn");
+      resubmitBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          if (!isNaN(idx) && list[idx]) {
+            const subItem = list[idx];
+            openSubmitWorkModal(
+              { id: subItem.assignment_id, title: subItem.assignment_title, class_name: subItem.class_name },
+              subItem
+            );
+          }
+        });
+      });
+
       const detailBtns = elements.submissionsTableBody.querySelectorAll(".view-sub-details-btn");
       detailBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -2506,170 +4239,416 @@ function renderMiniCalendar(currentDate, assignments) {
 }
 
 /**
- * Renders the standalone Analytics page
+ * Renders the standalone Analytics & Results page
  */
+let currentAnalyticsClassId = null;
+let currentAnalyticsSubject = "";
+
 async function loadAnalyticsPageView() {
-  if (!elements.analyticsKpiRow) return;
+  if (!elements.analyticsView) return;
 
   const isTeacher = state.currentUser?.role === "teacher";
   if (elements.analyticsPageTitle) {
-    elements.analyticsPageTitle.textContent = isTeacher ? "Analytics & Reports" : "Results & Academic Progress";
+    elements.analyticsPageTitle.textContent = isTeacher ? "Analytics & Results" : "Results & Academic Progress";
   }
   if (elements.analyticsPageSubtitle) {
     elements.analyticsPageSubtitle.textContent = isTeacher
-      ? "Class-wide submission rates, student engagement metrics, and grading analytics."
-      : "Personal assignment completion history, timeliness compliance, and course results.";
+      ? "Class-level performance analytics, unit rankings, finalized score calculations, and reports."
+      : "Personal academic progress, unit results, teacher feedback, and privacy-safe class ranking.";
   }
 
+  // Configure action toolbar buttons based on role
+  if (elements.btnFinalizeResults) elements.btnFinalizeResults.style.display = isTeacher ? "inline-flex" : "none";
+  if (elements.btnExportSummaryCsv) elements.btnExportSummaryCsv.style.display = isTeacher ? "inline-flex" : "none";
+  if (elements.btnExportDetailedCsv) elements.btnExportDetailedCsv.style.display = isTeacher ? "inline-flex" : "none";
+  if (elements.btnToggleLeaderboard) elements.btnToggleLeaderboard.style.display = !isTeacher ? "inline-flex" : "none";
+  if (elements.analyticsStudentFeedbackCard) elements.analyticsStudentFeedbackCard.style.display = !isTeacher ? "block" : "none";
+
+  // Load classes dropdown
+  await populateAnalyticsClassSelect();
+}
+
+async function populateAnalyticsClassSelect() {
+  if (!elements.analyticsClassSelect) return;
+
   try {
-    const res = await fetch(API_ENDPOINTS.dashboard, {
+    let classesList = state.classes || [];
+    if (!classesList.length) {
+      const res = await fetch(API_ENDPOINTS.classes, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        classesList = await res.json();
+        state.classes = classesList;
+      }
+    }
+
+    elements.analyticsClassSelect.innerHTML = `<option value="">Select Class...</option>` +
+      classesList.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+
+    if (classesList.length > 0) {
+      if (!currentAnalyticsClassId || !classesList.some(c => c.id == currentAnalyticsClassId)) {
+        currentAnalyticsClassId = classesList[0].id;
+      }
+      elements.analyticsClassSelect.value = currentAnalyticsClassId;
+      await onAnalyticsClassChanged();
+    } else {
+      if (elements.analyticsRankingsBody) {
+        elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">No classes available. Join or create a class first.</td></tr>`;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to populate analytics classes:", err);
+  }
+}
+
+async function onAnalyticsClassChanged() {
+  const classId = elements.analyticsClassSelect ? elements.analyticsClassSelect.value : null;
+  currentAnalyticsClassId = classId;
+
+  if (!classId) {
+    if (elements.analyticsSubjectSelect) elements.analyticsSubjectSelect.innerHTML = `<option value="">All Subjects</option>`;
+    return;
+  }
+
+  // Populate subjects for this class based on state.assignments or fetch assignments
+  if (!state.assignments || !state.assignments.length) {
+    await fetchAssignments();
+  }
+  const classAssignments = (state.assignments || []).filter(a => a.class_id == classId);
+  const subjects = [...new Set(classAssignments.map(a => a.subject).filter(Boolean))];
+
+  if (elements.analyticsSubjectSelect) {
+    elements.analyticsSubjectSelect.innerHTML = subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    if (subjects.length > 0) {
+      currentAnalyticsSubject = subjects[0];
+      elements.analyticsSubjectSelect.value = currentAnalyticsSubject;
+    } else {
+      currentAnalyticsSubject = "General";
+      elements.analyticsSubjectSelect.innerHTML = `<option value="General">General</option>`;
+    }
+  }
+
+  await refreshAnalyticsData();
+}
+
+async function refreshAnalyticsData() {
+  if (!currentAnalyticsClassId) return;
+
+  const isTeacher = state.currentUser?.role === "teacher";
+
+  // 1. Fetch Class Overview
+  try {
+    const ovRes = await fetch(API_ENDPOINTS.analytics.overview(currentAnalyticsClassId), {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
-    if (!res.ok) return;
-    const data = await res.json();
-
-    if (isTeacher) {
-      const totalSubs = data.submissions_overview?.total || 0;
-      const lateSubs = data.submissions_overview?.late || 0;
-      const onTimeRate = totalSubs > 0 ? Math.round(((totalSubs - lateSubs) / totalSubs) * 100) + "%" : "100%";
-
-      elements.analyticsKpiRow.innerHTML = `
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.total_assignments}</span>
-            <span class="dash-metric-label">Total Assignments</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.total_students}</span>
-            <span class="dash-metric-label">Enrolled Students</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.pending_grading}</span>
-            <span class="dash-metric-label">Total Submissions</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${onTimeRate}</span>
-            <span class="dash-metric-label">On-Time Rate</span>
-          </div>
-        </div>
-      `;
-
-      if (elements.analyticsLeftCard) {
-        elements.analyticsLeftCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Submission Breakdown</h2></div>
-          <div id="analyticsDonutContainer"></div>
-        `;
-        const overview = data.submissions_overview || { graded: 0, pending: 0, late: 0, total: 0 };
-        renderDonutChart("analyticsDonutContainer", overview.total, "Total", [
-          { label: "Graded", value: overview.graded, color: "#10b981" },
-          { label: "Pending", value: overview.pending, color: "#3b82f6" },
-          { label: "Late", value: overview.late, color: "#ef4444" },
-        ]);
-      }
-
-      if (elements.analyticsRightCard) {
-        const classesList = (data.my_classes || []).map((cls) => `
-          <div class="dash-list-item">
-            <div class="dash-item-main">
-              <div class="dash-icon-box purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-              <div class="dash-item-texts">
-                <span class="dash-item-title">${escapeHtml(cls.name)}</span>
-                <span class="dash-item-sub">${escapeHtml(cls.description)}</span>
-              </div>
-            </div>
-            <div class="dash-item-meta"><span class="dash-pill pill-new">${cls.student_count || 0} enrolled</span></div>
-          </div>
-        `).join("");
-
-        elements.analyticsRightCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Class Distribution</h2></div>
-          <div class="dash-list">${classesList || '<div class="dash-empty-state"><p>No classes created yet.</p></div>'}</div>
-        `;
-      }
-    } else {
-      const totalAsgns = data.metrics.total_assignments || 0;
-      const submitted = data.metrics.submitted || 0;
-      const completionRate = totalAsgns > 0 ? Math.round((submitted / totalAsgns) * 100) + "%" : "100%";
-
-      elements.analyticsKpiRow.innerHTML = `
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${totalAsgns}</span>
-            <span class="dash-metric-label">Total Assigned</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${submitted}</span>
-            <span class="dash-metric-label">Completed</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.pending}</span>
-            <span class="dash-metric-label">Pending</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${completionRate}</span>
-            <span class="dash-metric-label">Completion Rate</span>
-          </div>
-        </div>
-      `;
-
-      if (elements.analyticsLeftCard) {
-        elements.analyticsLeftCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Submission Status</h2></div>
-          <div id="analyticsStudentDonutContainer"></div>
-        `;
-        const statusObj = data.submission_status || { pending: 0, submitted: 0, overdue: 0, total: 0 };
-        renderDonutChart("analyticsStudentDonutContainer", statusObj.total, "Total", [
-          { label: "Pending", value: statusObj.pending, color: "#3b82f6" },
-          { label: "Submitted", value: statusObj.submitted, color: "#10b981" },
-          { label: "Overdue", value: statusObj.overdue, color: "#ef4444" },
-        ]);
-      }
-
-      if (elements.analyticsRightCard) {
-        const classesList = (data.my_classes || []).map((cls) => `
-          <div class="dash-list-item">
-            <div class="dash-item-main">
-              <div class="dash-icon-box blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg></div>
-              <div class="dash-item-texts">
-                <span class="dash-item-title">${escapeHtml(cls.name)}</span>
-                <span class="dash-item-sub">${escapeHtml(cls.teacher_name || "Instructor")}</span>
-              </div>
-            </div>
-            <div class="dash-item-meta"><span class="dash-pill pill-graded">Enrolled</span></div>
-          </div>
-        `).join("");
-
-        elements.analyticsRightCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Enrolled Classes</h2></div>
-          <div class="dash-list">${classesList || '<div class="dash-empty-state"><p>Not enrolled in any classes.</p></div>'}</div>
-        `;
-      }
+    if (ovRes.ok) {
+      const ov = await ovRes.json();
+      renderAnalyticsOverview(ov);
     }
   } catch (err) {
-    console.error("Analytics fetch error:", err);
+    console.error("Error fetching analytics overview:", err);
   }
+
+  // 2. Fetch Subject Rankings & Finalization Status
+  if (currentAnalyticsSubject) {
+    try {
+      const rkRes = await fetch(API_ENDPOINTS.analytics.rankings(currentAnalyticsClassId, currentAnalyticsSubject), {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (rkRes.ok) {
+        const rk = await rkRes.json();
+        renderAnalyticsRankings(rk);
+      }
+    } catch (err) {
+      console.error("Error fetching subject rankings:", err);
+    }
+  }
+
+  // 3. If teacher: Fetch Alerts
+  if (isTeacher && elements.analyticsAlertsContainer) {
+    try {
+      const alRes = await fetch(API_ENDPOINTS.analytics.alerts(currentAnalyticsClassId), {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (alRes.ok) {
+        const alertsData = await alRes.json();
+        renderTeacherAlerts(alertsData);
+      }
+    } catch (err) {
+      console.error("Error fetching alerts:", err);
+    }
+  }
+
+  // 4. If student: Fetch Feedback
+  if (!isTeacher && elements.analyticsStudentFeedbackBody) {
+    try {
+      const fbRes = await fetch(API_ENDPOINTS.analytics.studentFeedback, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (fbRes.ok) {
+        const fbData = await fbRes.json();
+        renderStudentFeedback(fbData);
+      }
+    } catch (err) {
+      console.error("Error fetching student feedback:", err);
+    }
+  }
+}
+
+function renderAnalyticsOverview(ov) {
+  if (elements.analyticsKpiRow) {
+    const classAvgVal = (ov.class_average_percentage ?? ov.class_average);
+    const subRateVal = (ov.submission_compliance_rate ?? ov.submission_rate);
+
+    elements.analyticsKpiRow.innerHTML = `
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${classAvgVal !== null && classAvgVal !== undefined ? classAvgVal + "%" : "—"}</span>
+          <span class="dash-metric-label">Class Average Score</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${ov.total_students}</span>
+          <span class="dash-metric-label">Enrolled Students</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${ov.total_assignments}</span>
+          <span class="dash-metric-label">Units / Assessments</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${subRateVal !== null && subRateVal !== undefined ? subRateVal + "%" : "0%"}</span>
+          <span class="dash-metric-label">Submission Rate</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Unit Comparisons
+  if (elements.analyticsUnitComparisonsBody) {
+    if (!ov.unit_comparisons || !ov.unit_comparisons.length) {
+      elements.analyticsUnitComparisonsBody.innerHTML = `<div class="dash-empty-state"><p>No unit assessments recorded for this class.</p></div>`;
+    } else {
+      elements.analyticsUnitComparisonsBody.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          ${ov.unit_comparisons.map(u => {
+            const unitTitle = u.title || u.assignment_title || "";
+            const unitAvg = (u.average_percentage ?? u.average_score);
+            const gradedCount = u.graded_count ?? u.released_count ?? 0;
+            return `
+              <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <span style="font-weight: 600; font-size: 0.875rem;">Unit ${u.unit}: ${escapeHtml(unitTitle)}</span>
+                  <span style="font-size: 0.8rem; font-weight: 700; color: #2563eb;">${unitAvg !== null && unitAvg !== undefined ? unitAvg + "% Avg" : "Ungraded"}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; display: flex; gap: 1rem;">
+                  <span>Submissions: <strong>${u.submission_count ?? 0}</strong></span>
+                  <span>Graded: <strong>${gradedCount}</strong></span>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+  }
+
+  // Grade Distribution Card
+  if (elements.analyticsRightCardBody) {
+    const dist = ov.grade_distribution || (ov.distribution ? {
+      "A (85-100%)": ov.distribution.grade_a,
+      "B (70-84%)": ov.distribution.grade_b,
+      "C (55-69%)": ov.distribution.grade_c,
+      "D (40-54%)": ov.distribution.grade_d,
+      "F (<40%)": ov.distribution.grade_f,
+    } : {});
+    const grades = [
+      { label: "A (85-100%)", count: dist["A (85-100%)"] ?? dist["A (90-100%)"] ?? dist.grade_a ?? 0, color: "#10b981" },
+      { label: "B (70-84%)", count: dist["B (70-84%)"] ?? dist["B (80-89%)"] ?? dist.grade_b ?? 0, color: "#3b82f6" },
+      { label: "C (55-69%)", count: dist["C (55-69%)"] ?? dist["C (70-79%)"] ?? dist.grade_c ?? 0, color: "#f59e0b" },
+      { label: "D (40-54%)", count: dist["D (40-54%)"] ?? dist["D (60-69%)"] ?? dist.grade_d ?? 0, color: "#f97316" },
+      { label: "F (<40%)", count: dist["F (<40%)"] ?? dist["F (<60%)"] ?? dist.grade_f ?? 0, color: "#ef4444" },
+    ];
+    elements.analyticsRightCardBody.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+        ${grades.map(g => `
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.2rem;">
+              <span>${g.label}</span>
+              <span style="font-weight: 600;">${g.count} students</span>
+            </div>
+            <div style="height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+              <div style="width: ${ov.total_students > 0 ? (g.count / ov.total_students) * 100 : 0}%; height: 100%; background: ${g.color};"></div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+}
+
+function renderAnalyticsRankings(rk) {
+  if (elements.analyticsFinalizedBadge) {
+    elements.analyticsFinalizedBadge.style.display = rk.is_finalized ? "block" : "none";
+  }
+
+  const units = rk.units || rk.required_units || [];
+  if (elements.analyticsRankingsHead) {
+    elements.analyticsRankingsHead.innerHTML = `
+      <th>Rank</th>
+      <th>Student</th>
+      ${units.map(u => `<th>Unit ${u}</th>`).join("")}
+      <th title="Calculated only from submitted and released units. Never treats unreleased work as zero.">Provisional %</th>
+      <th title="Official final score when all required units are complete.">Final %</th>
+      <th>Status</th>
+    `;
+  }
+
+  if (elements.analyticsRankingsBody) {
+    if (!rk.rankings || !rk.rankings.length) {
+      elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="${5 + units.length}" style="text-align: center; padding: 2rem; color: var(--text-muted);">No student rankings found for this subject.</td></tr>`;
+      return;
+    }
+
+    elements.analyticsRankingsBody.innerHTML = rk.rankings.map((s, idx) => {
+      const isYou = state.currentUser?.id === s.student_id;
+      const rankVal = s.rank ?? (s.is_complete ? s.final_rank : s.provisional_rank) ?? (idx + 1);
+      const isComplete = Boolean(s.is_complete || s.status === "finalized");
+      const statusPill = isComplete
+        ? `<span class="submission-pill status-graded" style="font-size:0.75rem;">Complete</span>`
+        : `<span class="submission-pill status-draft" style="font-size:0.75rem;">Provisional</span>`;
+
+      const provDisplay = (s.provisional_percentage !== null && s.provisional_percentage !== undefined)
+        ? s.provisional_percentage + "%"
+        : "—";
+
+      const finalDisplay = (isComplete && s.final_percentage !== null && s.final_percentage !== undefined)
+        ? s.final_percentage + "%"
+        : `<span style="color:#94a3b8; font-style:italic;">Pending</span>`;
+
+      const unitCols = units.map(u => {
+        let m = null;
+        if (s.unit_marks && s.unit_marks[u] !== undefined) {
+          m = s.unit_marks[u];
+        } else if (Array.isArray(s.units)) {
+          const uObj = s.units.find(x => x.unit === u);
+          if (uObj && uObj.score !== null && uObj.score !== undefined) {
+            m = uObj.score + "/" + uObj.max_marks;
+          }
+        }
+        return "<td>" + (m !== null && m !== undefined ? m : "—") + "</td>";
+      }).join("");
+
+      return `
+        <tr style="${isYou ? 'background: #eff6ff; font-weight: 600;' : ''}">
+          <td><strong>#${rankVal}</strong></td>
+          <td>${escapeHtml(s.student_name)}${isYou ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+          ${unitCols}
+          <td><strong style="color: #2563eb;">${provDisplay}</strong></td>
+          <td>${finalDisplay}</td>
+          <td>${statusPill}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+}
+
+function renderTeacherAlerts(alerts) {
+  if (!elements.analyticsAlertsContainer) return;
+
+  const atRisk = alerts.at_risk_students || [];
+  const backlog = alerts.grading_backlog || [];
+
+  if (!atRisk.length && !backlog.length) {
+    elements.analyticsAlertsContainer.style.display = "none";
+    return;
+  }
+
+  let html = `<div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">`;
+
+  if (atRisk.length > 0) {
+    html += `
+      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 0.9rem; color: #9f1239; font-weight: 600;">Students Requiring Academic Support (${atRisk.length})</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+            ${atRisk.map(s => {
+              const scoreVal = (s.provisional_percentage ?? s.provisional_score);
+              const scoreDisplay = scoreVal !== null && scoreVal !== undefined ? scoreVal + '%' : '0%';
+              return `<span style="background: #ffe4e6; color: #9f1239; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.student_name)} (${scoreDisplay})</span>`;
+            }).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (backlog.length > 0) {
+    html += `
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 0.9rem; color: #92400e; font-weight: 600;">Grading Backlog (${backlog.length} pending assessments)</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+            ${backlog.map(b => `<span style="background: #fef3c7; color: #92400e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${escapeHtml(b.title)} (${b.pending_count} pending)</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  elements.analyticsAlertsContainer.innerHTML = html;
+  elements.analyticsAlertsContainer.style.display = "block";
+}
+
+function renderStudentFeedback(fbData) {
+  if (!elements.analyticsStudentFeedbackBody) return;
+
+  const feedbacks = fbData.feedbacks || [];
+  if (!feedbacks.length) {
+    elements.analyticsStudentFeedbackBody.innerHTML = `<div class="dash-empty-state"><p>No instructor feedback recorded yet.</p></div>`;
+    return;
+  }
+
+  elements.analyticsStudentFeedbackBody.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      ${feedbacks.map(f => `
+        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600; font-size: 0.95rem;">${escapeHtml(f.assignment_title)}</span>
+            <span style="font-weight: 700; color: #2563eb; font-size: 0.9rem;">${f.grade !== null ? f.grade + ' / ' + f.max_marks : 'Ungraded'}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; background: #ffffff; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+            ${escapeHtml(f.feedback || "Good work.")}
+          </div>
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.4rem; text-align: right;">
+            Evaluated on ${new Date(f.graded_at || f.submitted_at).toLocaleDateString()}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 /**
@@ -2723,21 +4702,28 @@ function clearSettingsPreferences() {
  * Fetches role-scoped dashboard metrics, cards, and donut data
  */
 async function fetchDashboard() {
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
   try {
     const res = await fetch(API_ENDPOINTS.dashboard, {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
     if (res.ok) {
       const data = await res.json();
+      if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
       renderDashboard(data);
     } else if (res.status === 401) {
+      clearUserState();
       openAuthModal("signin");
     } else {
       console.error("Dashboard fetch error:", res.status);
     }
   } catch (err) {
+    if (err.name === "AbortError") return;
     console.error("Failed to load dashboard data:", err);
   }
 }
@@ -3229,7 +5215,7 @@ function renderDashboard(data) {
   } else {
     // Student Bottom Row
     // Left: Recently Submitted
-    const recentlySubmittedList = (data.recently_submitted || []).map((sub) => {
+    const recentlySubmittedList = (data.recently_submitted || []).map((sub, idx) => {
       const formattedDate = formatDisplayDate(sub.submitted_at);
       let statusBadge = "";
       if (sub.status === "Released" && sub.grade !== null && sub.grade !== undefined) {
@@ -3237,8 +5223,22 @@ function renderDashboard(data) {
       } else {
         statusBadge = `<span class="submission-pill status-ungraded">Pending Review</span>`;
       }
+
+      const isResubAllowed = Boolean(sub.resubmission_allowed);
+      const isResubExpired = isResubAllowed && sub.resubmission_deadline && new Date(sub.resubmission_deadline).getTime() < Date.now();
+      let resubBadge = "";
+      let resubBtnHtml = "";
+      if (isResubAllowed) {
+        if (!isResubExpired) {
+          resubBadge = `<span class="submission-pill status-resubmit-allowed" title="Resubmission permitted by teacher">↻ Resubmit Permitted</span>`;
+          resubBtnHtml = `<button class="btn btn-warning btn-xs dash-resubmit-btn" data-assignment-id="${sub.assignment_id}" data-index="${idx}" type="button" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 600;">↻ Resubmit</button>`;
+        } else {
+          resubBadge = `<span class="submission-pill status-resubmit-expired" title="Resubmission deadline passed">Resubmission Expired</span>`;
+        }
+      }
+
       return `
-        <div class="dash-list-item" style="cursor: pointer;" onclick="navigateToView('submissions')">
+        <div class="dash-list-item dash-recent-sub-item" data-assignment-id="${sub.assignment_id}" data-index="${idx}" style="cursor: pointer;">
           <div class="dash-item-main">
             <div class="dash-icon-box purple">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3253,9 +5253,16 @@ function renderDashboard(data) {
               <span class="dash-item-sub">${escapeHtml(sub.class_name)}</span>
             </div>
           </div>
-          <div class="dash-item-meta">
-            <span class="dash-item-time">${formattedDate}</span>
-            ${statusBadge}
+          <div class="dash-item-meta" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end;">
+              <span class="dash-item-time">${formattedDate}</span>
+              ${statusBadge}
+              ${resubBadge}
+            </div>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              ${resubBtnHtml}
+              <button class="btn btn-outline btn-xs dash-view-sub-btn" data-assignment-id="${sub.assignment_id}" data-index="${idx}" type="button" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">View Work</button>
+            </div>
           </div>
         </div>
       `;
@@ -3273,6 +5280,38 @@ function renderDashboard(data) {
 
     document.getElementById("linkStudentRecentlySubmittedViewAll")?.addEventListener("click", () => {
       navigateToView("submissions");
+    });
+
+    elements.dashBottomLeftCard.querySelectorAll(".dash-resubmit-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute("data-index"), 10);
+        const sub = (data.recently_submitted || [])[idx];
+        if (sub) {
+          openSubmitWorkModal({ id: sub.assignment_id, title: sub.assignment_title, class_name: sub.class_name }, sub);
+        }
+      });
+    });
+
+    elements.dashBottomLeftCard.querySelectorAll(".dash-view-sub-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute("data-index"), 10);
+        const sub = (data.recently_submitted || [])[idx];
+        if (sub) {
+          openViewSubmissionModal({ id: sub.assignment_id, title: sub.assignment_title, class_name: sub.class_name }, sub);
+        }
+      });
+    });
+
+    elements.dashBottomLeftCard.querySelectorAll(".dash-recent-sub-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const idx = parseInt(item.getAttribute("data-index"), 10);
+        const sub = (data.recently_submitted || [])[idx];
+        if (sub) {
+          openViewSubmissionModal({ id: sub.assignment_id, title: sub.assignment_title, class_name: sub.class_name }, sub);
+        }
+      });
     });
 
     // Right: My Classes
@@ -3464,12 +5503,9 @@ async function handleLoginSubmit(e) {
     }
 
     const data = await res.json();
-    state.currentUser = data.user;
-    updateUserUI(data.user);
+    await applyAuthenticatedUserSession(data.user);
     closeAuthModal();
     showToast(`Welcome back, ${data.user.full_name}!`, "success");
-    await fetchClasses();
-    await fetchAssignments();
   } catch (err) {
     console.error("Login failed:", err);
     showAuthAlert(err.message, "error");
@@ -3531,12 +5567,9 @@ async function handleRegisterSubmit(e) {
     }
 
     const data = await res.json();
-    state.currentUser = data.user;
-    updateUserUI(data.user);
+    await applyAuthenticatedUserSession(data.user);
     closeAuthModal();
     showToast(`Account created! Welcome, ${data.user.full_name}!`, "success");
-    await fetchClasses();
-    await fetchAssignments();
   } catch (err) {
     console.error("Registration failed:", err);
     showAuthAlert(err.message, "error");
@@ -3560,17 +5593,7 @@ async function handleLogout() {
     console.warn("Logout request error:", err);
   }
 
-  state.currentUser = null;
-  state.assignments = [];
-  state.filteredAssignments = [];
-  state.classes = [];
-  state.mySubmissions = {};
-  state.currentSubmittingAssignment = null;
-  populateClassFilterOptions([]);
-  populateFormClassOptions([]);
-  updateUserUI(null);
-  renderTable([]);
-  updateStatistics([]);
+  clearUserState();
   showToast("Logged out successfully.", "info");
   openAuthModal("signin");
 }
@@ -3591,15 +5614,22 @@ async function fetchClasses() {
     return;
   }
 
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
+
   try {
     const res = await fetch(API_ENDPOINTS.classes, {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
 
     if (res.ok) {
       const data = await res.json();
+      if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
       state.classes = data;
       populateClassFilterOptions(data);
       if (state.currentUser.role === "teacher") {
@@ -3610,6 +5640,7 @@ async function fetchClasses() {
       }
     }
   } catch (err) {
+    if (err.name === "AbortError") return;
     console.error("Failed to fetch classes:", err);
   }
 }
@@ -3653,7 +5684,7 @@ function populateClassFilterOptions(classes) {
 function populateFormClassOptions(classes) {
   if (!elements.formClass) return;
   const currentVal = elements.formClass.value || "";
-  elements.formClass.innerHTML = '<option value="">General / Unassigned</option>';
+  elements.formClass.innerHTML = '<option value="">General / Unassigned (Private Draft)</option>';
   classes.forEach((cls) => {
     const opt = document.createElement("option");
     opt.value = String(cls.id);
@@ -4043,22 +6074,29 @@ function clearClassesAlert() {
  * Fetches the logged-in student's submission status for the provided assignments list
  */
 async function fetchStudentSubmissions(assignments) {
-  if (!assignments || !assignments.length) return;
+  if (!assignments || !assignments.length || !state.currentUser) return;
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
   const fetchPromises = assignments.map(async (assignment) => {
     try {
       const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions/me`, {
         method: "GET",
         credentials: "same-origin",
         headers: { Accept: "application/json" },
+        signal: state.activeAbortController?.signal,
       });
+      if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
       if (res.ok) {
         const sub = await res.json();
+        if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
         state.mySubmissions[assignment.id] = sub;
       } else {
         state.mySubmissions[assignment.id] = null;
       }
     } catch (e) {
-      state.mySubmissions[assignment.id] = null;
+      if (epoch === state.authEpoch) {
+        state.mySubmissions[assignment.id] = null;
+      }
     }
   });
   await Promise.allSettled(fetchPromises);
@@ -4105,6 +6143,7 @@ function handleSubmissionFileSelection(file) {
 
   if (elements.submissionFileName) {
     elements.submissionFileName.textContent = file.name;
+    elements.submissionFileName.title = file.name;
   }
   if (elements.submissionFileSize) {
     elements.submissionFileSize.textContent = formatBytes(file.size);
@@ -4124,6 +6163,9 @@ function resetSubmissionDropzone() {
   if (elements.submissionFileInput) {
     elements.submissionFileInput.value = "";
   }
+  if (elements.submissionFileName) {
+    elements.submissionFileName.title = "";
+  }
   if (elements.submissionFilePreview) {
     elements.submissionFilePreview.style.display = "none";
   }
@@ -4135,14 +6177,119 @@ function resetSubmissionDropzone() {
 /**
  * Opens student submit work dialog
  */
-function openSubmitWorkModal(assignment) {
+async function openSubmitWorkModal(assignment, submission = null) {
   state.currentSubmittingAssignment = assignment;
+  let existingSub = submission || (state.mySubmissions ? state.mySubmissions[assignment.id] : null);
+
+  if (!existingSub || existingSub.resubmission_allowed === undefined) {
+    try {
+      const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions/me`, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        existingSub = await res.json();
+        if (state.mySubmissions) {
+          state.mySubmissions[assignment.id] = existingSub;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch submission details for submit modal:", e);
+    }
+  }
+
+  state.currentSubmittingExistingSubmission = existingSub;
   resetSubmissionDropzone();
   if (elements.submissionNotes) elements.submissionNotes.value = "";
   if (elements.submissionFileError) elements.submissionFileError.textContent = "";
   if (elements.submitWorkAlert) {
     elements.submitWorkAlert.style.display = "none";
     elements.submitWorkAlert.textContent = "";
+  }
+
+  const isResubmission = Boolean(existingSub && existingSub.resubmission_allowed);
+
+  let isExpired = false;
+  let deadlineDate = null;
+  if (isResubmission && existingSub.resubmission_deadline) {
+    deadlineDate = new Date(existingSub.resubmission_deadline);
+    if (deadlineDate.getTime() < Date.now()) {
+      isExpired = true;
+    }
+  }
+
+  if (isResubmission) {
+    if (elements.submitWorkModalTitle) {
+      elements.submitWorkModalTitle.textContent = "Resubmit Assignment Work";
+    }
+    if (elements.submitWorkModalSubtitle) {
+      const nextAttempt = (existingSub.attempt_number || 1) + 1;
+      elements.submitWorkModalSubtitle.textContent = `Submit revision attempt #${nextAttempt} • Previous attempt will be archived in history`;
+    }
+    if (elements.submitWorkBtnText) {
+      elements.submitWorkBtnText.textContent = "Submit Revision";
+    }
+
+    if (elements.submitWorkResubmitBanner) {
+      elements.submitWorkResubmitBanner.style.display = "block";
+      if (elements.submitWorkResubmitTitle) {
+        elements.submitWorkResubmitTitle.textContent = isExpired
+          ? "⚠ Resubmission Window Closed"
+          : "↻ Resubmission Authorized by Teacher";
+      }
+      if (elements.submitWorkResubmitNote) {
+        if (existingSub.resubmission_note) {
+          elements.submitWorkResubmitNote.textContent = `Teacher guidance: "${existingSub.resubmission_note}"`;
+          elements.submitWorkResubmitNote.style.display = "block";
+        } else {
+          elements.submitWorkResubmitNote.textContent = "Your teacher has authorized a revision for this assignment.";
+          elements.submitWorkResubmitNote.style.display = "block";
+        }
+      }
+      if (elements.submitWorkResubmitDeadline) {
+        if (deadlineDate) {
+          elements.submitWorkResubmitDeadline.textContent = isExpired
+            ? `Resubmission deadline passed on ${formatDisplayDateTime(existingSub.resubmission_deadline)}. Revisions can no longer be accepted.`
+            : `Resubmission deadline: ${formatDisplayDateTime(existingSub.resubmission_deadline)}`;
+          elements.submitWorkResubmitDeadline.style.display = "block";
+        } else {
+          elements.submitWorkResubmitDeadline.style.display = "none";
+        }
+      }
+    }
+
+    if (isExpired) {
+      if (elements.submitWorkAlert) {
+        elements.submitWorkAlert.className = "auth-alert error";
+        elements.submitWorkAlert.textContent = "The resubmission deadline for this assignment has expired. New attempts cannot be submitted.";
+        elements.submitWorkAlert.style.display = "block";
+      }
+      if (elements.btnSubmitWork) {
+        elements.btnSubmitWork.disabled = true;
+      }
+    } else {
+      if (elements.btnSubmitWork) {
+        elements.btnSubmitWork.disabled = false;
+      }
+    }
+  } else {
+    // Normal first submission
+    if (elements.submitWorkModalTitle) {
+      elements.submitWorkModalTitle.textContent = "Submit Assignment Work";
+    }
+    if (elements.submitWorkModalSubtitle) {
+      elements.submitWorkModalSubtitle.textContent = "Upload your completed solution";
+    }
+    if (elements.submitWorkBtnText) {
+      elements.submitWorkBtnText.textContent = "Submit Work";
+    }
+    if (elements.submitWorkResubmitBanner) {
+      elements.submitWorkResubmitBanner.style.display = "none";
+    }
+    if (elements.btnSubmitWork) {
+      elements.btnSubmitWork.disabled = false;
+    }
   }
 
   if (elements.submitWorkAssignmentName) {
@@ -4165,6 +6312,7 @@ function openSubmitWorkModal(assignment) {
  */
 function closeSubmitWorkModal() {
   state.currentSubmittingAssignment = null;
+  state.currentSubmittingExistingSubmission = null;
   resetSubmissionDropzone();
   if (elements.submitWorkModalBackdrop) {
     elements.submitWorkModalBackdrop.style.display = "none";
@@ -4230,10 +6378,64 @@ async function handleSubmitWorkForm(e) {
     }
 
     // Success! Update local state
+    const wasResubmission = Boolean(state.currentSubmittingExistingSubmission && state.currentSubmittingExistingSubmission.resubmission_allowed);
+
+    // 1. Immediately update state.mySubmissions
     state.mySubmissions[state.currentSubmittingAssignment.id] = data;
+
+    // 2. Immediately update matching entry in state.submissionsData without requiring a refresh
+    if (Array.isArray(state.submissionsData)) {
+      const subIdx = state.submissionsData.findIndex(
+        (s) => s.assignment_id === data.assignment_id || s.id === data.id
+      );
+      if (subIdx !== -1) {
+        state.submissionsData[subIdx] = {
+          ...state.submissionsData[subIdx],
+          ...data,
+          status: "submitted",
+          grade: null,
+          feedback: null,
+          resubmission_allowed: false,
+          resubmission_deadline: null,
+          resubmission_note: null,
+          attempt_number: data.attempt_number || (state.submissionsData[subIdx].attempt_number || 1) + 1,
+          file_name: data.file_name,
+          file_size: data.file_size,
+          submitted_at: data.submitted_at,
+          notes: data.notes,
+        };
+      }
+    }
+
+    // 3. Immediately re-render My Submissions page if present in DOM
+    filterAndRenderSubmissions();
+
+    // 4. Update current viewing submission if open
+    if (state.currentViewingSubmission && (state.currentViewingSubmission.id === data.id || state.currentViewingSubmission.assignment_id === data.assignment_id)) {
+      state.currentViewingSubmission = {
+        ...state.currentViewingSubmission,
+        ...data,
+        status: "submitted",
+        grade: null,
+        feedback: null,
+        resubmission_allowed: false,
+      };
+    }
+
+    // 5. Close submit modal
     closeSubmitWorkModal();
-    showToast("Work submitted successfully!", "success");
+
+    if (wasResubmission) {
+      showToast(`Revision submitted successfully! (Attempt #${data.attempt_number || 2})`, "success");
+    } else {
+      showToast("Work submitted successfully!", "success");
+    }
+
+    // 6. Synchronize assignments table and dashboard
     applyFiltersAndRender();
+    if (state.activeView === "dashboard") {
+      fetchDashboard();
+    }
   } catch (err) {
     console.error("Submission failed:", err);
     if (elements.submitWorkAlert) {
@@ -4256,7 +6458,7 @@ async function openViewSubmissionModal(assignment, submission = null) {
     submission = state.mySubmissions[assignment.id];
   }
 
-  if (!submission) {
+  if (!submission || submission.resubmission_allowed === undefined || !submission.download_url) {
     try {
       const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions/me`, {
         method: "GET",
@@ -4277,11 +6479,76 @@ async function openViewSubmissionModal(assignment, submission = null) {
     return;
   }
 
+  state.currentViewingAssignment = assignment;
+  state.currentViewingSubmission = submission;
+
   // Assignment Title and Subtitle in modal header
   if (elements.viewSubmissionModalSubtitle) {
     elements.viewSubmissionModalSubtitle.textContent = assignment.title
       ? `${assignment.title} • ${assignment.class_name || "General"}`
       : "Submission details and file";
+  }
+
+  // Resubmission permission banner & button handling
+  const resubAllowed = Boolean(submission.resubmission_allowed);
+  let isResubExpired = false;
+  let resubDeadlineDate = null;
+  if (resubAllowed && submission.resubmission_deadline) {
+    resubDeadlineDate = new Date(submission.resubmission_deadline);
+    if (resubDeadlineDate.getTime() < Date.now()) {
+      isResubExpired = true;
+    }
+  }
+
+  if (elements.viewSubResubmitBanner) {
+    if (resubAllowed) {
+      elements.viewSubResubmitBanner.style.display = "block";
+      if (elements.viewSubResubmitTitle) {
+        elements.viewSubResubmitTitle.textContent = isResubExpired
+          ? "Resubmission Deadline Expired"
+          : "↻ Resubmission Permitted by Teacher";
+      }
+      if (elements.viewSubResubmitNote) {
+        if (submission.resubmission_note) {
+          elements.viewSubResubmitNote.textContent = `Teacher guidance: "${submission.resubmission_note}"`;
+          elements.viewSubResubmitNote.style.display = "block";
+        } else {
+          elements.viewSubResubmitNote.textContent = "Your teacher has authorized a revised attempt for this assignment.";
+          elements.viewSubResubmitNote.style.display = "block";
+        }
+      }
+      if (elements.viewSubResubmitDeadline) {
+        if (resubDeadlineDate) {
+          elements.viewSubResubmitDeadline.textContent = isResubExpired
+            ? `The resubmission deadline passed on ${formatDisplayDateTime(submission.resubmission_deadline)}. New attempts can no longer be accepted.`
+            : `Resubmission deadline: ${formatDisplayDateTime(submission.resubmission_deadline)}`;
+          elements.viewSubResubmitDeadline.style.display = "block";
+        } else {
+          elements.viewSubResubmitDeadline.style.display = "none";
+        }
+      }
+    } else {
+      elements.viewSubResubmitBanner.style.display = "none";
+    }
+  }
+
+  if (elements.btnModalResubmitWork) {
+    if (resubAllowed && !isResubExpired) {
+      elements.btnModalResubmitWork.style.display = "inline-flex";
+      elements.btnModalResubmitWork.disabled = false;
+    } else {
+      elements.btnModalResubmitWork.style.display = "none";
+    }
+  }
+
+  if (elements.btnModalViewHistory) {
+    if (submission.attempt_number && submission.attempt_number > 1) {
+      elements.btnModalViewHistory.style.display = "inline-flex";
+      const histSpan = elements.btnModalViewHistory.querySelector("span");
+      if (histSpan) histSpan.textContent = `Attempt History (${submission.attempt_number})`;
+    } else {
+      elements.btnModalViewHistory.style.display = "none";
+    }
   }
 
   // Check if grade is released
@@ -4375,6 +6642,8 @@ async function openViewSubmissionModal(assignment, submission = null) {
  * Closes student's view-submission dialog
  */
 function closeViewSubmissionModal() {
+  state.currentViewingAssignment = null;
+  state.currentViewingSubmission = null;
   if (elements.viewSubmissionModalBackdrop) {
     elements.viewSubmissionModalBackdrop.style.display = "none";
   }
@@ -4743,6 +7012,17 @@ function openSubmissionPreviewModal(sub) {
     elements.submissionPreviewDownloadTopBtn.setAttribute("download", sub.file_name || "submission");
   }
 
+  if (elements.studentRequestReevalBtn) {
+    const isStudent = state.currentUser?.role === "student";
+    const isReleased = sub.status === "released";
+    elements.studentRequestReevalBtn.style.display = (isStudent && isReleased) ? "inline-flex" : "none";
+    elements.studentRequestReevalBtn.onclick = () => openStudentReevaluationModal(sub);
+  }
+  if (elements.studentViewHistoryBtn) {
+    elements.studentViewHistoryBtn.style.display = (sub.attempt_number && sub.attempt_number > 1) ? "inline-flex" : "none";
+    elements.studentViewHistoryBtn.onclick = () => openSubmissionHistoryModal(sub);
+  }
+
   const fileName = (sub.file_name || "").toLowerCase();
   const isPdf = fileName.endsWith(".pdf");
   const isDocx = fileName.endsWith(".docx");
@@ -5043,6 +7323,26 @@ function openGradingWorkspace(index) {
     } else {
       elements.gradingReleaseSingleBtn.textContent = "Release Grade to Student";
       elements.gradingReleaseSingleBtn.disabled = false;
+    }
+  }
+
+  // Check pending re-evaluations
+  if (elements.gradingReviewReevalBtn) {
+    elements.gradingReviewReevalBtn.style.display = "none";
+    if (assignment && assignment.id) {
+      fetch(API_ENDPOINTS.workflow.assignmentReevaluations(assignment.id), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      })
+      .then(r => r.ok ? r.json() : [])
+      .then(reevals => {
+        const match = reevals.find(r => r.submission_id === sub.id && r.status === "pending");
+        if (match) {
+          elements.gradingReviewReevalBtn.style.display = "inline-flex";
+          elements.gradingReviewReevalBtn.onclick = () => openTeacherReevaluationModal(match);
+        }
+      })
+      .catch(() => {});
     }
   }
 

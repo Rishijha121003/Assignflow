@@ -627,3 +627,255 @@ def test_frontend_assembly_integrity():
         text=True,
     )
     assert result.returncode == 0, f"Assembly integrity check failed:\n{result.stderr}\n{result.stdout}"
+
+
+def test_audit_correct_modal_overlay_and_z_index():
+    """
+    Regression test:
+    Verify that gradeCorrectionModalBackdrop and other modals opening over SpeedGrader
+    have z-index: 1100 (above SpeedGrader at z-index: 1050) and proper dialog attributes.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    modals_html = (repo_root / "frontend" / "components" / "modals.html").read_text(encoding="utf-8")
+    index_html = (repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    for html in (modals_html, index_html):
+        # Must have z-index: 1100 to appear above SpeedGrader (z-index: 1050)
+        assert 'id="gradeCorrectionModalBackdrop" style="display: none; z-index: 1100;"' in html
+        assert 'id="resubmissionModalBackdrop" style="display: none; z-index: 1100;"' in html
+        assert 'id="reevaluationModalBackdrop" style="display: none; z-index: 1100;"' in html
+        assert 'id="submissionHistoryModalBackdrop" style="display: none; z-index: 1100;"' in html
+
+        # SpeedGrader is at 1050
+        assert 'id="gradingWorkspaceModalBackdrop" style="display: none; z-index: 1050;"' in html
+
+        # Modal must have role="dialog" and aria-modal="true" for accessible blocking behavior
+        assert 'role="dialog" aria-modal="true" aria-labelledby="correctionModalTitle"' in html
+        assert 'id="closeCorrectionModalBtn"' in html
+        assert 'id="cancelCorrectionBtn"' in html
+        assert 'id="confirmCorrectionBtn"' in html
+        assert 'id="correctionPreviousGrade"' in html
+        assert 'id="correctionNewGrade"' in html
+        assert 'id="correctionReasonInput"' in html
+
+
+def test_audit_correct_modal_js_event_handlers_and_grade_resolution():
+    """
+    Regression test:
+    Verify that app.js properly traps Escape, handles Tab wrapping, prevents SpeedGrader background
+    navigation while open, and resolves the current grade without defaulting to 0.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # Dedicated close helper
+    assert "function closeGradeCorrectionModal()" in app_js
+    assert "elements.closeCorrectionModalBtn.addEventListener(\"click\", closeGradeCorrectionModal)" in app_js
+    assert "elements.cancelCorrectionBtn.addEventListener(\"click\", closeGradeCorrectionModal)" in app_js
+
+    # Keydown handling for grade correction dialog
+    assert "elements.gradeCorrectionModalBackdrop.style.display === \"flex\"" in app_js
+    assert "closeGradeCorrectionModal();" in app_js
+
+    # Prevents SpeedGrader Alt+Arrow navigation while modal is open
+    assert 'e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")' in app_js
+
+    # Grade resolution logic: does NOT unconditionally fallback to "0"
+    assert "sub.grade !== null ? sub.grade : \"0\"" not in app_js
+    assert "let currentGrade = null;" in app_js
+    assert "elements.gradingMarksInput" in app_js
+    assert "currentGrade !== null ? currentGrade : \"\"" in app_js
+
+    # Verify no broken fetchSubmissionsForGrading calls remain
+    assert "fetchSubmissionsForGrading" not in app_js
+
+
+def test_analytics_frontend_contract_and_field_bindings():
+    """
+    Regression test verifying frontend field bindings for Analytics & Results:
+    - No undefined% in class average, submission rate, or unit comparison
+    - Provisional percentage used for provisional score column (not raw points)
+    - Final percentage used for final score column (not raw points)
+    - Dynamic rank binding avoiding `#undefined`
+    - Grade distribution band keys match between backend schema and frontend rendering
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. Class Average & Submission Rate bindings
+    assert "ov.class_average_percentage ?? ov.class_average" in app_js
+    assert "ov.submission_compliance_rate ?? ov.submission_rate" in app_js
+    # Ensure raw undefined% is prevented
+    assert "${ov.submission_compliance_rate}%" not in app_js
+
+    # 2. Unit comparisons: title and graded count
+    assert "u.title || u.assignment_title" in app_js
+    assert "u.graded_count ?? u.released_count" in app_js
+    assert "u.average_percentage ?? u.average_score" in app_js
+
+    # 3. Rankings table: percentage columns use percentage fields, not raw marks
+    assert "s.provisional_percentage" in app_js
+    assert "s.final_percentage" in app_js
+    assert "${s.provisional_score !== null ? s.provisional_score + \"%\"" not in app_js
+
+    # 4. Rank binding avoids #undefined and prioritizes unified s.rank
+    assert "s.rank ??" in app_js
+
+    # 5. Teacher alerts at-risk score uses percentage
+    assert "s.provisional_percentage ?? s.provisional_score" in app_js
+
+
+def test_frontend_role_switching_and_state_isolation():
+    """
+    Regression test verifying frontend contracts for account switching and role-based navigation:
+    - clearUserState clears user state, cached collections, closes all modals, and resets to #dashboard
+    - applyAuthenticatedUserSession awaits resolved user identity/role before navigating
+    - canUserAccessRoute verifies role-based route permissions and prevents unauthorized views
+    - navigateToView enforces role route access checks and falls back to dashboard
+    - handleLoginSubmit and handleRegisterSubmit invoke applyAuthenticatedUserSession
+    - handleLogout and menuSwitchAccountBtn invoke clearUserState to eliminate stale teacher data
+    - Stale async request guards (authEpoch and abortController signals) are present on data fetchers
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. State object includes epoch and abortController
+    assert "authEpoch: 0" in app_js
+    assert "activeAbortController: null" in app_js
+
+    # 2. clearUserState function definition and thorough cleanup
+    assert "function clearUserState()" in app_js
+    assert "state.currentUser = null;" in app_js
+    assert "state.submissionsData = [];" in app_js
+    assert "state.assignments = [];" in app_js
+    assert "state.classes = [];" in app_js
+    assert "state.activeView = \"dashboard\";" in app_js
+    assert 'state.activeAbortController.abort();' in app_js
+    assert "elements.submissionsTableHead.innerHTML = \"\";" in app_js
+    assert "elements.submissionsTableBody.innerHTML = \"\";" in app_js
+
+    # 3. canUserAccessRoute function definition and role permissions
+    assert "function canUserAccessRoute(user, route)" in app_js
+    assert "rolePermissions" in app_js
+
+    # 4. applyAuthenticatedUserSession function definition and flow
+    assert "async function applyAuthenticatedUserSession(user, preferredRoute = null)" in app_js
+    assert "updateUserUI(user);" in app_js
+    assert "canUserAccessRoute(user, rawRoute)" in app_js
+    assert "navigateToView(targetRoute, true);" in app_js
+
+    # 5. Login/register submit handlers call applyAuthenticatedUserSession
+    assert "await applyAuthenticatedUserSession(data.user);" in app_js
+    assert "clearUserState();" in app_js
+
+    # 6. Route navigation role-based fallback
+    assert "canUserAccessRoute(state.currentUser, targetView)" in app_js
+
+    # 7. Async guards (epoch & abortController signal) in key fetchers
+    assert "signal: state.activeAbortController?.signal" in app_js
+    assert "epoch !== state.authEpoch" in app_js
+
+
+def test_resubmission_frontend_elements_and_workflow_contract():
+    """
+    Regression test:
+    Verify that frontend HTML components and JavaScript implement the student resubmission permission workflow:
+    1. modals.html and index.html contain viewSubResubmitBanner, btnModalResubmitWork, and submitWorkResubmitBanner.
+    2. app.js binds these elements and sets up event handlers.
+    3. renderTable checks resubmission_allowed and displays '↻ Resubmit' button and '↻ Resubmission Permitted' badge.
+    4. openSubmitWorkModal customizes title and guidance for revision attempts, and disables submissions when expired.
+    5. openViewSubmissionModal displays resubmission banner, teacher note, and resubmit action.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    modals_html = (repo_root / "frontend" / "components" / "modals.html").read_text(encoding="utf-8")
+    index_html = (repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    style_css = (repo_root / "frontend" / "css" / "style.css").read_text(encoding="utf-8")
+
+    # 1. Modals HTML and compiled index.html
+    for html in (modals_html, index_html):
+        assert 'id="viewSubResubmitBanner"' in html
+        assert 'id="viewSubResubmitTitle"' in html
+        assert 'id="viewSubResubmitNote"' in html
+        assert 'id="viewSubResubmitDeadline"' in html
+        assert 'id="btnModalResubmitWork"' in html
+        assert 'id="btnModalViewHistory"' in html
+        assert 'id="submitWorkResubmitBanner"' in html
+        assert 'id="submitWorkResubmitTitle"' in html
+        assert 'id="submitWorkResubmitNote"' in html
+        assert 'id="submitWorkResubmitDeadline"' in html
+
+    # 2. CSS styles
+    assert ".status-resubmit-allowed" in style_css
+    assert ".status-resubmit-expired" in style_css
+    assert ".btn-warning" in style_css
+
+    # 3. app.js bindings
+    assert "btnModalResubmitWork: document.getElementById(\"btnModalResubmitWork\")" in app_js
+    assert "btnModalViewHistory: document.getElementById(\"btnModalViewHistory\")" in app_js
+    assert "viewSubResubmitBanner: document.getElementById(\"viewSubResubmitBanner\")" in app_js
+    assert "submitWorkResubmitBanner: document.getElementById(\"submitWorkResubmitBanner\")" in app_js
+
+    # 4. renderTable resubmission logic
+    assert "resubAllowed = Boolean(mySub.resubmission_allowed)" in app_js
+    assert "status-resubmit-allowed" in app_js
+    assert "status-resubmit-expired" in app_js
+    assert "resubmit-work-btn" in app_js
+    assert "openSubmitWorkModal(assignment, mySub)" in app_js
+
+    # 5. openSubmitWorkModal customization & expiry
+    assert "isResubmission" in app_js
+    assert "Resubmit Assignment Work" in app_js
+    assert "Submit Revision" in app_js
+    assert "btnSubmitWork.disabled = true" in app_js
+
+    # 6. openViewSubmissionModal banner & action
+    assert "submission.resubmission_allowed" in app_js
+    assert "btnModalResubmitWork.style.display" in app_js
+
+
+def test_post_revision_success_ui_state_and_row_update():
+    """
+    Regression test:
+    Verify that upon successful revision submission:
+    1. Failed requests never modify state or trigger success UI.
+    2. Successful requests immediately update state.submissionsData without requiring a page refresh.
+    3. The updated item resets resubmission_allowed=false, status='submitted', grade=null, and increments attempt_number.
+    4. filterAndRenderSubmissions() is immediately called to update the visible My Submissions row.
+    5. 'Resubmit Allowed' badge and Resubmit action button are hidden/omitted.
+    6. Row renders as 'Pending Review'.
+    7. Rows contain data-sub-id and data-assignment-id for deterministic DOM selection.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. Verification of failed request guard (no state update on failure)
+    assert "if (!response.ok) {" in app_js
+    assert "showToast(errorMsg, \"error\");" in app_js
+
+    # 2. Immediate in-memory update of state.submissionsData
+    assert "if (Array.isArray(state.submissionsData))" in app_js
+    assert "s.assignment_id === data.assignment_id || s.id === data.id" in app_js
+    assert "resubmission_allowed: false" in app_js
+    assert 'status: "submitted"' in app_js
+    assert "grade: null" in app_js
+
+    # 3. Synchronous re-rendering of My Submissions table
+    assert "filterAndRenderSubmissions();" in app_js
+
+    # 4. Closing modal and showing attempt-specific toast
+    assert "closeSubmitWorkModal();" in app_js
+    assert "Revision submitted successfully! (Attempt #${data.attempt_number || 2})" in app_js
+
+    # 5. Row data attributes and pending review / resubmit button logic in filterAndRenderSubmissions
+    assert '<tr data-sub-id="${s.id}" data-assignment-id="${s.assignment_id}">' in app_js
+    assert "reviewBadge = isReleased" in app_js
+    assert '<span class="submission-pill status-ungraded">Pending Review</span>' in app_js
+    assert "resubmitActionBtn = (resubAllowed && !isResubExpired)" in app_js
+    assert '<span class="submission-pill status-resubmit-allowed"' in app_js

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AssignFlow - Assignment Management Dashboard</title>
   <meta name="description" content="Assignment Management Platform for College Teachers and Students.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -162,13 +163,25 @@
         </div>
 
         <div class="top-bar-right">
-          <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="1 unread notification">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-            </svg>
-            <span class="notification-badge">1</span>
-          </button>
+          <!-- Notification Dropdown -->
+          <div class="notification-dropdown-wrapper" id="notificationDropdownWrapper" style="position: relative;">
+            <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+              </svg>
+              <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown-menu" id="notificationMenu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.5rem; width: 340px; max-width: 90vw; background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: var(--radius-md, 8px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 1050; overflow: hidden;">
+              <div class="notification-menu-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0); background: #f8fafc;">
+                <span style="font-weight: 600; font-size: 0.875rem;">Notifications</span>
+                <button type="button" id="markAllNotificationsReadBtn" class="btn btn-ghost btn-xs" style="font-size: 0.75rem; color: #2563eb; background: transparent; border: none; cursor: pointer;">Mark all read</button>
+              </div>
+              <div class="notification-list" id="notificationList" style="max-height: 360px; overflow-y: auto;">
+                <div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>
+              </div>
+            </div>
+          </div>
 
           <!-- Profile / Account Dropdown -->
           <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
@@ -305,6 +318,15 @@
                 </svg>
                 <span id="classesBtnText">Classes</span>
               </button>
+              <button class="btn btn-secondary" id="openStructureModalBtn" title="View Curriculum Unit Organization">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+                  <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+                  <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+                  <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+                </svg>
+                <span>Curriculum Units</span>
+              </button>
               <button class="btn btn-primary create-btn" id="openCreateDrawerBtn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -404,6 +426,14 @@
                     <option value="Mathematics">Mathematics</option>
                     <option value="Science">Science</option>
                     <option value="Design">Design</option>
+                  </select>
+                  <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+
+                <!-- Unit Filter -->
+                <div class="select-wrapper">
+                  <select id="unitFilter" aria-label="Filter by unit">
+                    <option value="all">All Units</option>
                   </select>
                   <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
@@ -633,26 +663,154 @@
         <!-- ANALYTICS VIEW (Role-Scoped Academic Performance & Results)      -->
         <!-- ================================================================ -->
         <div id="analyticsView" class="page-view analytics-view-content" style="display: none;">
-          <div class="page-header-row">
+          <div class="page-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
             <div>
               <h1 class="page-title" id="analyticsPageTitle">Analytics & Results</h1>
-              <p class="page-subtitle" id="analyticsPageSubtitle">Detailed academic insights, submission compliance, and performance metrics.</p>
+              <p class="page-subtitle" id="analyticsPageSubtitle">Detailed academic insights, unit-wise rankings, and finalized performance metrics.</p>
+            </div>
+            
+            <!-- Controls & Actions Toolbar -->
+            <div class="analytics-actions-toolbar" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <div class="select-wrapper" style="min-width: 180px;">
+                <select id="analyticsClassSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+                  <option value="">Select Class...</option>
+                </select>
+                <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+
+              <div class="select-wrapper" style="min-width: 160px;">
+                <select id="analyticsSubjectSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+                  <option value="">All Subjects</option>
+                </select>
+                <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+
+              <!-- Teacher Actions -->
+              <button class="btn btn-primary" id="btnFinalizeResults" style="display: none; padding: 0.45rem 0.9rem; font-size: 0.85rem;" title="Finalize combined results for this subject">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Finalize Subject
+              </button>
+
+              <button class="btn btn-secondary" id="btnExportSummaryCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Class Summary CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Summary CSV
+              </button>
+
+              <button class="btn btn-secondary" id="btnExportDetailedCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Detailed Student-Wise CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Detailed CSV
+              </button>
+
+              <!-- Student Actions -->
+              <button class="btn btn-secondary" id="btnToggleLeaderboard" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                Class Leaderboard
+              </button>
             </div>
           </div>
 
-          <!-- 4 Summary KPI Cards -->
-          <section class="dash-metrics-row" id="analyticsKpiRow">
+          <!-- Academic Alerts Container (Teacher & Student) -->
+          <div id="analyticsAlertsContainer" style="margin-top: 1rem; display: none;"></div>
+
+          <!-- Summary KPI Cards -->
+          <section class="dash-metrics-row" id="analyticsKpiRow" style="margin-top: 1.25rem;">
             <!-- Dynamically populated -->
           </section>
 
-          <!-- Visual Analytics Grids -->
-          <div class="dash-cards-grid dash-mid-row" style="margin-top: 1.5rem;">
-            <div class="dash-box-card" id="analyticsLeftCard">
-              <!-- Dynamically populated -->
+          <!-- Main Analytics View Tabs / Cards -->
+          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Rankings & Overall Performance Table Card -->
+            <div class="dash-box-card" id="analyticsRankingsCard">
+              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color, #e2e8f0);">
+                <div>
+                  <h3 class="dash-card-title" id="analyticsRankingsTitle">Unit Rankings & Results</h3>
+                  <p class="dash-card-subtitle" id="analyticsRankingsSubtitle">Official provisional and finalized score calculations (Never treats unreleased work as zero).</p>
+                </div>
+                <div id="analyticsFinalizedBadge" style="display: none;">
+                  <span class="badge badge-success" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">Subject Finalized</span>
+                </div>
+              </div>
+              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
+                <table class="data-table" id="analyticsRankingsTable" style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr id="analyticsRankingsHead">
+                      <th>Rank</th>
+                      <th>Student</th>
+                      <th>Provisional %</th>
+                      <th>Final %</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analyticsRankingsBody">
+                    <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a class and subject to view performance rankings.</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="dash-box-card" id="analyticsRightCard">
-              <!-- Dynamically populated -->
+
+            <!-- Two-Column Unit Comparisons & Backlog Section -->
+            <div class="dash-cards-grid dash-mid-row" style="margin-top: 0;">
+              <!-- Unit Comparisons Card -->
+              <div class="dash-box-card" id="analyticsLeftCard">
+                <div class="dash-card-header">
+                  <h3 class="dash-card-title">Curriculum Unit Comparisons</h3>
+                  <p class="dash-card-subtitle">Assessment performance metrics and submission compliance across units.</p>
+                </div>
+                <div id="analyticsUnitComparisonsBody" style="margin-top: 1rem;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+
+              <!-- Grade Distribution & At-Risk Card -->
+              <div class="dash-box-card" id="analyticsRightCard">
+                <div class="dash-card-header">
+                  <h3 class="dash-card-title" id="analyticsRightCardTitle">Grade Distribution & Compliance</h3>
+                  <p class="dash-card-subtitle" id="analyticsRightCardSubtitle">Aggregated academic standing across enrolled students.</p>
+                </div>
+                <div id="analyticsRightCardBody" style="margin-top: 1rem;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
             </div>
+
+            <!-- Student Private Performance Feedback Section (Student Only) -->
+            <div class="dash-box-card" id="analyticsStudentFeedbackCard" style="display: none;">
+              <div class="dash-card-header">
+                <h3 class="dash-card-title">Your Assessment Feedback & Progress</h3>
+                <p class="dash-card-subtitle">Private instructor evaluation, feedback notes, and recommendations for improvement.</p>
+              </div>
+              <div id="analyticsStudentFeedbackBody" style="margin-top: 1rem;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Privacy-Safe Class Leaderboard Section -->
+            <div class="dash-box-card" id="analyticsLeaderboardCard" style="display: none;">
+              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="dash-card-title">Class Leaderboard</h3>
+                  <p class="dash-card-subtitle">Anonymous peer ranking protecting individual student privacy.</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btnCloseLeaderboard">Close</button>
+              </div>
+              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
+                <table class="data-table" id="analyticsLeaderboardTable" style="width: 100%;">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Student</th>
+                      <th>Provisional Score (%)</th>
+                      <th>Completed Units</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analyticsLeaderboardBody">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
 <!-- END COMPONENT: pages/analytics.html -->
@@ -797,9 +955,12 @@
         <label for="formClass" class="form-label">Publish to Class</label>
         <div class="select-wrapper select-full">
           <select id="formClass" class="form-input">
-            <option value="">General / Unassigned</option>
+            <option value="">General / Unassigned (Private Draft)</option>
           </select>
           <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="field-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+          Select a class to publish to enrolled students, or keep unassigned as a private teacher draft.
         </div>
       </div>
 
@@ -807,6 +968,20 @@
       <div class="form-group" id="customSubjectGroup" style="display: none;">
         <label for="formCustomSubject" class="form-label">Custom Subject Name</label>
         <input type="text" id="formCustomSubject" class="form-input" placeholder="Enter subject name">
+      </div>
+
+      <!-- Unit & Maximum Marks -->
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="formUnit" class="form-label">Unit <span class="required">*</span></label>
+          <input type="number" id="formUnit" class="form-input" min="1" step="1" value="1" placeholder="1" required>
+          <div class="field-error" id="unitError"></div>
+        </div>
+        <div class="form-group form-group-half">
+          <label for="formMaxMarks" class="form-label">Maximum Marks <span class="required">*</span></label>
+          <input type="number" id="formMaxMarks" class="form-input" min="0.5" step="any" value="100" placeholder="100" required>
+          <div class="field-error" id="maxMarksError"></div>
+        </div>
       </div>
 
       <!-- Description -->
@@ -820,7 +995,7 @@
         <label for="formPdf" class="form-label">
           Assignment Question PDF <span class="required" id="pdfRequiredStar">*</span>
         </label>
-        <div class="file-dropzone" id="fileDropzone">
+        <div class="file-dropzone" id="fileDropzone" tabindex="0" role="button" aria-label="Upload assignment question PDF">
           <input type="file" id="formPdf" class="file-input-hidden" accept="application/pdf,.pdf">
           <div class="dropzone-content" id="dropzoneContent">
             <svg class="dropzone-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -850,6 +1025,29 @@
         <div class="field-error" id="dueDateError"></div>
       </div>
 
+      <!-- Deadline & Late Submission Rules -->
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="formGracePeriod" class="form-label">Grace Period (Mins)</label>
+          <input type="number" id="formGracePeriod" class="form-input" min="0" value="0" placeholder="0">
+        </div>
+        <div class="form-group form-group-half">
+          <label for="formLatePenalty" class="form-label">Late Penalty (%)</label>
+          <input type="number" id="formLatePenalty" class="form-input" min="0" max="100" step="any" value="0" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="formAllowLate" class="form-label">Late Submissions</label>
+        <div class="select-wrapper select-full">
+          <select id="formAllowLate" class="form-input">
+            <option value="true" selected>Allow late submissions</option>
+            <option value="false">Disallow late submissions</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
+
       <!-- Status -->
       <div class="form-group">
         <label for="formStatus" class="form-label">Status</label>
@@ -865,6 +1063,7 @@
 
       <!-- Form Action Buttons -->
       <div class="drawer-actions">
+        <button type="button" class="btn btn-secondary" id="drawerExtensionsBtn" style="display: none;" title="Manage student deadline extensions">Extensions</button>
         <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
         <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">
           <span class="btn-spinner" id="submitSpinner" style="display: none;"></span>
@@ -1146,6 +1345,13 @@
           </div>
         </div>
 
+        <!-- Resubmission Guidance Banner -->
+        <div class="resubmission-allowed-banner" id="submitWorkResubmitBanner" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 0.75rem 0.9rem; margin-top: 0.75rem; margin-bottom: 0.75rem; color: #854d0e;">
+          <div style="font-weight: 600; font-size: 0.875rem;" id="submitWorkResubmitTitle">↻ Resubmission Authorized</div>
+          <p id="submitWorkResubmitNote" style="margin: 0.25rem 0 0 0; font-size: 0.825rem; color: #713f12;"></p>
+          <div id="submitWorkResubmitDeadline" style="margin-top: 0.25rem; font-size: 0.8rem; font-weight: 500; color: #a16207;"></div>
+        </div>
+
         <!-- File Upload Dropzone -->
         <div class="form-group">
           <label class="form-label" for="submissionFileInput">
@@ -1246,6 +1452,18 @@
           </div>
         </div>
 
+        <!-- Resubmission Permitted Banner -->
+        <div class="resubmission-allowed-banner" id="viewSubResubmitBanner" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; color: #854d0e;">
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+            <div style="font-size: 1.25rem; line-height: 1;">↻</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 0.9rem;" id="viewSubResubmitTitle">Resubmission Permitted by Teacher</div>
+              <p id="viewSubResubmitNote" style="margin: 0.35rem 0 0 0; font-size: 0.825rem; color: #713f12;"></p>
+              <div id="viewSubResubmitDeadline" style="margin-top: 0.35rem; font-size: 0.8rem; font-weight: 500; color: #a16207;"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="submission-summary-box">
           <div class="submission-meta-row">
             <span class="meta-label">Timing:</span>
@@ -1270,6 +1488,22 @@
         </div>
 
         <div class="modal-actions" style="margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button id="btnModalResubmitWork" type="button" class="btn btn-warning" style="display: none; flex: 1; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2v6h-6"></path>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M3 22v-6h6"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            </svg>
+            <span>Resubmit Assignment</span>
+          </button>
+          <button id="btnModalViewHistory" type="button" class="btn btn-secondary" style="display: none; flex: 1;" title="View past attempts">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 14 14"></polyline>
+            </svg>
+            <span>Attempt History</span>
+          </button>
           <a id="btnDownloadMySubmission" href="#" target="_blank" rel="noopener" class="btn btn-secondary" style="flex: 1;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1536,6 +1770,27 @@
               </button>
               <p class="grading-release-hint">Released grades are visible immediately to the student.</p>
             </div>
+
+            <!-- Workflow Actions -->
+            <div class="grading-workflow-actions" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color, #e2e8f0); display: flex; flex-direction: column; gap: 0.5rem;">
+              <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted, #64748b);">Workflow Actions</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" id="gradingAllowResubmitBtn" type="button" title="Allow student to submit a revised attempt">
+                  Resubmission
+                </button>
+                <button class="btn btn-secondary btn-sm" id="gradingCorrectGradeBtn" type="button" title="Formally log grade revision with audit reason">
+                  Audit Correct
+                </button>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" id="gradingViewHistoryBtn" type="button" title="View past attempts and submission versions">
+                  Attempt History
+                </button>
+                <button class="btn btn-secondary btn-sm" id="gradingReviewReevalBtn" type="button" title="Review student re-evaluation request" style="display: none; color: #2563eb;">
+                  Re-eval Request
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1596,6 +1851,12 @@
           </div>
         </div>
         <div class="modal-header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="studentViewHistoryBtn" type="button" style="display: none;" title="View previous attempt history">
+            Attempts
+          </button>
+          <button class="btn btn-secondary btn-sm" id="studentRequestReevalBtn" type="button" style="display: none; color: #2563eb;" title="Request re-evaluation of your grade">
+            Request Re-evaluation
+          </button>
           <a class="btn btn-secondary btn-sm" id="submissionPreviewDownloadTopBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1648,6 +1909,279 @@
             </svg>
             Download Submission
           </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- CURRICULUM UNITS & ASSESSMENT STRUCTURE MODAL                    -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="structureModalBackdrop" style="display: none;">
+    <div class="modal-container modal-wide" role="dialog" aria-modal="true" aria-labelledby="structureModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="structureModalTitle">Curriculum Units & Assessments</h3>
+          <p class="modal-subtitle" id="structureModalSubtitle">Hierarchical assessment organization by Class, Subject, and Unit</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeStructureModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+        <div id="structureLoadingSpinner" class="preview-modal-spinner" style="display: none;">
+          <div class="spinner"></div>
+          <p>Loading curriculum units...</p>
+        </div>
+        <div id="structureTreeContainer" class="structure-tree-container">
+          <!-- Dynamically populated via Vanilla JS -->
+        </div>
+        <div id="structureEmptyState" class="state-container" style="display: none;">
+          <p>No assessment units found.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- FINALIZE RESULTS MODAL                                           -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="finalizeModalBackdrop" style="display: none;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="finalizeModalTitle" style="max-width: 520px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="finalizeModalTitle">Finalize Subject Results</h3>
+          <p class="modal-subtitle" id="finalizeModalSubtitle">Lock in official final grades and rankings for this subject</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeFinalizeModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div class="auth-alert" id="finalizeAlert" style="display: none; margin-bottom: 1rem;"></div>
+        <p style="font-size: 0.875rem; color: #475569; margin-bottom: 1rem;">
+          Select the required units that must be completed to compute official final rankings. Any student missing required units will remain provisional.
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Required Units</label>
+          <div id="finalizeUnitsChecklist" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 160px; overflow-y: auto; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="finalizeNotesInput" class="form-label" style="font-weight: 600;">Finalization Audit Notes (Optional)</label>
+          <textarea id="finalizeNotesInput" class="form-input" rows="2" placeholder="e.g. Approved by Academic Board on 2026-10-17"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" id="cancelFinalizeBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmFinalizeBtn">
+          <span>Confirm & Finalize</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- DEADLINE EXTENSIONS MODAL                                        -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="extensionsModalBackdrop" style="display: none;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="extensionsModalTitle" style="max-width: 600px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="extensionsModalTitle">Per-Student Deadline Extensions</h3>
+          <p class="modal-subtitle" id="extensionsModalSubtitle">Grant specific students extra time without affecting the whole class</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeExtensionsModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; max-height: 65vh; overflow-y: auto;">
+        <div class="auth-alert" id="extensionsAlert" style="display: none; margin-bottom: 1rem;"></div>
+        
+        <form id="grantExtensionForm" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+          <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Grant New Extension</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label for="extensionStudentSelect" class="form-label" style="font-weight: 500; font-size: 0.85rem;">Student</label>
+              <select id="extensionStudentSelect" class="form-input" required>
+                <option value="">Select student...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="extensionDeadlineInput" class="form-label" style="font-weight: 500; font-size: 0.85rem;">Extended Due Date</label>
+              <input type="datetime-local" id="extensionDeadlineInput" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="extensionReasonInput" class="form-label" style="font-weight: 500; font-size: 0.85rem;">Reason</label>
+            <input type="text" id="extensionReasonInput" class="form-input" placeholder="e.g. Medical dispensation granted" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" id="grantExtensionSubmitBtn">Grant Extension</button>
+        </form>
+
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Existing Extensions</h4>
+        <div id="extensionsListContainer" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <p style="color: #64748b; font-size: 0.85rem;">No active extensions for this assignment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- GRADE CORRECTION MODAL (AUDIT TRAIL)                             -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="gradeCorrectionModalBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="correctionModalTitle" style="max-width: 520px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="correctionModalTitle">Correct Grade (Audit Trail)</h3>
+          <p class="modal-subtitle" id="correctionModalSubtitle">Authorized grade revisions are logged with reason and timestamp</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeCorrectionModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div class="auth-alert" id="correctionAlert" style="display: none; margin-bottom: 1rem;"></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.85rem;">Current Grade</label>
+            <input type="number" id="correctionPreviousGrade" class="form-input" readonly disabled style="background: #f1f5f9;">
+          </div>
+          <div class="form-group">
+            <label for="correctionNewGrade" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Corrected Grade</label>
+            <input type="number" step="0.5" id="correctionNewGrade" class="form-input" placeholder="e.g. 92.5" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="correctionReasonInput" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Correction Reason <span style="color: var(--danger);">*</span></label>
+          <textarea id="correctionReasonInput" class="form-input" rows="3" placeholder="Explain the rationale for this grade adjustment..." required></textarea>
+        </div>
+
+        <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Revision History</h4>
+        <div id="correctionHistoryList" style="max-height: 140px; overflow-y: auto; font-size: 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem;">
+          <p style="color: #64748b; margin: 0;">No prior corrections recorded.</p>
+        </div>
+      </div>
+      <div class="modal-actions" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" id="cancelCorrectionBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmCorrectionBtn">Save Correction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- RESUBMISSION AUTHORIZATION MODAL                                 -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="resubmissionModalBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resubmissionModalTitle" style="max-width: 500px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="resubmissionModalTitle">Authorize Resubmission</h3>
+          <p class="modal-subtitle" id="resubmissionModalSubtitle">Permit student to submit a revised attempt while preserving history</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeResubmissionModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div class="auth-alert" id="resubmissionAlert" style="display: none; margin-bottom: 1rem;"></div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="resubmissionDeadlineInput" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Optional Resubmission Deadline</label>
+          <input type="datetime-local" id="resubmissionDeadlineInput" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="resubmissionNotesInput" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Teacher Guidance / Revision Notes</label>
+          <textarea id="resubmissionNotesInput" class="form-input" rows="3" placeholder="Provide instructions on what needs to be improved in attempt #2..."></textarea>
+        </div>
+      </div>
+      <div class="modal-actions" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" id="cancelResubmissionBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmResubmissionBtn">Allow Resubmission</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- RE-EVALUATION REQUEST & DECISION MODAL                           -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="reevaluationModalBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reevaluationModalTitle" style="max-width: 540px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="reevaluationModalTitle">Re-evaluation</h3>
+          <p class="modal-subtitle" id="reevaluationModalSubtitle">Formal grade review and recorded decision</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeReevaluationModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div class="auth-alert" id="reevaluationAlert" style="display: none; margin-bottom: 1rem;"></div>
+
+        <!-- Student view: Submit request -->
+        <div id="reevaluationStudentSection" style="display: none;">
+          <p style="font-size: 0.875rem; color: #475569; margin-bottom: 1rem;">
+            If you believe your graded submission was assessed incorrectly, submit a re-evaluation request explaining your rationale clearly.
+          </p>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="reevalReasonInput" class="form-label" style="font-weight: 600; font-size: 0.85rem;">Reason for Re-evaluation <span style="color: var(--danger);">*</span></label>
+            <textarea id="reevalReasonInput" class="form-input" rows="4" placeholder="Detail specific criteria or questions you request re-assessment for..." required></textarea>
+          </div>
+          <button type="button" class="btn btn-primary" id="submitReevaluationRequestBtn">Submit Request</button>
+        </div>
+
+        <!-- Teacher view: Decision review -->
+        <div id="reevaluationTeacherSection" style="display: none;">
+          <div style="background: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: #64748b;">Student Reason:</div>
+            <div id="reevaluationTeacherReason" style="font-size: 0.875rem; color: #1e293b; margin-top: 0.25rem; font-style: italic;"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="reevalDecisionSelect" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Decision</label>
+              <select id="reevalDecisionSelect" class="form-input">
+                <option value="approved">Approve (Change Grade)</option>
+                <option value="rejected">Reject (Keep Grade)</option>
+              </select>
+            </div>
+            <div class="form-group" id="reevalRevisedGradeGroup">
+              <label for="reevalRevisedGrade" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Revised Grade</label>
+              <input type="number" step="0.5" id="reevalRevisedGrade" class="form-input" placeholder="e.g. 88">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="reevalDecisionNotes" class="form-label" style="font-size: 0.85rem; font-weight: 600;">Teacher Decision Notes</label>
+            <textarea id="reevalDecisionNotes" class="form-input" rows="3" placeholder="Notes explaining the decision to the student..."></textarea>
+          </div>
+          <button type="button" class="btn btn-primary" id="submitReevaluationDecisionBtn">Record Decision</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- SUBMISSION HISTORY MODAL                                         -->
+  <!-- ================================================================ -->
+  <div class="modal-backdrop" id="submissionHistoryModalBackdrop" style="display: none; z-index: 1100;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle" style="max-width: 600px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="historyModalTitle">Submission History & Archived Attempts</h3>
+          <p class="modal-subtitle" id="historyModalSubtitle">Audit log of all versions submitted by this student</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeHistoryModalBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; max-height: 65vh; overflow-y: auto;">
+        <div id="submissionHistoryList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Populated dynamically via JS -->
         </div>
       </div>
     </div>

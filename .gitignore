@@ -50,3 +50,15 @@ uploads/
 .idea/
 *.swp
 .DS_Store
+
+# Agent & Workspace Tooling Artifacts
+.agent/
+.agents/
+.gemini/
+.gsd/
+GSD-STYLE.md
+PROJECT_RULES.md
+VERSION
+adapters/
+model_capabilities.yaml
+scripts/

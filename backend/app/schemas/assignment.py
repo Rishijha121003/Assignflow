@@ -12,6 +12,10 @@ class AssignmentBase(BaseModel):
     status: str = Field(default="active", max_length=50, description="Status: active, closed, draft, etc.")
     class_id: Optional[int] = Field(None, description="Class ID to which this assignment belongs")
     max_marks: float = Field(default=100.0, gt=0.0, description="Maximum numeric marks for this assignment (must be greater than 0)")
+    unit: int = Field(default=1, ge=1, description="Curriculum unit number for this assessment (e.g. 1, 2, 3)")
+    grace_period_minutes: int = Field(default=0, ge=0, description="Grace period duration in minutes beyond due_date")
+    allow_late: bool = Field(default=True, description="Whether late submissions are permitted beyond grace period")
+    late_penalty_percent: float = Field(default=0.0, ge=0.0, le=100.0, description="Percentage deduction for late submission")
 
 
 class AssignmentCreate(AssignmentBase):
@@ -28,6 +32,10 @@ class AssignmentUpdate(BaseModel):
     status: Optional[str] = Field(None, max_length=50)
     class_id: Optional[int] = None
     max_marks: Optional[float] = Field(None, gt=0.0)
+    unit: Optional[int] = Field(None, ge=1)
+    grace_period_minutes: Optional[int] = Field(None, ge=0)
+    allow_late: Optional[bool] = None
+    late_penalty_percent: Optional[float] = Field(None, ge=0.0, le=100.0)
 
 
 class AssignmentResponse(AssignmentBase):

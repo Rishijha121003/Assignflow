@@ -43,9 +43,12 @@
         <label for="formClass" class="form-label">Publish to Class</label>
         <div class="select-wrapper select-full">
           <select id="formClass" class="form-input">
-            <option value="">General / Unassigned</option>
+            <option value="">General / Unassigned (Private Draft)</option>
           </select>
           <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="field-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+          Select a class to publish to enrolled students, or keep unassigned as a private teacher draft.
         </div>
       </div>
 
@@ -53,6 +56,20 @@
       <div class="form-group" id="customSubjectGroup" style="display: none;">
         <label for="formCustomSubject" class="form-label">Custom Subject Name</label>
         <input type="text" id="formCustomSubject" class="form-input" placeholder="Enter subject name">
+      </div>
+
+      <!-- Unit & Maximum Marks -->
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="formUnit" class="form-label">Unit <span class="required">*</span></label>
+          <input type="number" id="formUnit" class="form-input" min="1" step="1" value="1" placeholder="1" required>
+          <div class="field-error" id="unitError"></div>
+        </div>
+        <div class="form-group form-group-half">
+          <label for="formMaxMarks" class="form-label">Maximum Marks <span class="required">*</span></label>
+          <input type="number" id="formMaxMarks" class="form-input" min="0.5" step="any" value="100" placeholder="100" required>
+          <div class="field-error" id="maxMarksError"></div>
+        </div>
       </div>
 
       <!-- Description -->
@@ -66,7 +83,7 @@
         <label for="formPdf" class="form-label">
           Assignment Question PDF <span class="required" id="pdfRequiredStar">*</span>
         </label>
-        <div class="file-dropzone" id="fileDropzone">
+        <div class="file-dropzone" id="fileDropzone" tabindex="0" role="button" aria-label="Upload assignment question PDF">
           <input type="file" id="formPdf" class="file-input-hidden" accept="application/pdf,.pdf">
           <div class="dropzone-content" id="dropzoneContent">
             <svg class="dropzone-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -96,6 +113,29 @@
         <div class="field-error" id="dueDateError"></div>
       </div>
 
+      <!-- Deadline & Late Submission Rules -->
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="formGracePeriod" class="form-label">Grace Period (Mins)</label>
+          <input type="number" id="formGracePeriod" class="form-input" min="0" value="0" placeholder="0">
+        </div>
+        <div class="form-group form-group-half">
+          <label for="formLatePenalty" class="form-label">Late Penalty (%)</label>
+          <input type="number" id="formLatePenalty" class="form-input" min="0" max="100" step="any" value="0" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="formAllowLate" class="form-label">Late Submissions</label>
+        <div class="select-wrapper select-full">
+          <select id="formAllowLate" class="form-input">
+            <option value="true" selected>Allow late submissions</option>
+            <option value="false">Disallow late submissions</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
+
       <!-- Status -->
       <div class="form-group">
         <label for="formStatus" class="form-label">Status</label>
@@ -111,6 +151,7 @@
 
       <!-- Form Action Buttons -->
       <div class="drawer-actions">
+        <button type="button" class="btn btn-secondary" id="drawerExtensionsBtn" style="display: none;" title="Manage student deadline extensions">Extensions</button>
         <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
         <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">
           <span class="btn-spinner" id="submitSpinner" style="display: none;"></span>
