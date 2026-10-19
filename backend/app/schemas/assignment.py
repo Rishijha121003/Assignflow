@@ -15,7 +15,10 @@ class AssignmentBase(BaseModel):
     subject_id: Optional[int] = Field(None, description="Subject ID associated with the class")
     assignment_type: Optional[str] = Field(default="Assignment", max_length=50, description="Type: Assignment, Test, Quiz, etc.")
     max_marks: float = Field(default=100.0, gt=0.0, description="Maximum numeric marks for this assignment (must be greater than 0)")
-    allow_late: bool = Field(default=True, description="Whether late submissions are permitted")
+    unit: int = Field(default=1, ge=1, description="Curriculum unit number for this assessment (e.g. 1, 2, 3)")
+    grace_period_minutes: int = Field(default=0, ge=0, description="Grace period duration in minutes beyond due_date")
+    allow_late: bool = Field(default=True, description="Whether late submissions are permitted beyond grace period")
+    late_penalty_percent: float = Field(default=0.0, ge=0.0, le=100.0, description="Percentage deduction for late submission")
     resubmission_policy: str = Field(default="approval_only", max_length=50, description="Policy: until_due or approval_only")
 
 
@@ -36,7 +39,10 @@ class AssignmentUpdate(BaseModel):
     semester_id: Optional[int] = None
     assignment_type: Optional[str] = Field(None, max_length=50)
     max_marks: Optional[float] = Field(None, gt=0.0)
+    unit: Optional[int] = Field(None, ge=1)
+    grace_period_minutes: Optional[int] = Field(None, ge=0)
     allow_late: Optional[bool] = None
+    late_penalty_percent: Optional[float] = Field(None, ge=0.0, le=100.0)
     resubmission_policy: Optional[str] = Field(None, max_length=50)
 
 

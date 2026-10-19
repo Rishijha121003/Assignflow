@@ -62,6 +62,12 @@ class Submission(Base):
     )
     released_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Resubmission fields
+    resubmission_allowed = Column(Boolean, default=False, nullable=False)
+    resubmission_deadline = Column(DateTime(timezone=True), nullable=True)
+    resubmission_note = Column(Text, nullable=True)
+    attempt_number = Column(Integer, default=1, nullable=False)
+
     # Relationships
     assignment = relationship("Assignment", back_populates="submissions")
     student = relationship("User", foreign_keys=[student_id], backref="submissions")

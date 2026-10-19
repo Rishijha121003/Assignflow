@@ -49,6 +49,12 @@ const state = {
   currentSubmittingAssignment: null,
   authMode: "signin",
   activeView: "dashboard",
+  authEpoch: 0,
+  activeAbortController: null,
+  currentAnalyticsClassId: null,
+  analyticsOverviewData: null,
+  analyticsRankingsData: null,
+  analyticsSubmissionsData: null,
   currentGradingAssignment: null,
   currentGradingSubmissions: [],
   currentGradingIndex: 0,
@@ -105,6 +111,62 @@ const elements = {
   analyticsView: document.getElementById("analyticsView"),
   settingsView: document.getElementById("settingsView"),
 
+  btnModalResubmitWork: document.getElementById("btnModalResubmitWork"),
+  btnModalViewHistory: document.getElementById("btnModalViewHistory"),
+  viewSubResubmitBanner: document.getElementById("viewSubResubmitBanner"),
+  viewSubResubmitTitle: document.getElementById("viewSubResubmitTitle"),
+  viewSubResubmitNote: document.getElementById("viewSubResubmitNote"),
+  viewSubResubmitDeadline: document.getElementById("viewSubResubmitDeadline"),
+  submitWorkResubmitBanner: document.getElementById("submitWorkResubmitBanner"),
+  submitWorkResubmitTitle: document.getElementById("submitWorkResubmitTitle"),
+  submitWorkResubmitNote: document.getElementById("submitWorkResubmitNote"),
+  submitWorkResubmitDeadline: document.getElementById("submitWorkResubmitDeadline"),
+  gradeCorrectionModalBackdrop: document.getElementById("gradeCorrectionModalBackdrop"),
+  closeCorrectionModalBtn: document.getElementById("closeCorrectionModalBtn"),
+  cancelCorrectionBtn: document.getElementById("cancelCorrectionBtn"),
+  confirmCorrectionBtn: document.getElementById("confirmCorrectionBtn"),
+  correctionPreviousGrade: document.getElementById("correctionPreviousGrade"),
+  correctionNewGrade: document.getElementById("correctionNewGrade"),
+  correctionReasonInput: document.getElementById("correctionReasonInput"),
+  correctionAlert: document.getElementById("correctionAlert"),
+  correctionHistoryList: document.getElementById("correctionHistoryList"),
+  resubmissionModalBackdrop: document.getElementById("resubmissionModalBackdrop"),
+  closeResubmissionModalBtn: document.getElementById("closeResubmissionModalBtn"),
+  cancelResubmissionBtn: document.getElementById("cancelResubmissionBtn"),
+  confirmResubmissionBtn: document.getElementById("confirmResubmissionBtn"),
+  resubmissionDeadlineInput: document.getElementById("resubmissionDeadlineInput"),
+  resubmissionNoteInput: document.getElementById("resubmissionNoteInput"),
+  resubmissionAlert: document.getElementById("resubmissionAlert"),
+  reevaluationModalBackdrop: document.getElementById("reevaluationModalBackdrop"),
+  closeReevaluationModalBtn: document.getElementById("closeReevaluationModalBtn"),
+  cancelReevaluationBtn: document.getElementById("cancelReevaluationBtn"),
+  confirmReevaluationBtn: document.getElementById("confirmReevaluationBtn"),
+  reevaluationReasonInput: document.getElementById("reevaluationReasonInput"),
+  reevaluationAlert: document.getElementById("reevaluationAlert"),
+  submissionHistoryModalBackdrop: document.getElementById("submissionHistoryModalBackdrop"),
+  closeSubmissionHistoryModalBtn: document.getElementById("closeSubmissionHistoryModalBtn"),
+  closeSubmissionHistoryFooterBtn: document.getElementById("closeSubmissionHistoryFooterBtn"),
+  submissionHistoryTimeline: document.getElementById("submissionHistoryTimeline"),
+  structureModalBackdrop: document.getElementById("structureModalBackdrop"),
+  structureClassSelect: document.getElementById("structureClassSelect"),
+  structureTreeContainer: document.getElementById("structureTreeContainer"),
+  closeStructureModalBtn: document.getElementById("closeStructureModalBtn"),
+  closeStructureFooterBtn: document.getElementById("closeStructureFooterBtn"),
+  finalizeModalBackdrop: document.getElementById("finalizeModalBackdrop"),
+  finalizeConfirmCheckbox: document.getElementById("finalizeConfirmCheckbox"),
+  finalizeAuditNote: document.getElementById("finalizeAuditNote"),
+  confirmFinalizeBtn: document.getElementById("confirmFinalizeBtn"),
+  cancelFinalizeBtn: document.getElementById("cancelFinalizeBtn"),
+  closeFinalizeModalBtn: document.getElementById("closeFinalizeModalBtn"),
+  analyticsKpiRow: document.getElementById("analyticsKpiRow"),
+  analyticsUnitComparisonsBody: document.getElementById("analyticsUnitComparisonsBody"),
+  analyticsRightCardBody: document.getElementById("analyticsRightCardBody"),
+  analyticsRankingsHead: document.getElementById("analyticsRankingsHead"),
+  analyticsRankingsBody: document.getElementById("analyticsRankingsBody"),
+  analyticsAlertsContainer: document.getElementById("analyticsAlertsContainer"),
+  analyticsFinalizedBadge: document.getElementById("analyticsFinalizedBadge"),
+  analyticsStudentFeedbackBody: document.getElementById("analyticsStudentFeedbackBody"),
+  analyticsLeaderboardBody: document.getElementById("analyticsLeaderboardBody"),
   // Semesters Page Elements
   semestersListContainer: document.getElementById("semestersListContainer"),
   btnOpenCreateSemester: document.getElementById("btnOpenCreateSemester"),
@@ -1085,6 +1147,120 @@ function setupEventListeners() {
     });
   }
 
+  // Grade Correction Modal Listeners
+  if (elements.closeCorrectionModalBtn) {
+    elements.closeCorrectionModalBtn.addEventListener("click", closeGradeCorrectionModal);
+  }
+  if (elements.cancelCorrectionBtn) {
+    elements.cancelCorrectionBtn.addEventListener("click", closeGradeCorrectionModal);
+  }
+  if (elements.confirmCorrectionBtn) {
+    elements.confirmCorrectionBtn.addEventListener("click", handleConfirmGradeCorrection);
+  }
+  if (elements.gradeCorrectionModalBackdrop) {
+    elements.gradeCorrectionModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.gradeCorrectionModalBackdrop) closeGradeCorrectionModal();
+    });
+  }
+
+  // Resubmission Modal Listeners
+  if (elements.closeResubmissionModalBtn) {
+    elements.closeResubmissionModalBtn.addEventListener("click", closeResubmissionModal);
+  }
+  if (elements.cancelResubmissionBtn) {
+    elements.cancelResubmissionBtn.addEventListener("click", closeResubmissionModal);
+  }
+  if (elements.confirmResubmissionBtn) {
+    elements.confirmResubmissionBtn.addEventListener("click", handleConfirmResubmission);
+  }
+  if (elements.resubmissionModalBackdrop) {
+    elements.resubmissionModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.resubmissionModalBackdrop) closeResubmissionModal();
+    });
+  }
+
+  // Re-evaluation Modal Listeners
+  if (elements.closeReevaluationModalBtn) {
+    elements.closeReevaluationModalBtn.addEventListener("click", closeReevaluationModal);
+  }
+  if (elements.cancelReevaluationBtn) {
+    elements.cancelReevaluationBtn.addEventListener("click", closeReevaluationModal);
+  }
+  if (elements.confirmReevaluationBtn) {
+    elements.confirmReevaluationBtn.addEventListener("click", handleSubmitReevaluationDecision);
+  }
+  if (elements.reevaluationModalBackdrop) {
+    elements.reevaluationModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.reevaluationModalBackdrop) closeReevaluationModal();
+    });
+  }
+
+  // Submission History Modal Listeners
+  if (elements.closeSubmissionHistoryModalBtn) {
+    elements.closeSubmissionHistoryModalBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
+  if (elements.closeSubmissionHistoryFooterBtn) {
+    elements.closeSubmissionHistoryFooterBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.submissionHistoryModalBackdrop) closeSubmissionHistoryModal();
+    });
+  }
+
+  // Resubmit and View History Button Listeners in View Submission Modal
+  if (elements.btnModalResubmitWork) {
+    elements.btnModalResubmitWork.addEventListener("click", () => {
+      if (state.currentViewingSubmission && state.currentViewingAssignment) {
+        const sub = state.currentViewingSubmission;
+        const asgn = state.currentViewingAssignment;
+        closeViewSubmissionModal();
+        openSubmitWorkModal(asgn, sub);
+      }
+    });
+  }
+  if (elements.btnModalViewHistory) {
+    elements.btnModalViewHistory.addEventListener("click", () => {
+      if (state.currentViewingSubmission) {
+        openSubmissionHistoryModal(state.currentViewingSubmission);
+      }
+    });
+  }
+
+  // Escape and Alt+Arrow handling
+  window.addEventListener("keydown", (e) => {
+    if (elements.gradeCorrectionModalBackdrop && elements.gradeCorrectionModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        closeGradeCorrectionModal();
+      }
+      return;
+    }
+    if (elements.resubmissionModalBackdrop && elements.resubmissionModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        closeResubmissionModal();
+      }
+      return;
+    }
+    if (elements.reevaluationModalBackdrop && elements.reevaluationModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        closeReevaluationModal();
+      }
+      return;
+    }
+    if (elements.submissionHistoryModalBackdrop && elements.submissionHistoryModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        closeSubmissionHistoryModal();
+      }
+      return;
+    }
+    if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      if (elements.gradeCorrectionModalBackdrop && elements.gradeCorrectionModalBackdrop.style.display === "flex") {
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+
   // Semesters Page Form & Button Listeners
   if (elements.createSemesterInlineForm) {
     elements.createSemesterInlineForm.addEventListener("submit", handleCreateSemesterInline);
@@ -1296,6 +1472,641 @@ function setupEventListeners() {
 }
 
 // ==========================================================================
+// WORKFLOW & NOTIFICATION HELPER FUNCTIONS
+// ==========================================================================
+
+async function fetchNotifications() {
+  if (!state.currentUser) return;
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
+  try {
+    const res = await fetch(API_ENDPOINTS.notifications, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
+    });
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+    if (!res.ok) return;
+    const notifications = await res.json();
+    if (epoch !== state.authEpoch || state.currentUser?.id !== user?.id) return;
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    if (elements.notificationBadge) {
+      if (unreadCount > 0) {
+        elements.notificationBadge.textContent = unreadCount > 9 ? "9+" : unreadCount;
+        elements.notificationBadge.style.display = "block";
+      } else {
+        elements.notificationBadge.style.display = "none";
+      }
+    }
+
+    if (elements.notificationList) {
+      if (!notifications.length) {
+        elements.notificationList.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>`;
+      } else {
+        elements.notificationList.innerHTML = notifications.slice(0, 15).map(n => `
+          <div class="notification-item" data-id="${n.id}" data-link="${escapeHtml(n.link_url || '')}" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; background: ${n.is_read ? 'transparent' : '#f0f9ff'}; display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; font-size: 0.825rem; color: #1e293b;">${escapeHtml(n.title)}</span>
+              <span style="font-size: 0.7rem; color: #94a3b8;">${new Date(n.created_at).toLocaleDateString([], {month:'short', day:'numeric'})}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #475569;">${escapeHtml(n.message)}</div>
+          </div>
+        `).join("");
+
+        elements.notificationList.querySelectorAll(".notification-item").forEach(item => {
+          item.addEventListener("click", async () => {
+            const notifId = item.getAttribute("data-id");
+            const linkUrl = item.getAttribute("data-link");
+            try {
+              await fetch(`${API_ENDPOINTS.notifications}/${notifId}/read`, {
+                method: "PUT",
+                credentials: "same-origin",
+              });
+              await fetchNotifications();
+            } catch (e) {}
+            if (linkUrl) {
+              window.location.hash = linkUrl.replace(/^\//, "");
+            }
+            if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Notifications error:", err);
+  }
+}
+
+// Extensions
+let currentExtensionAssignmentId = null;
+
+async function openExtensionsModal(asgnId) {
+  currentExtensionAssignmentId = asgnId;
+  const asgn = state.assignments.find(a => a.id === asgnId);
+  if (!asgn) return;
+
+  if (elements.extensionsAlert) elements.extensionsAlert.style.display = "none";
+  if (elements.extensionsModalSubtitle) {
+    elements.extensionsModalSubtitle.textContent = `Extensions for: ${asgn.title}`;
+  }
+
+  if (elements.extensionStudentSelect) {
+    elements.extensionStudentSelect.innerHTML = `<option value="">Select student...</option>`;
+    if (asgn.class_id) {
+      try {
+        const res = await fetch(`${API_ENDPOINTS.classes}/${asgn.class_id}/students`, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" }
+        });
+        if (res.ok) {
+          const students = await res.json();
+          elements.extensionStudentSelect.innerHTML += students.map(s => `<option value="${s.id}">${escapeHtml(s.full_name || s.email)}</option>`).join("");
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (elements.extensionDeadlineInput) {
+    const d = new Date(asgn.due_date || Date.now());
+    d.setDate(d.getDate() + 3);
+    elements.extensionDeadlineInput.value = formatInputDate(d);
+  }
+
+  await loadExistingExtensions(asgnId);
+  if (elements.extensionsModalBackdrop) elements.extensionsModalBackdrop.style.display = "flex";
+}
+
+async function loadExistingExtensions(asgnId) {
+  if (!elements.extensionsListContainer) return;
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.extensions(asgnId), {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const exts = await res.json();
+      if (!exts.length) {
+        elements.extensionsListContainer.innerHTML = `<p style="color: #64748b; font-size: 0.85rem;">No active extensions for this assignment.</p>`;
+      } else {
+        elements.extensionsListContainer.innerHTML = exts.map(e => `
+          <div style="padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-weight: 600;">Student #${e.student_id}</span>
+              <div style="font-size: 0.75rem; color: #64748b;">Reason: ${escapeHtml(e.reason || "None")}</div>
+            </div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #2563eb;">
+              Due: ${new Date(e.extended_due_date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+  } catch (err) {
+    console.error("Extensions load error:", err);
+  }
+}
+
+async function handleGrantExtension(e) {
+  e.preventDefault();
+  if (!currentExtensionAssignmentId) return;
+
+  const studentId = parseInt(elements.extensionStudentSelect.value, 10);
+  const deadlineVal = elements.extensionDeadlineInput.value;
+  const reasonVal = elements.extensionReasonInput.value.trim();
+
+  if (!studentId || !deadlineVal || !reasonVal) {
+    showToast("Please fill in all extension fields.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.extensions(currentExtensionAssignmentId), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        student_id: studentId,
+        extended_due_date: new Date(deadlineVal).toISOString(),
+        reason: reasonVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to grant extension.", "error");
+      return;
+    }
+    showToast("Extension granted successfully.", "success");
+    elements.extensionReasonInput.value = "";
+    await loadExistingExtensions(currentExtensionAssignmentId);
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Resubmissions
+let currentWorkflowSubmission = null;
+
+function openResubmissionModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.resubmissionAlert) elements.resubmissionAlert.style.display = "none";
+  if (elements.resubmissionDeadlineInput) elements.resubmissionDeadlineInput.value = "";
+  if (elements.resubmissionNotesInput) elements.resubmissionNotesInput.value = "";
+  if (elements.resubmissionModalBackdrop) elements.resubmissionModalBackdrop.style.display = "flex";
+}
+
+let isAllowingResubmission = false;
+
+async function handleConfirmResubmission() {
+  if (!currentWorkflowSubmission || isAllowingResubmission) return;
+  const deadlineVal = elements.resubmissionDeadlineInput ? elements.resubmissionDeadlineInput.value : null;
+  const isoDeadline = deadlineVal ? new Date(deadlineVal).toISOString() : null;
+  const notes = elements.resubmissionNotesInput ? elements.resubmissionNotesInput.value.trim() : null;
+
+  isAllowingResubmission = true;
+  if (elements.confirmResubmissionBtn) {
+    elements.confirmResubmissionBtn.disabled = true;
+    elements.confirmResubmissionBtn.textContent = "Authorizing...";
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.allowResubmission(currentWorkflowSubmission.id), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        resubmission_deadline: isoDeadline,
+        resubmission_note: notes
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to allow resubmission", "error");
+      return;
+    }
+    showToast("Resubmission permitted for student.", "success");
+    closeResubmissionModal();
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  } finally {
+    isAllowingResubmission = false;
+    if (elements.confirmResubmissionBtn) {
+      elements.confirmResubmissionBtn.disabled = false;
+      elements.confirmResubmissionBtn.textContent = "Confirm Authorization";
+    }
+  }
+}
+
+function closeGradeCorrectionModal() {
+  if (elements.gradeCorrectionModalBackdrop) {
+    elements.gradeCorrectionModalBackdrop.style.display = "none";
+  }
+  if (elements.correctionAlert) {
+    elements.correctionAlert.style.display = "none";
+    elements.correctionAlert.textContent = "";
+  }
+  if (elements.gradingCorrectGradeBtn) {
+    elements.gradingCorrectGradeBtn.focus();
+  }
+}
+
+function closeResubmissionModal() {
+  if (elements.resubmissionModalBackdrop) {
+    elements.resubmissionModalBackdrop.style.display = "none";
+  }
+  if (elements.resubmissionAlert) {
+    elements.resubmissionAlert.style.display = "none";
+    elements.resubmissionAlert.textContent = "";
+  }
+}
+
+function closeReevaluationModal() {
+  if (elements.reevaluationModalBackdrop) {
+    elements.reevaluationModalBackdrop.style.display = "none";
+  }
+  if (elements.reevaluationAlert) {
+    elements.reevaluationAlert.style.display = "none";
+    elements.reevaluationAlert.textContent = "";
+  }
+}
+
+function closeSubmissionHistoryModal() {
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.style.display = "none";
+  }
+}
+
+// Grade Corrections (Audit Trail)
+async function openGradeCorrectionModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.correctionAlert) {
+    elements.correctionAlert.style.display = "none";
+    elements.correctionAlert.textContent = "";
+  }
+
+  // Resolve current active grade without inventing or defaulting to 0:
+  // 1. Saved grade on sub object (number or valid numeric string)
+  // 2. Active grade currently displayed in grading panel input (elements.gradingMarksInput)
+  // 3. Saved grade in active roster item if sub was shallow
+  let currentGrade = null;
+  if (sub && sub.grade !== null && sub.grade !== undefined && sub.grade !== "" && !isNaN(Number(sub.grade))) {
+    currentGrade = Number(sub.grade);
+  } else if (elements.gradingMarksInput && elements.gradingMarksInput.value.trim() !== "") {
+    const parsed = parseFloat(elements.gradingMarksInput.value.trim());
+    if (!isNaN(parsed)) {
+      currentGrade = parsed;
+    }
+  } else if (state.currentGradingSubmissions && sub && sub.id) {
+    const matched = state.currentGradingSubmissions.find((s) => s.id === sub.id);
+    if (matched && matched.grade !== null && matched.grade !== undefined && matched.grade !== "" && !isNaN(Number(matched.grade))) {
+      currentGrade = Number(matched.grade);
+    }
+  }
+
+  if (elements.correctionPreviousGrade) {
+    elements.correctionPreviousGrade.value = currentGrade !== null ? currentGrade : "";
+  }
+  if (elements.correctionNewGrade) {
+    elements.correctionNewGrade.value = currentGrade !== null ? currentGrade : "";
+  }
+  if (elements.correctionReasonInput) {
+    elements.correctionReasonInput.value = "";
+  }
+
+  if (elements.correctionHistoryList) {
+    try {
+      const res = await fetch(API_ENDPOINTS.workflow.gradeCorrections(sub.id), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      });
+      if (res.ok) {
+        const list = await res.json();
+        if (!list.length) {
+          elements.correctionHistoryList.innerHTML = `<p style="color: #64748b; margin: 0;">No prior corrections recorded.</p>`;
+        } else {
+          elements.correctionHistoryList.innerHTML = list.map(c => `
+            <div style="padding: 0.35rem 0; border-bottom: 1px solid var(--border-color);">
+              <span style="font-weight: 600;">${c.previous_grade !== null && c.previous_grade !== undefined ? c.previous_grade : "—"} ➔ ${c.new_grade}</span>
+              <span style="color: #64748b; font-size: 0.75rem; margin-left: 0.5rem;">(${escapeHtml(c.reason)})</span>
+            </div>
+          `).join("");
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (elements.gradeCorrectionModalBackdrop) {
+    elements.gradeCorrectionModalBackdrop.style.display = "flex";
+  }
+
+  // Set focus to the corrected grade input
+  if (elements.correctionNewGrade) {
+    setTimeout(() => {
+      elements.correctionNewGrade.focus();
+      elements.correctionNewGrade.select();
+    }, 50);
+  }
+}
+
+async function handleConfirmGradeCorrection() {
+  if (!currentWorkflowSubmission) return;
+  const newGradeVal = parseFloat(elements.correctionNewGrade.value);
+  const reasonVal = elements.correctionReasonInput.value.trim();
+
+  if (isNaN(newGradeVal)) {
+    showToast("Please enter a valid numeric grade.", "warning");
+    return;
+  }
+  if (!reasonVal) {
+    showToast("Correction reason is required for audit trail.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.correctGrade(currentWorkflowSubmission.id), {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        new_grade: newGradeVal,
+        reason: reasonVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to save grade correction.", "error");
+      return;
+    }
+    showToast("Grade corrected and logged in audit trail.", "success");
+    closeGradeCorrectionModal();
+
+    // Update in-memory state
+    currentWorkflowSubmission.grade = newGradeVal;
+    if (currentWorkflowSubmission.status === "submitted") {
+      currentWorkflowSubmission.status = "graded";
+    }
+    if (state.currentGradingSubmissions && state.currentGradingSubmissions[state.currentGradingIndex]) {
+      state.currentGradingSubmissions[state.currentGradingIndex].grade = newGradeVal;
+      if (state.currentGradingSubmissions[state.currentGradingIndex].status === "submitted") {
+        state.currentGradingSubmissions[state.currentGradingIndex].status = "graded";
+      }
+    }
+    if (elements.gradingMarksInput) {
+      elements.gradingMarksInput.value = newGradeVal;
+    }
+
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Submission History Modal
+async function openSubmissionHistoryModal(sub) {
+  if (!elements.submissionHistoryList) return;
+  elements.submissionHistoryList.innerHTML = `<p style="color: #64748b;">Loading history...</p>`;
+  if (elements.submissionHistoryModalBackdrop) elements.submissionHistoryModalBackdrop.style.display = "flex";
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.submissionHistory(sub.id), {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const history = await res.json();
+      let html = "";
+      html += `
+        <div style="padding: 0.85rem; border: 1.5px solid #2563eb; border-radius: var(--radius-sm); background: #eff6ff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <span style="font-weight: 700; color: #1e3a8a;">Attempt #${sub.attempt_number || 1} (Current Active)</span>
+            <span style="font-size: 0.75rem; color: #64748b;">${new Date(sub.submitted_at).toLocaleString()}</span>
+          </div>
+          <div style="font-size: 0.85rem;">File: <strong>${escapeHtml(sub.file_name || 'submission')}</strong> (${formatBytes(sub.file_size || 0)})</div>
+          <div style="font-size: 0.8rem; color: #475569; margin-top: 0.2rem;">Grade: <strong>${sub.grade !== null ? sub.grade : 'Ungraded'}</strong></div>
+        </div>
+      `;
+
+      if (history.length > 0) {
+        html += `<h5 style="margin: 0.75rem 0 0.4rem; font-size: 0.85rem; color: #64748b;">Prior Attempts:</h5>`;
+        html += history.map(h => `
+          <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <span style="font-weight: 600;">Attempt #${h.attempt_number} (Archived)</span>
+              <span style="font-size: 0.75rem; color: #94a3b8;">${new Date(h.submitted_at).toLocaleString()}</span>
+            </div>
+            <div>File: <strong>${escapeHtml(h.file_name || 'submission')}</strong> (${formatBytes(h.file_size || 0)})</div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">Score at time: ${h.grade !== null ? h.grade : 'Ungraded'} | Feedback: ${escapeHtml(h.feedback || 'None')}</div>
+          </div>
+        `).join("");
+      }
+
+      elements.submissionHistoryList.innerHTML = html;
+    }
+  } catch (e) {
+    elements.submissionHistoryList.innerHTML = `<p style="color: var(--danger);">Failed to load history.</p>`;
+  }
+}
+
+// Re-evaluations
+let currentReevaluationRequest = null;
+
+function openStudentReevaluationModal(sub) {
+  currentWorkflowSubmission = sub;
+  if (elements.reevaluationAlert) elements.reevaluationAlert.style.display = "none";
+  if (elements.reevaluationStudentSection) elements.reevaluationStudentSection.style.display = "block";
+  if (elements.reevaluationTeacherSection) elements.reevaluationTeacherSection.style.display = "none";
+  if (elements.reevalReasonInput) elements.reevalReasonInput.value = "";
+  if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "flex";
+}
+
+function openTeacherReevaluationModal(req) {
+  currentReevaluationRequest = req;
+  if (elements.reevaluationAlert) elements.reevaluationAlert.style.display = "none";
+  if (elements.reevaluationStudentSection) elements.reevaluationStudentSection.style.display = "none";
+  if (elements.reevaluationTeacherSection) elements.reevaluationTeacherSection.style.display = "block";
+  if (elements.reevaluationTeacherReason) elements.reevaluationTeacherReason.textContent = req.reason || "None";
+  if (elements.reevalRevisedGrade) elements.reevalRevisedGrade.value = req.previous_grade !== null ? req.previous_grade : "";
+  if (elements.reevalDecisionNotes) elements.reevalDecisionNotes.value = "";
+  if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "flex";
+}
+
+async function handleSubmitReevaluationRequest() {
+  if (!currentWorkflowSubmission) return;
+  const reasonVal = elements.reevalReasonInput ? elements.reevalReasonInput.value.trim() : "";
+  if (!reasonVal) {
+    showToast("Please provide a reason for re-evaluation.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.requestReevaluation(currentWorkflowSubmission.id), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ reason: reasonVal })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to submit re-evaluation request.", "error");
+      return;
+    }
+    showToast("Re-evaluation request submitted to instructor.", "success");
+    if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "none";
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+async function handleSubmitReevaluationDecision() {
+  if (!currentReevaluationRequest) return;
+  const decisionVal = elements.reevalDecisionSelect ? elements.reevalDecisionSelect.value : "approved";
+  const revisedGradeVal = elements.reevalRevisedGrade ? parseFloat(elements.reevalRevisedGrade.value) : null;
+  const notesVal = elements.reevalDecisionNotes ? elements.reevalDecisionNotes.value.trim() : null;
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.reevaluationDecision(currentReevaluationRequest.id), {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        status: decisionVal,
+        revised_grade: decisionVal === "approved" ? revisedGradeVal : null,
+        decision_notes: notesVal
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to record decision.", "error");
+      return;
+    }
+    showToast("Re-evaluation decision recorded.", "success");
+    closeReevaluationModal();
+    if (state.currentGradingAssignment) {
+      await fetchTeacherSubmissions(state.currentGradingAssignment);
+      if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
+        openGradingWorkspace(state.currentGradingIndex);
+      }
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Finalization
+async function openFinalizeModal() {
+  if (!currentAnalyticsClassId || !currentAnalyticsSubject) {
+    showToast("Please select a class and subject first.", "warning");
+    return;
+  }
+  if (elements.finalizeAlert) elements.finalizeAlert.style.display = "none";
+  if (elements.finalizeNotesInput) elements.finalizeNotesInput.value = "";
+
+  const asgns = (state.assignments || []).filter(a => a.class_id == currentAnalyticsClassId && a.subject === currentAnalyticsSubject);
+  const units = [...new Set(asgns.map(a => a.unit || 1))].sort((a,b) => a-b);
+
+  if (elements.finalizeUnitsChecklist) {
+    elements.finalizeUnitsChecklist.innerHTML = units.map(u => `
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+        <input type="checkbox" class="finalize-unit-check" value="${u}" checked>
+        <span>Unit ${u} (Required)</span>
+      </label>
+    `).join("");
+  }
+
+  if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "flex";
+}
+
+async function handleConfirmFinalize() {
+  const checkedUnits = Array.from(document.querySelectorAll(".finalize-unit-check:checked")).map(cb => cb.value).join(",");
+  const auditNotes = elements.finalizeNotesInput ? elements.finalizeNotesInput.value.trim() : null;
+
+  try {
+    const res = await fetch(API_ENDPOINTS.workflow.finalize(currentAnalyticsClassId, currentAnalyticsSubject), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        required_units: checkedUnits || "1",
+        audit_notes: auditNotes
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || "Failed to finalize results.", "error");
+      return;
+    }
+    showToast("Subject results successfully finalized and locked.", "success");
+    if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "none";
+    await refreshAnalyticsData();
+  } catch (e) {
+    showToast("Network error", "error");
+  }
+}
+
+// Leaderboard & Reports
+async function toggleLeaderboard() {
+  if (!elements.analyticsLeaderboardCard) return;
+  const isHidden = elements.analyticsLeaderboardCard.style.display === "none";
+
+  if (isHidden) {
+    try {
+      const res = await fetch(API_ENDPOINTS.analytics.leaderboard(currentAnalyticsClassId, currentAnalyticsSubject), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        const board = Array.isArray(resData) ? resData : (resData.leaderboard || []);
+        if (elements.analyticsLeaderboardBody) {
+          elements.analyticsLeaderboardBody.innerHTML = board.map(b => `
+            <tr style="${(b.is_self || b.is_current_user) ? 'background: #eff6ff; font-weight: 600;' : ''}">
+              <td><strong>#${b.rank}</strong></td>
+              <td>${escapeHtml(b.display_name)}${(b.is_self || b.is_current_user) ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+              <td style="color: #2563eb; font-weight: 700;">${(b.percentage ?? b.score) !== null && (b.percentage ?? b.score) !== undefined ? (b.percentage ?? b.score) + '%' : '—'}</td>
+              <td>${b.units_completed ?? b.completed_units ?? 0}</td>
+            </tr>
+          `).join("");
+        }
+        elements.analyticsLeaderboardCard.style.display = "block";
+      }
+    } catch (e) {
+      showToast("Failed to load class leaderboard", "error");
+    }
+  } else {
+    elements.analyticsLeaderboardCard.style.display = "none";
+  }
+}
+
+function handleDownloadSummaryCsv() {
+  if (!currentAnalyticsClassId) {
+    showToast("Select a class first.", "warning");
+    return;
+  }
+  window.open(API_ENDPOINTS.analytics.summaryCsv(currentAnalyticsClassId), "_blank");
+}
+
+function handleDownloadDetailedCsv() {
+  if (!currentAnalyticsClassId) {
+    showToast("Select a class first.", "warning");
+    return;
+  }
+  window.open(API_ENDPOINTS.analytics.detailedCsv(currentAnalyticsClassId), "_blank");
+}
+
+
+// ==========================================================================
 // API Interaction Functions
 // ==========================================================================
 
@@ -1304,13 +2115,17 @@ function setupEventListeners() {
  */
 async function fetchAssignments() {
   showLoadingState();
+  const epoch = state.authEpoch;
+  const user = state.currentUser;
 
   try {
     const response = await fetch(API_ENDPOINTS.assignments, {
       method: "GET",
       credentials: "same-origin",
       headers: getAuthHeaders(),
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (response.status === 401) {
       state.currentUser = null;
@@ -1550,7 +2365,9 @@ async function handleConfirmDelete() {
       method: "DELETE",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (response.status === 401) {
       state.currentUser = null;
@@ -1748,7 +2565,7 @@ function renderTable(assignments) {
     // Class pill badge
     const classBadge = assignment.class_name
       ? `<span class="class-pill" title="Class: ${escapeHtml(assignment.class_name)}">${escapeHtml(assignment.class_name)}</span>`
-      : "";
+      : (isTeacher ? `<span class="class-pill unassigned-pill" title="Private teacher draft: not visible to students until assigned to a class">Unassigned (Draft)</span>` : "");
 
     // PDF attachment chip indicator
     const pdfBadge = assignment.has_attachment
@@ -1804,9 +2621,22 @@ function renderTable(assignments) {
       `;
     } else if (isStudent) {
       if (mySub) {
+        const resubAllowed = Boolean(mySub.resubmission_allowed);
+        let isResubExpired = false;
+        if (resubAllowed && mySub.resubmission_deadline) {
+          isResubExpired = new Date(mySub.resubmission_deadline).getTime() < Date.now();
+        }
+
+        const resubmitBtn = (resubAllowed && !isResubExpired)
+          ? `<button class="btn btn-sm btn-warning resubmit-work-btn" data-id="${assignment.id}" title="Teacher authorized resubmission: click to submit a revised attempt" style="padding: 0.25rem 0.65rem; font-size: 0.775rem; font-weight: 600;">
+               ↻ Resubmit
+             </button>`
+          : "";
+
         actionsHtml = `
           <div class="action-btn-group">
             ${downloadActionBtn}
+            ${resubmitBtn}
             <button class="btn btn-sm btn-outline view-submission-btn" data-id="${assignment.id}" title="View Your Submission" style="padding: 0.25rem 0.65rem; font-size: 0.775rem;">
               View Work
             </button>
@@ -1830,12 +2660,35 @@ function renderTable(assignments) {
 
     let studentSubBadge = "";
     if (isStudent && mySub) {
+      const resubAllowed = Boolean(mySub.resubmission_allowed);
+      let isResubExpired = false;
+      if (resubAllowed && mySub.resubmission_deadline) {
+        isResubExpired = new Date(mySub.resubmission_deadline).getTime() < Date.now();
+      }
+
+      let resubBadge = "";
+      if (resubAllowed) {
+        if (!isResubExpired) {
+          const dlHint = mySub.resubmission_deadline ? ` until ${formatDisplayDate(mySub.resubmission_deadline)}` : "";
+          resubBadge = `<span class="submission-pill status-resubmit-allowed" title="Resubmission permitted by teacher${dlHint}">↻ Resubmission Permitted</span>`;
+        } else {
+          resubBadge = `<span class="submission-pill status-resubmit-expired" title="Resubmission deadline passed on ${formatDisplayDate(mySub.resubmission_deadline)}">Resubmission Expired</span>`;
+        }
+      }
+
+      let gradeBadge = "";
       if (mySub.status === "released" && mySub.grade !== null && mySub.grade !== undefined) {
-        studentSubBadge = `<span class="submission-pill status-released" title="Grade Released: ${mySub.grade}/${mySub.max_marks || 100}">Score: ${mySub.grade}/${mySub.max_marks || 100}</span>`;
+        gradeBadge = `<span class="submission-pill status-released" title="Grade Released: ${mySub.grade}/${mySub.max_marks || 100}">Score: ${mySub.grade}/${mySub.max_marks || 100}</span>`;
       } else {
-        studentSubBadge = mySub.is_late
+        gradeBadge = mySub.is_late
           ? `<span class="submission-pill status-late" title="Submitted Late on ${formatDisplayDate(mySub.submitted_at)}">✓ Late (In Review)</span>`
           : `<span class="submission-pill status-ungraded" title="Submitted on ${formatDisplayDate(mySub.submitted_at)}">✓ Pending Review</span>`;
+      }
+
+      if (resubBadge) {
+        studentSubBadge = `<div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">${gradeBadge}${resubBadge}</div>`;
+      } else {
+        studentSubBadge = gradeBadge;
       }
     }
 
@@ -1843,11 +2696,13 @@ function renderTable(assignments) {
       <td class="col-num">${index + 1}</td>
       <td class="col-title" title="${escapeHtml(assignment.description || assignment.title)}">
         <span class="title-text">${escapeHtml(assignment.title)}</span>
+        <span class="marks-chip" title="Maximum Marks: ${assignment.max_marks || 100}">${assignment.max_marks || 100} pts</span>
         ${pdfBadge}
       </td>
       <td class="col-subject">
         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;">
           <span>${escapeHtml(assignment.subject)}</span>
+          <span class="unit-badge">Unit ${assignment.unit || 1}</span>
           ${classBadge}
         </div>
       </td>
@@ -1870,6 +2725,7 @@ function renderTable(assignments) {
     const deleteBtn = tr.querySelector(".delete-btn");
     const submissionsBtn = tr.querySelector(".submissions-btn");
     const submitWorkBtn = tr.querySelector(".submit-work-btn");
+    const resubmitBtn = tr.querySelector(".resubmit-work-btn");
     const viewSubBtn = tr.querySelector(".view-submission-btn");
     const subPill = tr.querySelector(".submission-pill");
 
@@ -1884,6 +2740,9 @@ function renderTable(assignments) {
     }
     if (submitWorkBtn) {
       submitWorkBtn.addEventListener("click", () => openSubmitWorkModal(assignment));
+    }
+    if (resubmitBtn) {
+      resubmitBtn.addEventListener("click", () => openSubmitWorkModal(assignment, mySub));
     }
     if (viewSubBtn) {
       viewSubBtn.addEventListener("click", () => openViewSubmissionModal(assignment, mySub));
@@ -1937,7 +2796,9 @@ async function loadClassSubjects(classId, preselectedSubjectName = null, presele
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (res.ok) {
       const subjects = await res.json();
@@ -2711,6 +3572,195 @@ function escapeHtml(str) {
 // ==========================================================================
 
 /**
+ * Role-based route authorization.
+ * Returns true if the user's role has permission to access the target route.
+ */
+function canUserAccessRoute(user, route) {
+  if (!user || !user.role) return false;
+  const normalized = (route || "").toLowerCase().trim();
+  if (!SUPPORTED_VIEWS.includes(normalized)) return false;
+
+  const rolePermissions = {
+    teacher: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
+    student: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
+  };
+
+  const allowedRoutes = rolePermissions[user.role] || ["dashboard"];
+  return allowedRoutes.includes(normalized);
+}
+
+/**
+ * Completely clears all in-memory user-specific state, aborts in-flight requests,
+ * closes all modals/drawers, empties DOM tables/containers, and resets navigation to #dashboard.
+ */
+function clearUserState() {
+  // Invalidate any in-flight asynchronous requests from previous session
+  if (state.activeAbortController) {
+    try {
+      state.activeAbortController.abort();
+    } catch (_) {}
+  }
+  state.activeAbortController = new AbortController();
+  state.authEpoch = (state.authEpoch || 0) + 1;
+
+  // Clear in-memory and persistent user-specific state
+  setAuthToken(null);
+  state.currentUser = null;
+  state.assignments = [];
+  state.filteredAssignments = [];
+  state.classes = [];
+  state.mySubmissions = {};
+  state.submissionsData = [];
+  state.editingId = null;
+  state.deletePendingId = null;
+  state.currentSubmittingAssignment = null;
+  state.currentSubmittingExistingSubmission = null;
+  state.currentViewingAssignment = null;
+  state.currentViewingSubmission = null;
+  state.currentGradingAssignment = null;
+  state.currentGradingSubmissions = [];
+  state.currentGradingIndex = 0;
+  state.pendingSingleReleaseSubId = null;
+  state.isGradingSaving = false;
+  if (state.selectedSubmissionIds) {
+    state.selectedSubmissionIds.clear();
+  } else {
+    state.selectedSubmissionIds = new Set();
+  }
+  state.filters = {
+    search: "",
+    classId: "all",
+    subject: "all",
+    unit: "all",
+    status: "all",
+    sort: "newest",
+  };
+
+  // Clear module-level variables
+  currentExtensionAssignmentId = null;
+  currentWorkflowSubmission = null;
+  currentReevaluationRequest = null;
+  currentAnalyticsClassId = null;
+  currentAnalyticsSubject = "";
+
+  // Close all open modals, drawers, and menus to prevent background bleed
+  try { closeProfileMenu(); } catch (_) {}
+  try { closeDrawer(); } catch (_) {}
+  try { closeDeleteModal(); } catch (_) {}
+  try { closeSidebar(); } catch (_) {}
+  try { closeClassesModal(); } catch (_) {}
+  try { closeSubmitWorkModal(); } catch (_) {}
+  try { closeViewSubmissionModal(); } catch (_) {}
+  try { closeTeacherSubmissionsModal(); } catch (_) {}
+  try { closeSubmissionPreviewModal(); } catch (_) {}
+  try {
+    if (elements.gradingWorkspaceModalBackdrop) elements.gradingWorkspaceModalBackdrop.style.display = "none";
+    if (elements.gradingPdfIframe) elements.gradingPdfIframe.src = "about:blank";
+    if (elements.gradingPdfSpinner) elements.gradingPdfSpinner.style.display = "none";
+  } catch (_) {}
+  try { closeGradeCorrectionModal(); } catch (_) {}
+  try { closeResubmissionModal(); } catch (_) {}
+  try { closeReevaluationModal(); } catch (_) {}
+  try { closeSubmissionHistoryModal(); } catch (_) {}
+  try { closeSingleReleaseModal(); } catch (_) {}
+  try { closeBulkReleaseModal(); } catch (_) {}
+  try { closeStructureModal(); } catch (_) {}
+  if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
+
+  // Clear role/user-specific DOM tables and containers
+  if (elements.submissionsTableHead) elements.submissionsTableHead.innerHTML = "";
+  if (elements.submissionsTableBody) elements.submissionsTableBody.innerHTML = "";
+  if (elements.submissionsEmptyState) elements.submissionsEmptyState.style.display = "none";
+  if (elements.submissionsLoadingState) elements.submissionsLoadingState.style.display = "none";
+  if (elements.classesPageContent) elements.classesPageContent.innerHTML = "";
+  if (elements.tableBody) elements.tableBody.innerHTML = "";
+  if (elements.dashMetricsRow) elements.dashMetricsRow.innerHTML = "";
+  if (elements.dashDueAssignmentsList) elements.dashDueAssignmentsList.innerHTML = "";
+  if (elements.dashRecentSubmissionsList) elements.dashRecentSubmissionsList.innerHTML = "";
+  if (elements.analyticsRankingsBody) elements.analyticsRankingsBody.innerHTML = "";
+  if (elements.analyticsUnitComparisonsBody) elements.analyticsUnitComparisonsBody.innerHTML = "";
+  if (elements.analyticsStudentFeedbackBody) elements.analyticsStudentFeedbackBody.innerHTML = "";
+  if (elements.analyticsLeaderboardBody) elements.analyticsLeaderboardBody.innerHTML = "";
+  if (elements.notificationList) {
+    elements.notificationList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>';
+  }
+  if (elements.notificationBadge) elements.notificationBadge.style.display = "none";
+
+  populateClassFilterOptions([]);
+  populateFormClassOptions([]);
+  if (elements.globalSearchInput) elements.globalSearchInput.value = "";
+  if (elements.tableSearchInput) elements.tableSearchInput.value = "";
+
+  updateUserUI(null);
+  renderTable([]);
+  updateStatistics([]);
+
+  // Reset navigation to default dashboard view
+  state.activeView = "dashboard";
+  if (window.location.hash !== "#dashboard" && window.location.hash !== "") {
+    try {
+      history.replaceState(null, "", "#dashboard");
+    } catch (_) {
+      window.location.hash = "#dashboard";
+    }
+  }
+  document.querySelectorAll(".page-view").forEach((viewEl) => {
+    viewEl.style.display = "none";
+  });
+  const dashView = document.getElementById("dashboardView");
+  if (dashView) dashView.style.display = "flex";
+  elements.navLinks.forEach((link) => link.classList.remove("active"));
+  const dashLink = document.querySelector('.nav-link[data-nav="dashboard"]');
+  if (dashLink) dashLink.classList.add("active");
+}
+
+/**
+ * Fully establishes an authenticated user session:
+ * 1. Resolves identity and role
+ * 2. Updates user UI and sidebar elements
+ * 3. Fetches user metadata (classes, notifications)
+ * 4. Checks route authorization and navigates cleanly without refresh
+ */
+async function applyAuthenticatedUserSession(user, preferredRoute = null) {
+  if (!user || !user.role) {
+    throw new Error("Unable to resolve user identity or role.");
+  }
+
+  // Cancel prior in-flight requests and increment auth epoch
+  if (state.activeAbortController) {
+    try {
+      state.activeAbortController.abort();
+    } catch (_) {}
+  }
+  state.activeAbortController = new AbortController();
+  const currentEpoch = (state.authEpoch || 0) + 1;
+  state.authEpoch = currentEpoch;
+
+  state.currentUser = user;
+  updateUserUI(user);
+
+  // Fetch initial classes and notifications
+  await Promise.allSettled([
+    fetchClasses(),
+    fetchNotifications(),
+  ]);
+
+  // Ensure session has not changed during async fetch
+  if (state.authEpoch !== currentEpoch || state.currentUser?.id !== user.id) {
+    return;
+  }
+
+  // Determine target route: check authorization for the role
+  const rawRoute = (preferredRoute || window.location.hash || "").replace(/^#\/?/, "").toLowerCase() || "dashboard";
+  const targetRoute = canUserAccessRoute(user, rawRoute) ? rawRoute : "dashboard";
+
+  // Navigate to resolved route and trigger role-specific view loader
+  navigateToView(targetRoute, true);
+}
+
+
+
+/**
  * Authentication token storage helpers
  * Safely retains session token across browser hard-refreshes (Ctrl + Shift + R)
  */
@@ -2747,12 +3797,15 @@ function getAuthHeaders(extraHeaders = {}) {
  * Checks existing session against GET /api/auth/me
  */
 async function checkCurrentUser() {
+  const epoch = ++state.authEpoch;
   try {
     const res = await fetch(API_ENDPOINTS.authMe, {
       method: "GET",
       credentials: "same-origin",
       headers: getAuthHeaders(),
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (res.ok) {
       const user = await res.json();
@@ -2947,6 +4000,10 @@ function navigateToView(viewName, updateHash = true) {
     targetView = "dashboard";
   }
 
+  if (state.currentUser && !canUserAccessRoute(state.currentUser, targetView)) {
+    targetView = "dashboard";
+    rawView = "dashboard";
+  }
   state.activeView = targetView;
   state.currentView = targetView;
 
@@ -3442,7 +4499,9 @@ async function loadSubmissionsPageView() {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       state.submissionsData = await res.json();
       filterAndRenderSubmissions();
@@ -3549,15 +4608,33 @@ function filterAndRenderSubmissions() {
       const timingBadge = s.is_late
         ? `<span class="submission-pill status-late">Late</span>`
         : `<span class="submission-pill status-ontime">On-Time</span>`;
-      const reviewBadge = isReleased
+      let reviewBadge = isReleased
         ? `<span class="submission-pill status-released">Released</span>`
         : `<span class="submission-pill status-ungraded">Pending Review</span>`;
+
+      const resubAllowed = Boolean(s.resubmission_allowed);
+      let isResubExpired = false;
+      if (resubAllowed && s.resubmission_deadline) {
+        isResubExpired = new Date(s.resubmission_deadline).getTime() < Date.now();
+      }
+      if (resubAllowed) {
+        if (!isResubExpired) {
+          reviewBadge += `<div style="margin-top: 0.25rem;"><span class="submission-pill status-resubmit-allowed" title="Resubmission permitted by teacher">↻ Resubmit Allowed</span></div>`;
+        } else {
+          reviewBadge += `<div style="margin-top: 0.25rem;"><span class="submission-pill status-resubmit-expired" title="Resubmission deadline passed">Resubmission Expired</span></div>`;
+        }
+      }
+
+      const resubmitActionBtn = (resubAllowed && !isResubExpired)
+        ? `<button class="btn btn-warning btn-xs submissions-resubmit-btn" data-index="${idx}" type="button" title="Resubmit revised attempt">Resubmit</button>`
+        : "";
+
       const gradeHtml = isReleased
         ? `<strong>${s.grade}</strong> / ${s.max_marks || 100} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">(${Math.round((s.grade / (s.max_marks || 100)) * 100)}%)</span>`
         : `<span style="color: var(--text-muted); font-size: 0.825rem;">Pending Review</span>`;
 
       return `
-        <tr>
+        <tr data-sub-id="${s.id}" data-assignment-id="${s.assignment_id}">
           <td>${idx + 1}</td>
           <td>
             <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(s.assignment_title)}</div>
@@ -3569,10 +4646,11 @@ function filterAndRenderSubmissions() {
           </td>
           <td style="font-size: 0.85rem; color: var(--text-secondary);">${submittedTime}</td>
           <td>${timingBadge}</td>
-          <td>${reviewBadge}</td>
-          <td style="font-size: 0.875rem;">${gradeHtml}</td>
-          <td style="text-align: right; white-space: nowrap;">
+          <td class="col-sub-review-status">${reviewBadge}</td>
+          <td class="col-sub-grade" style="font-size: 0.875rem;">${gradeHtml}</td>
+          <td class="col-sub-actions" style="text-align: right; white-space: nowrap;">
             <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
+              ${resubmitActionBtn}
               <button class="btn btn-secondary btn-xs view-sub-details-btn" data-index="${idx}" type="button">
                 View Details
               </button>
@@ -3627,7 +4705,21 @@ function filterAndRenderSubmissions() {
         });
       });
     } else {
-      // Student details and preview buttons
+      // Student details, resubmit, and preview buttons
+      const resubmitBtns = elements.submissionsTableBody.querySelectorAll(".submissions-resubmit-btn");
+      resubmitBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          if (!isNaN(idx) && list[idx]) {
+            const subItem = list[idx];
+            openSubmitWorkModal(
+              { id: subItem.assignment_id, title: subItem.assignment_title, class_name: subItem.class_name },
+              subItem
+            );
+          }
+        });
+      });
+
       const detailBtns = elements.submissionsTableBody.querySelectorAll(".view-sub-details-btn");
       detailBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -3801,7 +4893,9 @@ async function loadAnalyticsPageView() {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (!res.ok) return;
     const data = await res.json();
 
@@ -4025,12 +5119,15 @@ function formatShortDate(dateStr) {
  * Fetches academic semesters from backend API
  */
 async function fetchSemesters() {
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(API_ENDPOINTS.semesters, {
       method: "GET",
       credentials: "same-origin",
       headers: getAuthHeaders(),
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       state.semesters = await res.json();
       if (!state.activeSemesterId && state.semesters.length > 0) {
@@ -4055,6 +5152,7 @@ function changeActiveSemester(semesterId) {
  * Fetches role-scoped dashboard metrics, cards, and donut data (Semester-aware)
  */
 async function fetchDashboard() {
+  const epoch = state.authEpoch;
   try {
     // If user is a teacher, attempt to load semester-scoped dashboard
     if (state.currentUser?.role === "teacher") {
@@ -4080,7 +5178,9 @@ async function fetchDashboard() {
       method: "GET",
       credentials: "same-origin",
       headers: getAuthHeaders(),
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       const data = await res.json();
       renderDashboard(data);
@@ -4166,7 +5266,7 @@ function renderSemesterDashboard(dashData) {
 
   // 1. Hero Banner
   if (elements.dashGreeting) elements.dashGreeting.textContent = "Good morning,";
-  if (elements.dashUserName) elements.dashUserName.textContent = state.currentUser?.full_name || "Rishi";
+  if (elements.dashUserName) elements.dashUserName.textContent = state.currentUser?.full_name || "Teacher";
   if (elements.dashSubtitle) elements.dashSubtitle.textContent = "Here's an overview of your semester.";
 
   if (elements.dashRolePill) {
@@ -5336,12 +6436,12 @@ async function handleLoginSubmit(e) {
     }
 
     const data = await res.json();
-    state.currentUser = data.user;
-    updateUserUI(data.user);
+    if (data.access_token) {
+      setAuthToken(data.access_token);
+    }
+    await applyAuthenticatedUserSession(data.user);
     closeAuthModal();
     showToast(`Welcome back, ${data.user.full_name}!`, "success");
-    await fetchClasses();
-    await fetchAssignments();
   } catch (err) {
     console.error("Login failed:", err);
     showAuthAlert(err.message, "error");
@@ -5408,12 +6508,12 @@ async function handleRegisterSubmit(e) {
     }
 
     const data = await res.json();
-    state.currentUser = data.user;
-    updateUserUI(data.user);
+    if (data.access_token) {
+      setAuthToken(data.access_token);
+    }
+    await applyAuthenticatedUserSession(data.user);
     closeAuthModal();
     showToast(`Account created! Welcome, ${data.user.full_name}!`, "success");
-    await fetchClasses();
-    await fetchAssignments();
   } catch (err) {
     console.error("Registration failed:", err);
     showAuthAlert(err.message, "error");
@@ -5432,22 +6532,14 @@ async function handleLogout() {
       method: "POST",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
   } catch (err) {
     console.warn("Logout request error:", err);
   }
 
-  state.currentUser = null;
-  state.assignments = [];
-  state.filteredAssignments = [];
-  state.classes = [];
-  state.mySubmissions = {};
-  state.currentSubmittingAssignment = null;
-  populateClassFilterOptions([]);
-  populateFormClassOptions([]);
-  updateUserUI(null);
-  renderTable([]);
-  updateStatistics([]);
+  clearUserState();
   showToast("Logged out successfully.", "info");
   openAuthModal("signin");
 }
@@ -5473,7 +6565,9 @@ async function fetchClasses() {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (res.ok) {
       const data = await res.json();
@@ -5820,7 +6914,9 @@ async function handleDeleteClass(classId, className) {
       method: "DELETE",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -5855,7 +6951,9 @@ async function handleViewClassStudents(classId, className) {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -6023,14 +7121,119 @@ function resetSubmissionDropzone() {
 /**
  * Opens student submit work dialog
  */
-function openSubmitWorkModal(assignment) {
+async function openSubmitWorkModal(assignment, submission = null) {
   state.currentSubmittingAssignment = assignment;
+  let existingSub = submission || (state.mySubmissions ? state.mySubmissions[assignment.id] : null);
+
+  if (!existingSub || existingSub.resubmission_allowed === undefined) {
+    try {
+      const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions/me`, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        existingSub = await res.json();
+        if (state.mySubmissions) {
+          state.mySubmissions[assignment.id] = existingSub;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch submission details for submit modal:", e);
+    }
+  }
+
+  state.currentSubmittingExistingSubmission = existingSub;
   resetSubmissionDropzone();
   if (elements.submissionNotes) elements.submissionNotes.value = "";
   if (elements.submissionFileError) elements.submissionFileError.textContent = "";
   if (elements.submitWorkAlert) {
     elements.submitWorkAlert.style.display = "none";
     elements.submitWorkAlert.textContent = "";
+  }
+
+  const isResubmission = Boolean(existingSub && existingSub.resubmission_allowed);
+
+  let isExpired = false;
+  let deadlineDate = null;
+  if (isResubmission && existingSub.resubmission_deadline) {
+    deadlineDate = new Date(existingSub.resubmission_deadline);
+    if (deadlineDate.getTime() < Date.now()) {
+      isExpired = true;
+    }
+  }
+
+  if (isResubmission) {
+    if (elements.submitWorkModalTitle) {
+      elements.submitWorkModalTitle.textContent = "Resubmit Assignment Work";
+    }
+    if (elements.submitWorkModalSubtitle) {
+      const nextAttempt = (existingSub.attempt_number || 1) + 1;
+      elements.submitWorkModalSubtitle.textContent = `Submit revision attempt #${nextAttempt} • Previous attempt will be archived in history`;
+    }
+    if (elements.submitWorkBtnText) {
+      elements.submitWorkBtnText.textContent = "Submit Revision";
+    }
+
+    if (elements.submitWorkResubmitBanner) {
+      elements.submitWorkResubmitBanner.style.display = "block";
+      if (elements.submitWorkResubmitTitle) {
+        elements.submitWorkResubmitTitle.textContent = isExpired
+          ? "⚠ Resubmission Window Closed"
+          : "↻ Resubmission Authorized by Teacher";
+      }
+      if (elements.submitWorkResubmitNote) {
+        if (existingSub.resubmission_note) {
+          elements.submitWorkResubmitNote.textContent = `Teacher guidance: "${existingSub.resubmission_note}"`;
+          elements.submitWorkResubmitNote.style.display = "block";
+        } else {
+          elements.submitWorkResubmitNote.textContent = "Your teacher has authorized a revision for this assignment.";
+          elements.submitWorkResubmitNote.style.display = "block";
+        }
+      }
+      if (elements.submitWorkResubmitDeadline) {
+        if (deadlineDate) {
+          elements.submitWorkResubmitDeadline.textContent = isExpired
+            ? `Resubmission deadline passed on ${formatDisplayDateTime(existingSub.resubmission_deadline)}. Revisions can no longer be accepted.`
+            : `Resubmission deadline: ${formatDisplayDateTime(existingSub.resubmission_deadline)}`;
+          elements.submitWorkResubmitDeadline.style.display = "block";
+        } else {
+          elements.submitWorkResubmitDeadline.style.display = "none";
+        }
+      }
+    }
+
+    if (isExpired) {
+      if (elements.submitWorkAlert) {
+        elements.submitWorkAlert.className = "auth-alert error";
+        elements.submitWorkAlert.textContent = "The resubmission deadline for this assignment has expired. New attempts cannot be submitted.";
+        elements.submitWorkAlert.style.display = "block";
+      }
+      if (elements.btnSubmitWork) {
+        elements.btnSubmitWork.disabled = true;
+      }
+    } else {
+      if (elements.btnSubmitWork) {
+        elements.btnSubmitWork.disabled = false;
+      }
+    }
+  } else {
+    // Normal first submission
+    if (elements.submitWorkModalTitle) {
+      elements.submitWorkModalTitle.textContent = "Submit Assignment Work";
+    }
+    if (elements.submitWorkModalSubtitle) {
+      elements.submitWorkModalSubtitle.textContent = "Upload your completed solution";
+    }
+    if (elements.submitWorkBtnText) {
+      elements.submitWorkBtnText.textContent = "Submit Work";
+    }
+    if (elements.submitWorkResubmitBanner) {
+      elements.submitWorkResubmitBanner.style.display = "none";
+    }
+    if (elements.btnSubmitWork) {
+      elements.btnSubmitWork.disabled = false;
+    }
   }
 
   if (elements.submitWorkAssignmentName) {
@@ -6053,6 +7256,7 @@ function openSubmitWorkModal(assignment) {
  */
 function closeSubmitWorkModal() {
   state.currentSubmittingAssignment = null;
+  state.currentSubmittingExistingSubmission = null;
   resetSubmissionDropzone();
   if (elements.submitWorkModalBackdrop) {
     elements.submitWorkModalBackdrop.style.display = "none";
@@ -6118,10 +7322,64 @@ async function handleSubmitWorkForm(e) {
     }
 
     // Success! Update local state
+    const wasResubmission = Boolean(state.currentSubmittingExistingSubmission && state.currentSubmittingExistingSubmission.resubmission_allowed);
+
+    // 1. Immediately update state.mySubmissions
     state.mySubmissions[state.currentSubmittingAssignment.id] = data;
+
+    // 2. Immediately update matching entry in state.submissionsData without requiring a refresh
+    if (Array.isArray(state.submissionsData)) {
+      const subIdx = state.submissionsData.findIndex(
+        (s) => s.assignment_id === data.assignment_id || s.id === data.id
+      );
+      if (subIdx !== -1) {
+        state.submissionsData[subIdx] = {
+          ...state.submissionsData[subIdx],
+          ...data,
+          status: "submitted",
+          grade: null,
+          feedback: null,
+          resubmission_allowed: false,
+          resubmission_deadline: null,
+          resubmission_note: null,
+          attempt_number: data.attempt_number || (state.submissionsData[subIdx].attempt_number || 1) + 1,
+          file_name: data.file_name,
+          file_size: data.file_size,
+          submitted_at: data.submitted_at,
+          notes: data.notes,
+        };
+      }
+    }
+
+    // 3. Immediately re-render My Submissions page if present in DOM
+    filterAndRenderSubmissions();
+
+    // 4. Update current viewing submission if open
+    if (state.currentViewingSubmission && (state.currentViewingSubmission.id === data.id || state.currentViewingSubmission.assignment_id === data.assignment_id)) {
+      state.currentViewingSubmission = {
+        ...state.currentViewingSubmission,
+        ...data,
+        status: "submitted",
+        grade: null,
+        feedback: null,
+        resubmission_allowed: false,
+      };
+    }
+
+    // 5. Close submit modal
     closeSubmitWorkModal();
-    showToast("Work submitted successfully!", "success");
+
+    if (wasResubmission) {
+      showToast(`Revision submitted successfully! (Attempt #${data.attempt_number || 2})`, "success");
+    } else {
+      showToast("Work submitted successfully!", "success");
+    }
+
+    // 6. Synchronize assignments table and dashboard
     applyFiltersAndRender();
+    if (state.activeView === "dashboard") {
+      fetchDashboard();
+    }
   } catch (err) {
     console.error("Submission failed:", err);
     if (elements.submitWorkAlert) {
@@ -6144,7 +7402,7 @@ async function openViewSubmissionModal(assignment, submission = null) {
     submission = state.mySubmissions[assignment.id];
   }
 
-  if (!submission) {
+  if (!submission || submission.resubmission_allowed === undefined || !submission.download_url) {
     try {
       const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions/me`, {
         method: "GET",
@@ -6165,11 +7423,76 @@ async function openViewSubmissionModal(assignment, submission = null) {
     return;
   }
 
+  state.currentViewingAssignment = assignment;
+  state.currentViewingSubmission = submission;
+
   // Assignment Title and Subtitle in modal header
   if (elements.viewSubmissionModalSubtitle) {
     elements.viewSubmissionModalSubtitle.textContent = assignment.title
       ? `${assignment.title} • ${assignment.class_name || "General"}`
       : "Submission details and file";
+  }
+
+  // Resubmission permission banner & button handling
+  const resubAllowed = Boolean(submission.resubmission_allowed);
+  let isResubExpired = false;
+  let resubDeadlineDate = null;
+  if (resubAllowed && submission.resubmission_deadline) {
+    resubDeadlineDate = new Date(submission.resubmission_deadline);
+    if (resubDeadlineDate.getTime() < Date.now()) {
+      isResubExpired = true;
+    }
+  }
+
+  if (elements.viewSubResubmitBanner) {
+    if (resubAllowed) {
+      elements.viewSubResubmitBanner.style.display = "block";
+      if (elements.viewSubResubmitTitle) {
+        elements.viewSubResubmitTitle.textContent = isResubExpired
+          ? "Resubmission Deadline Expired"
+          : "↻ Resubmission Permitted by Teacher";
+      }
+      if (elements.viewSubResubmitNote) {
+        if (submission.resubmission_note) {
+          elements.viewSubResubmitNote.textContent = `Teacher guidance: "${submission.resubmission_note}"`;
+          elements.viewSubResubmitNote.style.display = "block";
+        } else {
+          elements.viewSubResubmitNote.textContent = "Your teacher has authorized a revised attempt for this assignment.";
+          elements.viewSubResubmitNote.style.display = "block";
+        }
+      }
+      if (elements.viewSubResubmitDeadline) {
+        if (resubDeadlineDate) {
+          elements.viewSubResubmitDeadline.textContent = isResubExpired
+            ? `The resubmission deadline passed on ${formatDisplayDateTime(submission.resubmission_deadline)}. New attempts can no longer be accepted.`
+            : `Resubmission deadline: ${formatDisplayDateTime(submission.resubmission_deadline)}`;
+          elements.viewSubResubmitDeadline.style.display = "block";
+        } else {
+          elements.viewSubResubmitDeadline.style.display = "none";
+        }
+      }
+    } else {
+      elements.viewSubResubmitBanner.style.display = "none";
+    }
+  }
+
+  if (elements.btnModalResubmitWork) {
+    if (resubAllowed && !isResubExpired) {
+      elements.btnModalResubmitWork.style.display = "inline-flex";
+      elements.btnModalResubmitWork.disabled = false;
+    } else {
+      elements.btnModalResubmitWork.style.display = "none";
+    }
+  }
+
+  if (elements.btnModalViewHistory) {
+    if (submission.attempt_number && submission.attempt_number > 1) {
+      elements.btnModalViewHistory.style.display = "inline-flex";
+      const histSpan = elements.btnModalViewHistory.querySelector("span");
+      if (histSpan) histSpan.textContent = `Attempt History (${submission.attempt_number})`;
+    } else {
+      elements.btnModalViewHistory.style.display = "none";
+    }
   }
 
   // Check if grade is released
@@ -6263,6 +7586,8 @@ async function openViewSubmissionModal(assignment, submission = null) {
  * Closes student's view-submission dialog
  */
 function closeViewSubmissionModal() {
+  state.currentViewingAssignment = null;
+  state.currentViewingSubmission = null;
   if (elements.viewSubmissionModalBackdrop) {
     elements.viewSubmissionModalBackdrop.style.display = "none";
   }
@@ -6327,7 +7652,9 @@ async function fetchTeacherSubmissions(assignment) {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (res.status === 401) {
       closeTeacherSubmissionsModal();
@@ -7282,7 +8609,9 @@ async function confirmSingleRelease(targetSubId = null) {
       method: "POST",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -8307,7 +9636,9 @@ async function handleArchiveSemester(semesterId) {
       method: "PUT",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       showToast("Semester successfully archived.", "success");
       await fetchSemesters();
@@ -8328,7 +9659,9 @@ async function handleFinalizeSemester(semesterId) {
       method: "PUT",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       const updated = await res.json();
       showToast(`Semester "${updated.name}" finalized successfully!`, "success");
@@ -8354,7 +9687,9 @@ async function handleDeleteSemester(semesterId, semName) {
       method: "DELETE",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
     if (res.ok) {
       showToast(`Semester "${semName}" deleted.`, "success");
       if (state.activeSemesterId === semesterId) {
@@ -8720,7 +10055,9 @@ async function renderSubjectDetailView() {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (res.ok) {
       const assignments = await res.json();
@@ -8867,7 +10204,9 @@ async function renderSemesterReport(semesterId) {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
     });
+    if (epoch !== state.authEpoch) return;
 
     if (!res.ok) {
       showToast("Failed to load semester report.", "error");
@@ -9081,4 +10420,219 @@ function exportSubjectStudentsCsv(subjectId, subjectName) {
   a.remove();
   URL.revokeObjectURL(url);
   showToast("Subject student roster exported successfully.", "success");
+}
+
+
+function renderAnalyticsOverview(ov) {
+  if (elements.analyticsKpiRow) {
+    const classAvgVal = (ov.class_average_percentage ?? ov.class_average);
+    const subRateVal = (ov.submission_compliance_rate ?? ov.submission_rate);
+
+    elements.analyticsKpiRow.innerHTML = `
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${classAvgVal !== null && classAvgVal !== undefined ? classAvgVal + "%" : "—"}</span>
+          <span class="dash-metric-label">Class Average Score</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${ov.total_students}</span>
+          <span class="dash-metric-label">Enrolled Students</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${ov.total_assignments}</span>
+          <span class="dash-metric-label">Units / Assessments</span>
+        </div>
+      </div>
+      <div class="dash-metric-card">
+        <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${subRateVal !== null && subRateVal !== undefined ? subRateVal + "%" : "0%"}</span>
+          <span class="dash-metric-label">Submission Rate</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Unit Comparisons
+  if (elements.analyticsUnitComparisonsBody) {
+    if (!ov.unit_comparisons || !ov.unit_comparisons.length) {
+      elements.analyticsUnitComparisonsBody.innerHTML = `<div class="dash-empty-state"><p>No unit assessments recorded for this class.</p></div>`;
+    } else {
+      elements.analyticsUnitComparisonsBody.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          ${ov.unit_comparisons.map(u => {
+            const unitTitle = u.title || u.assignment_title || "";
+            const unitAvg = (u.average_percentage ?? u.average_score);
+            const gradedCount = u.graded_count ?? u.released_count ?? 0;
+            return `
+              <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <span style="font-weight: 600; font-size: 0.875rem;">Unit ${u.unit}: ${escapeHtml(unitTitle)}</span>
+                  <span style="font-size: 0.8rem; font-weight: 700; color: #2563eb;">${unitAvg !== null && unitAvg !== undefined ? unitAvg + "% Avg" : "Ungraded"}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; display: flex; gap: 1rem;">
+                  <span>Submissions: <strong>${u.submission_count ?? 0}</strong></span>
+                  <span>Graded: <strong>${gradedCount}</strong></span>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+  }
+
+  // Grade Distribution Card
+  if (elements.analyticsRightCardBody) {
+    const dist = ov.grade_distribution || (ov.distribution ? {
+      "A (85-100%)": ov.distribution.grade_a,
+      "B (70-84%)": ov.distribution.grade_b,
+      "C (55-69%)": ov.distribution.grade_c,
+      "D (40-54%)": ov.distribution.grade_d,
+      "F (<40%)": ov.distribution.grade_f,
+    } : {});
+    const grades = [
+      { label: "A (85-100%)", count: dist["A (85-100%)"] ?? dist["A (90-100%)"] ?? dist.grade_a ?? 0, color: "#10b981" },
+      { label: "B (70-84%)", count: dist["B (70-84%)"] ?? dist["B (80-89%)"] ?? dist.grade_b ?? 0, color: "#3b82f6" },
+      { label: "C (55-69%)", count: dist["C (55-69%)"] ?? dist["C (70-79%)"] ?? dist.grade_c ?? 0, color: "#f59e0b" },
+      { label: "D (40-54%)", count: dist["D (40-54%)"] ?? dist["D (60-69%)"] ?? dist.grade_d ?? 0, color: "#f97316" },
+      { label: "F (<40%)", count: dist["F (<40%)"] ?? dist["F (<60%)"] ?? dist.grade_f ?? 0, color: "#ef4444" },
+    ];
+    elements.analyticsRightCardBody.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+        ${grades.map(g => `
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.2rem;">
+              <span>${g.label}</span>
+              <span style="font-weight: 600;">${g.count} students</span>
+            </div>
+            <div style="height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+              <div style="width: ${ov.total_students > 0 ? (g.count / ov.total_students) * 100 : 0}%; height: 100%; background: ${g.color};"></div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+}
+
+function renderAnalyticsRankings(rk) {
+  if (elements.analyticsFinalizedBadge) {
+    elements.analyticsFinalizedBadge.style.display = rk.is_finalized ? "block" : "none";
+  }
+
+  const units = rk.units || rk.required_units || [];
+  if (elements.analyticsRankingsHead) {
+    elements.analyticsRankingsHead.innerHTML = `
+      <th>Rank</th>
+      <th>Student</th>
+      ${units.map(u => `<th>Unit ${u}</th>`).join("")}
+      <th title="Calculated only from submitted and released units. Never treats unreleased work as zero.">Provisional %</th>
+      <th title="Official final score when all required units are complete.">Final %</th>
+      <th>Status</th>
+    `;
+  }
+
+  if (elements.analyticsRankingsBody) {
+    if (!rk.rankings || !rk.rankings.length) {
+      elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="${5 + units.length}" style="text-align: center; padding: 2rem; color: var(--text-muted);">No student rankings found for this subject.</td></tr>`;
+      return;
+    }
+
+    elements.analyticsRankingsBody.innerHTML = rk.rankings.map((s, idx) => {
+      const isYou = state.currentUser?.id === s.student_id;
+      const rankVal = s.rank ?? (s.is_complete ? s.final_rank : s.provisional_rank) ?? (idx + 1);
+      const isComplete = Boolean(s.is_complete || s.status === "finalized");
+      const statusPill = isComplete
+        ? `<span class="submission-pill status-graded" style="font-size:0.75rem;">Complete</span>`
+        : `<span class="submission-pill status-draft" style="font-size:0.75rem;">Provisional</span>`;
+
+      const provDisplay = (s.provisional_percentage !== null && s.provisional_percentage !== undefined)
+        ? s.provisional_percentage + "%"
+        : "—";
+
+      const finalDisplay = (isComplete && s.final_percentage !== null && s.final_percentage !== undefined)
+        ? s.final_percentage + "%"
+        : `<span style="color:#94a3b8; font-style:italic;">Pending</span>`;
+
+      const unitCols = units.map(u => {
+        let m = null;
+        if (s.unit_marks && s.unit_marks[u] !== undefined) {
+          m = s.unit_marks[u];
+        } else if (Array.isArray(s.units)) {
+          const uObj = s.units.find(x => x.unit === u);
+          if (uObj && uObj.score !== null && uObj.score !== undefined) {
+            m = uObj.score + "/" + uObj.max_marks;
+          }
+        }
+        return "<td>" + (m !== null && m !== undefined ? m : "—") + "</td>";
+      }).join("");
+
+      return `
+        <tr style="${isYou ? 'background: #eff6ff; font-weight: 600;' : ''}">
+          <td><strong>#${rankVal}</strong></td>
+          <td>${escapeHtml(s.student_name)}${isYou ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+          ${unitCols}
+          <td><strong style="color: #2563eb;">${provDisplay}</strong></td>
+          <td>${finalDisplay}</td>
+          <td>${statusPill}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+}
+
+function renderTeacherAlerts(alerts) {
+  if (!elements.analyticsAlertsContainer) return;
+
+  const atRisk = alerts.at_risk_students || [];
+  const backlog = alerts.grading_backlog || [];
+
+  if (!atRisk.length && !backlog.length) {
+    elements.analyticsAlertsContainer.style.display = "none";
+    return;
+  }
+
+  let html = `<div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">`;
+
+  if (atRisk.length > 0) {
+    html += `
+      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 0.9rem; color: #9f1239; font-weight: 600;">Students Requiring Academic Support (${atRisk.length})</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+            ${atRisk.map(s => {
+              const scoreVal = (s.provisional_percentage ?? s.provisional_score);
+              const scoreDisplay = scoreVal !== null && scoreVal !== undefined ? scoreVal + '%' : '0%';
+              return `<span style="background: #ffe4e6; color: #9f1239; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.student_name)} (${scoreDisplay})</span>`;
+            }).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if (backlog.length > 0) {
+    html += `
+      <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 0.9rem; color: #854d0e; font-weight: 600;">Ungraded Assessment Backlog (${backlog.length} Units)</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+            ${backlog.map(b => `<span style="background: #fef9c3; color: #854d0e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(b.title)}: ${b.pending_count} pending</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  html += `</div>`;
+  elements.analyticsAlertsContainer.innerHTML = html;
+  elements.analyticsAlertsContainer.style.display = "block";
 }

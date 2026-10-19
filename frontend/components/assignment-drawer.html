@@ -213,6 +213,16 @@
             </div>
           </label>
         </div>
+        <div class="form-row-2col" style="margin-top: 0.75rem;">
+          <div class="form-group">
+            <label for="formGracePeriod" class="form-label" style="font-size: 0.75rem;">Grace Period (Mins)</label>
+            <input type="number" id="formGracePeriod" class="form-input" min="0" value="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="formLatePenalty" class="form-label" style="font-size: 0.75rem;">Late Penalty (%)</label>
+            <input type="number" id="formLatePenalty" class="form-input" min="0" max="100" step="any" value="0" placeholder="0">
+          </div>
+        </div>
       </div>
 
       <!-- Student Resubmission Card -->
@@ -246,6 +256,7 @@
 
     <!-- Footer Actions -->
     <div class="drawer-actions">
+      <button type="button" class="btn btn-secondary" id="drawerExtensionsBtn" style="display: none;" title="Manage student deadline extensions">Extensions</button>
       <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
       <button type="button" class="btn btn-draft" id="drawerDraftBtn">Save as Draft</button>
       <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">

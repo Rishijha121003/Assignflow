@@ -6,7 +6,7 @@ import re
 import tempfile
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,6 +34,9 @@ from app.models.classroom import Class, ClassEnrollment, Subject
 from app.models.semester import Semester
 from app.models.user import User
 from app.models.submission import Submission
+from app.models.extension import DeadlineExtension
+from app.models.correction import SubmissionHistory
+from app.services.notification_service import create_notification
 from app.schemas.assignment import (
     AssignmentCreate,
     AssignmentUpdate,
@@ -157,7 +160,7 @@ def verify_teacher_assignment_ownership(assignment: Assignment, teacher_id: int)
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Access denied: You do not own this assignment.",
+        detail="Access denied: You do not own this assignment. You can only edit your own assignments.",
     )
 
 
@@ -227,12 +230,13 @@ def validate_class_subject_relationship(
             return matching_sub.name, matching_sub.id
 
         # Subject name was not found in associated subjects
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"Subject '{clean_subject}' is not associated with class {target_class_id}.",
-        )
+        if clean_subject.lower() in DEFAULT_GENERIC_SUBJECTS or target_class.semester_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Subject '{clean_subject}' is not associated with class {target_class_id}.",
+            )
 
-    # 3. Class currently has no subjects in assignflow.subjects
+    # 3. Class currently has no matching subject in assignflow.subjects (independent class custom subject)
     # Automatically create the subject association for this class
     new_sub = Subject(name=clean_subject, class_id=target_class.id)
     db.add(new_sub)
@@ -272,6 +276,7 @@ async def create_assignment(
         semester_id_raw = form.get("semester_id")
         assignment_type = form.get("assignment_type") or "Assignment"
         max_marks_raw = form.get("max_marks")
+        unit_raw = form.get("unit")
 
         # Field validation
         if not title or not str(title).strip():
@@ -318,6 +323,18 @@ async def create_assignment(
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="Maximum marks must be a positive number up to 1000 with at most 2 decimal places.",
+                )
+
+        unit_val = 1
+        if unit_raw is not None and str(unit_raw).strip():
+            try:
+                unit_val = int(unit_raw)
+                if unit_val < 1:
+                    raise ValueError
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="unit must be a positive integer (e.g. 1, 2, 3).",
                 )
 
         # Parse & verify class ownership
@@ -395,6 +412,23 @@ async def create_assignment(
             db, target_class_id, subject, subject_id_val
         )
 
+        # Check duplicate unit assessment (Requirement 2: Each unit contains one assessment)
+        if target_class_id is not None:
+            duplicate_unit = (
+                db.query(Assignment)
+                .filter(
+                    Assignment.class_id == target_class_id,
+                    func.lower(Assignment.subject) == resolved_subject.strip().lower(),
+                    Assignment.unit == unit_val,
+                )
+                .first()
+            )
+            if duplicate_unit:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"An assessment already exists for Unit {unit_val} in '{resolved_subject}' for this class. Each unit contains only one assessment.",
+                )
+
         # Instructions / Question PDF validation (required when publishing, optional for drafts)
         clean_description = str(description).strip() if description and str(description).strip() else None
         has_upload = upload_file and hasattr(upload_file, "filename") and bool(upload_file.filename)
@@ -421,6 +455,17 @@ async def create_assignment(
         resub_policy_raw = form.get("resubmission_policy") or "until_due"
         resub_policy_val = "approval_only" if "approval" in str(resub_policy_raw).lower() else "until_due"
 
+        grace_period_raw = form.get("grace_period_minutes")
+        grace_period_val = int(grace_period_raw) if grace_period_raw and str(grace_period_raw).strip() else 0
+
+        allow_late_raw = form.get("allow_late")
+        allow_late_val = True
+        if allow_late_raw is not None:
+            allow_late_val = str(allow_late_raw).lower() in ("true", "1", "yes")
+
+        late_penalty_raw = form.get("late_penalty_percent")
+        late_penalty_val = float(late_penalty_raw) if late_penalty_raw and str(late_penalty_raw).strip() else 0.0
+
         db_assignment = Assignment(
             title=str(title).strip(),
             subject=resolved_subject,
@@ -429,10 +474,13 @@ async def create_assignment(
             due_date=due_date,
             status=str(status_val),
             max_marks=max_marks_val,
+            unit=unit_val,
             class_id=target_class_id,
             semester_id=target_semester_id,
             assignment_type=str(assignment_type),
+            grace_period_minutes=grace_period_val,
             allow_late=allow_late_val,
+            late_penalty_percent=late_penalty_val,
             resubmission_policy=resub_policy_val,
             file_path=saved_file_path,
             file_name=display_name,
@@ -541,6 +589,23 @@ async def create_assignment(
             db, target_class_id, assignment_in.subject, assignment_in.subject_id
         )
 
+        # Check duplicate unit assessment (Requirement 2: Each unit contains one assessment)
+        if target_class_id is not None:
+            duplicate_unit = (
+                db.query(Assignment)
+                .filter(
+                    Assignment.class_id == target_class_id,
+                    func.lower(Assignment.subject) == assignment_in.subject.strip().lower(),
+                    Assignment.unit == assignment_in.unit,
+                )
+                .first()
+            )
+            if duplicate_unit:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"An assessment already exists for Unit {assignment_in.unit} in '{assignment_in.subject}' for this class. Each unit contains only one assessment.",
+                )
+
         db_assignment = Assignment(
             title=assignment_in.title.strip(),
             subject=resolved_subject,
@@ -549,10 +614,13 @@ async def create_assignment(
             due_date=due_date,
             status=assignment_in.status,
             max_marks=rounded_max_marks,
+            unit=assignment_in.unit,
             class_id=target_class_id,
             semester_id=target_semester_id,
             assignment_type=assignment_in.assignment_type or "Assignment",
+            grace_period_minutes=assignment_in.grace_period_minutes,
             allow_late=assignment_in.allow_late,
+            late_penalty_percent=assignment_in.late_penalty_percent,
             resubmission_policy=assignment_in.resubmission_policy or "until_due",
             created_by_id=teacher.id,
         )
@@ -572,13 +640,15 @@ async def create_assignment(
 def list_assignments(
     class_id: Optional[int] = None,
     semester_id: Optional[int] = None,
+    subject: Optional[str] = None,
+    unit: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieves assignments based on user role and class enrollment:
-    - Teachers: view assignments they created (or unassigned legacy assignments), optionally filtered by class_id or semester_id.
-    - Students: view assignments ONLY for classes they have joined, optionally filtered by class_id or semester_id.
+    - Teachers: view assignments they created (or unassigned legacy assignments), optionally filtered by class_id, semester_id, subject, unit.
+    - Students: view assignments ONLY for classes they have joined, optionally filtered by class_id, semester_id, subject, unit.
     """
     if current_user.role == "teacher":
         query = db.query(Assignment)
@@ -599,6 +669,7 @@ def list_assignments(
             if owned_class_ids:
                 ownership_filter = ownership_filter | Assignment.class_id.in_(owned_class_ids)
             query = query.filter(ownership_filter)
+
         if semester_id is not None:
             sem = db.query(Semester).filter(Semester.id == semester_id).first()
             if not sem or sem.teacher_id != current_user.id:
@@ -607,6 +678,11 @@ def list_assignments(
                     detail="Access denied: You do not own this semester.",
                 )
             query = query.filter(Assignment.semester_id == semester_id)
+
+        if subject is not None and subject.strip() and subject.lower() != "all":
+            query = query.filter(func.lower(Assignment.subject) == subject.strip().lower())
+        if unit is not None:
+            query = query.filter(Assignment.unit == unit)
         return query.order_by(Assignment.id.desc()).all()
 
     else:
@@ -617,8 +693,6 @@ def list_assignments(
             .filter(ClassEnrollment.student_id == current_user.id)
             .all()
         ]
-        if not enrolled_class_ids:
-            return []
 
         query = db.query(Assignment).filter(Assignment.class_id.in_(enrolled_class_ids))
         query = query.filter(Assignment.status != "draft")
@@ -631,8 +705,101 @@ def list_assignments(
             query = query.filter(Assignment.class_id == class_id)
         if semester_id is not None:
             query = query.filter(Assignment.semester_id == semester_id)
+        if subject is not None and subject.strip() and subject.lower() != "all":
+            query = query.filter(func.lower(Assignment.subject) == subject.strip().lower())
+        if unit is not None:
+            query = query.filter(Assignment.unit == unit)
 
         return query.order_by(Assignment.id.desc()).all()
+
+
+@router.get("/structure/units", summary="Get assessment organization by class, subject, and unit")
+def get_assessment_structure(
+    class_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns assessments hierarchically organized by:
+    Class -> Subject -> Unit -> Assessment details.
+    Enforces role-based class scoping for teachers and enrolled students.
+    """
+    if current_user.role == "teacher":
+        query = db.query(Assignment)
+        if class_id is not None:
+            target_class = db.query(Class).filter(Class.id == class_id).first()
+            if not target_class or target_class.teacher_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You do not own this class.",
+                )
+            query = query.filter(Assignment.class_id == class_id)
+        else:
+            teacher_class_ids = [c.id for c in db.query(Class.id).filter(Class.teacher_id == current_user.id).all()]
+            query = query.filter(
+                (Assignment.created_by_id == current_user.id)
+                | (Assignment.class_id.in_(teacher_class_ids))
+            )
+        assignments = query.order_by(Assignment.subject.asc(), Assignment.unit.asc()).all()
+
+    else:
+        enrolled_class_ids = [
+            row[0]
+            for row in db.query(ClassEnrollment.class_id)
+            .filter(ClassEnrollment.student_id == current_user.id)
+            .all()
+        ]
+
+        if class_id is not None:
+            if class_id not in enrolled_class_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You are not enrolled in this class.",
+                )
+            query = db.query(Assignment).filter(Assignment.class_id == class_id)
+        else:
+            if not enrolled_class_ids:
+                return []
+            query = db.query(Assignment).filter(Assignment.class_id.in_(enrolled_class_ids))
+
+        assignments = query.order_by(Assignment.subject.asc(), Assignment.unit.asc()).all()
+
+    # Build hierarchical tree: class_name -> subject -> list of units
+    tree = {}
+    for a in assignments:
+        c_name = a.class_name or "General"
+        subj = a.subject or "Unassigned"
+        if c_name not in tree:
+            tree[c_name] = {"class_id": a.class_id, "class_name": c_name, "subjects": {}}
+        if subj not in tree[c_name]["subjects"]:
+            tree[c_name]["subjects"][subj] = []
+
+        tree[c_name]["subjects"][subj].append({
+            "unit": a.unit,
+            "assignment_id": a.id,
+            "title": a.title,
+            "due_date": a.due_date.isoformat() if a.due_date else None,
+            "max_marks": a.max_marks,
+            "status": a.status,
+            "has_attachment": bool(a.file_path),
+        })
+
+    # Format into list
+    result = []
+    for c_data in tree.values():
+        subj_list = []
+        for s_name, units in c_data["subjects"].items():
+            subj_list.append({
+                "subject": s_name,
+                "units": sorted(units, key=lambda u: u["unit"]),
+            })
+        result.append({
+            "class_id": c_data["class_id"],
+            "class_name": c_data["class_name"],
+            "subjects": subj_list,
+        })
+
+    return result
 
 
 @router.get("/{id}", response_model=AssignmentResponse, summary="Get assignment by ID")
@@ -856,6 +1023,50 @@ async def update_assignment(
         assignment.subject = resolved_subject
         assignment.subject_id = resolved_subject_id
 
+        max_marks_raw = form.get("max_marks")
+        if max_marks_raw is not None and str(max_marks_raw).strip():
+            try:
+                mm = float(max_marks_raw)
+                if mm <= 0:
+                    raise ValueError
+                assignment.max_marks = mm
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="max_marks must be a positive number.",
+                )
+
+        unit_raw = form.get("unit")
+        if unit_raw is not None and str(unit_raw).strip():
+            try:
+                u = int(unit_raw)
+                if u < 1:
+                    raise ValueError
+                assignment.unit = u
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="unit must be a positive integer (e.g. 1, 2, 3).",
+                )
+
+        # Check duplicate unit assessment on update
+        if assignment.class_id is not None:
+            dup = (
+                db.query(Assignment)
+                .filter(
+                    Assignment.class_id == assignment.class_id,
+                    func.lower(Assignment.subject) == assignment.subject.lower(),
+                    Assignment.unit == assignment.unit,
+                    Assignment.id != assignment.id,
+                )
+                .first()
+            )
+            if dup:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"An assessment already exists for Unit {assignment.unit} in '{assignment.subject}' for this class. Each unit contains only one assessment.",
+                )
+
         # Optional replacement PDF file
         new_file_path = None
         old_file_path = None
@@ -1007,6 +1218,23 @@ async def update_assignment(
 
         for field, value in update_data.items():
             setattr(assignment, field, value)
+
+        if assignment.class_id is not None:
+            dup = (
+                db.query(Assignment)
+                .filter(
+                    Assignment.class_id == assignment.class_id,
+                    func.lower(Assignment.subject) == assignment.subject.lower(),
+                    Assignment.unit == assignment.unit,
+                    Assignment.id != assignment.id,
+                )
+                .first()
+            )
+            if dup:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"An assessment already exists for Unit {assignment.unit} in '{assignment.subject}' for this class. Each unit contains only one assessment.",
+                )
 
         db.commit()
         db.refresh(assignment)
@@ -1226,6 +1454,10 @@ def serialize_submission(sub: Submission, viewer_role: str = "teacher") -> Submi
         graded_at=sub.graded_at if show_grade else None,
         released_at=sub.released_at if (is_released or is_teacher) else None,
         max_marks=assignment_max_marks,
+        resubmission_allowed=sub.resubmission_allowed or False,
+        resubmission_deadline=sub.resubmission_deadline,
+        resubmission_note=sub.resubmission_note,
+        attempt_number=sub.attempt_number or 1,
         download_url=f"/api/assignments/{sub.assignment_id}/submissions/{sub.id}/download",
         preview_url=f"/api/assignments/{sub.assignment_id}/submissions/{sub.id}/preview",
     )
@@ -1284,12 +1516,23 @@ async def submit_assignment_work(
         )
 
     now = datetime.now(timezone.utc)
-    due_date = assignment.due_date
-    if due_date.tzinfo is None:
-        due_date = due_date.replace(tzinfo=timezone.utc)
-    is_late = now > due_date
+    # Check for individual extension or base due date
+    ext = (
+        db.query(DeadlineExtension)
+        .filter(
+            DeadlineExtension.assignment_id == id,
+            DeadlineExtension.student_id == student.id,
+        )
+        .first()
+    )
+    effective_deadline = ext.extended_due_date if ext else assignment.due_date
+    if effective_deadline.tzinfo is None:
+        effective_deadline = effective_deadline.replace(tzinfo=timezone.utc)
 
-    # Check for duplicate submission / resubmission policy
+    grace_minutes = assignment.grace_period_minutes or 0
+    grace_deadline = effective_deadline + timedelta(minutes=grace_minutes)
+
+    # Check for existing submission
     existing = (
         db.query(Submission)
         .filter(
@@ -1299,21 +1542,48 @@ async def submit_assignment_work(
         .first()
     )
     if existing:
-        if assignment.resubmission_policy != "until_due":
+        if existing.resubmission_allowed:
+            if existing.resubmission_deadline:
+                resub_dl = existing.resubmission_deadline
+                if resub_dl.tzinfo is None:
+                    resub_dl = resub_dl.replace(tzinfo=timezone.utc)
+                if now > resub_dl:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="The resubmission deadline for this assignment has expired.",
+                    )
+                is_late = now > resub_dl
+            else:
+                is_late = now > effective_deadline
+        elif assignment.resubmission_policy == "until_due":
+            if existing.status in ("graded", "released") or existing.grade is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This submission has already been graded or released. Resubmission requires explicit teacher authorization.",
+                )
+            if now > effective_deadline:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Resubmission deadline has passed. Submissions after due date cannot replace prior work.",
+                )
+            is_late = False
+        else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You have already submitted work for this assignment. Duplicate submissions are not permitted without teacher authorization.",
             )
-        # Policy is until_due:
-        if existing.status in ("graded", "released") or existing.grade is not None:
+    else:
+        if now <= effective_deadline:
+            is_late = False
+        elif now <= grace_deadline:
+            is_late = False  # Submitted within allowable grace period
+        else:
+            is_late = True
+
+        if is_late and not assignment.allow_late:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This submission has already been graded or released. Resubmission requires explicit teacher authorization.",
-            )
-        if is_late:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Resubmission deadline has passed. Submissions after due date cannot replace prior work.",
+                detail="Late submissions are not accepted for this assignment.",
             )
 
     content_type = request.headers.get("content-type", "")
@@ -1334,59 +1604,93 @@ async def submit_assignment_work(
         )
 
     saved_file_path, clean_display_name, file_size = validate_and_save_submission_file(upload_file)
+    try:
+        if existing:
+            old_file_path = existing.file_path
+            was_authorized_resubmission = bool(existing.resubmission_allowed)
+            if was_authorized_resubmission:
+                # Preserve current submission in history for teacher-authorized resubmissions
+                history_entry = SubmissionHistory(
+                    submission_id=existing.id,
+                    assignment_id=existing.assignment_id,
+                    student_id=existing.student_id,
+                    attempt_number=existing.attempt_number or 1,
+                    file_path=existing.file_path,
+                    file_name=existing.file_name,
+                    file_size=existing.file_size,
+                    notes=existing.notes,
+                    submitted_at=existing.submitted_at,
+                    is_late=existing.is_late or False,
+                    grade=existing.grade,
+                    feedback=existing.feedback,
+                    status=existing.status or "submitted",
+                    archived_at=now,
+                )
+                db.add(history_entry)
+                existing.attempt_number = (existing.attempt_number or 1) + 1
+            else:
+                # Student replaces prior ungraded work under until_due policy: clean up old file
+                if old_file_path and old_file_path != saved_file_path and Path(old_file_path).exists():
+                    try:
+                        Path(old_file_path).unlink(missing_ok=True)
+                    except Exception:
+                        pass
 
-    if is_late and not assignment.allow_late:
-        if saved_file_path:
-            Path(saved_file_path).unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Late submissions are not accepted for this assignment.",
-        )
+            # Update existing submission
+            existing.file_path = saved_file_path
+            existing.file_name = clean_display_name
+            existing.file_size = file_size
+            existing.notes = str(notes).strip() if notes and str(notes).strip() else None
+            existing.submitted_at = now
+            existing.is_late = is_late
+            existing.status = "submitted"
+            existing.grade = None
+            existing.feedback = None
+            existing.graded_at = None
+            existing.released_at = None
+            existing.resubmission_allowed = False
+            existing.resubmission_deadline = None
+            existing.resubmission_note = None
 
-    if existing:
-        # Safely replace prior ungraded submission before deadline
-        old_file_path = existing.file_path
-        existing.file_path = saved_file_path
-        existing.file_name = clean_display_name
-        existing.file_size = file_size
-        existing.notes = str(notes).strip() if notes and str(notes).strip() else None
-        existing.submitted_at = now
-        existing.is_late = False
-
-        try:
             db.commit()
             db.refresh(existing)
-            if old_file_path and old_file_path != saved_file_path and Path(old_file_path).exists():
-                try:
-                    Path(old_file_path).unlink(missing_ok=True)
-                except Exception:
-                    pass
-            return serialize_submission(existing)
-        except Exception as exc:
-            db.rollback()
-            if saved_file_path:
-                Path(saved_file_path).unlink(missing_ok=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error while saving resubmission: {str(exc)}",
+
+            create_notification(
+                db=db,
+                user_id=student.id,
+                title="Resubmission Received",
+                message=f"Your resubmission for '{assignment.title}' (Attempt #{existing.attempt_number}) has been received.",
+                notif_type="submission_received",
+                link="/#assignments",
             )
+            return serialize_submission(existing)
+        else:
+            submission = Submission(
+                assignment_id=assignment.id,
+                student_id=student.id,
+                file_path=saved_file_path,
+                file_name=clean_display_name,
+                file_size=file_size,
+                notes=str(notes).strip() if notes and str(notes).strip() else None,
+                submitted_at=now,
+                is_late=is_late,
+                attempt_number=1,
+            )
+            db.add(submission)
+            db.commit()
+            db.refresh(submission)
 
-    submission = Submission(
-        assignment_id=assignment.id,
-        student_id=student.id,
-        file_path=saved_file_path,
-        file_name=clean_display_name,
-        file_size=file_size,
-        notes=str(notes).strip() if notes and str(notes).strip() else None,
-        submitted_at=now,
-        is_late=is_late,
-    )
-
-    try:
-        db.add(submission)
-        db.commit()
-        db.refresh(submission)
-        return serialize_submission(submission)
+            create_notification(
+                db=db,
+                user_id=student.id,
+                title="Submission Received",
+                message=f"Your submission for '{assignment.title}' was successfully received.",
+                notif_type="submission_received",
+                link="/#assignments",
+            )
+            return serialize_submission(submission)
+    except HTTPException:
+        raise
     except Exception as exc:
         db.rollback()
         if saved_file_path:
@@ -1916,6 +2220,15 @@ def release_single_submission_grade(
     db.commit()
     db.refresh(submission)
 
+    create_notification(
+        db=db,
+        user_id=submission.student_id,
+        title="Grade Released",
+        message=f"Your grade for '{assignment.title}' is now released: {submission.grade}/{assignment.max_marks}.",
+        notif_type="grade_released",
+        link="/#assignments",
+    )
+
     return serialize_submission(submission, viewer_role="teacher")
 
 
@@ -1974,6 +2287,14 @@ def release_assignment_grades(
             sub.status = "released"
             if not sub.released_at:
                 sub.released_at = now_utc
+            create_notification(
+                db=db,
+                user_id=sub.student_id,
+                title="Grade Released",
+                message=f"Your grade for '{assignment.title}' is now released: {sub.grade}/{assignment.max_marks}.",
+                notif_type="grade_released",
+                link="/#assignments",
+            )
 
         db.commit()
 

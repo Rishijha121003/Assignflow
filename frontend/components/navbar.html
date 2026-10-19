@@ -1,93 +1,104 @@
 <!-- Top Navigation Bar -->
-      <header class="top-bar">
-        <div class="top-bar-container">
-          <!-- Left: Brand Logo & Product Name -->
-          <div class="top-nav-brand" onclick="navigateToView('dashboard')" style="cursor: pointer;" title="AssignFlow Dashboard">
-            <div class="brand-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-                <path d="M6 6h10"></path>
-                <path d="M6 10h10"></path>
-                <path d="M6 14h6"></path>
-              </svg>
-            </div>
-            <span class="brand-name">AssignFlow</span>
+<header class="top-bar">
+  <div class="top-bar-container">
+    <!-- Left: Brand Logo & Product Name -->
+    <div class="top-nav-brand" onclick="navigateToView('dashboard')" style="cursor: pointer;" title="AssignFlow Dashboard">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          <path d="M6 6h10"></path>
+          <path d="M6 10h10"></path>
+          <path d="M6 14h6"></path>
+        </svg>
+      </div>
+      <span class="brand-name">AssignFlow</span>
+    </div>
+
+    <!-- Center: Horizontal Top Navigation Links (Desktop) -->
+    <nav class="top-nav-links" id="topNavLinks" aria-label="Main Navigation">
+      <a href="#dashboard" class="nav-link active" data-nav="dashboard">Dashboard</a>
+      <a href="#semesters" class="nav-link" data-nav="semesters">Semesters</a>
+      <a href="#classes" class="nav-link" data-nav="classes">Classes</a>
+      <a href="#assignments" class="nav-link" data-nav="assignments">Assignments</a>
+      <a href="#submissions" class="nav-link" data-nav="submissions">Submissions</a>
+      <a href="#reports" class="nav-link" data-nav="reports">Reports</a>
+    </nav>
+
+    <!-- Right: Search, Notifications, Profile, Mobile Hamburger -->
+    <div class="top-bar-right">
+      <!-- Search Box -->
+      <div class="global-search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="globalSearchInput" placeholder="Search assignments, classes, students..." aria-label="Search assignments">
+      </div>
+
+      <!-- Notification Dropdown -->
+      <div class="notification-dropdown-wrapper" id="notificationDropdownWrapper" style="position: relative;">
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+        </button>
+        <div class="notification-dropdown-menu" id="notificationMenu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.5rem; width: 340px; max-width: 90vw; background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: var(--radius-md, 8px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 1050; overflow: hidden;">
+          <div class="notification-menu-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0); background: #f8fafc;">
+            <span style="font-weight: 600; font-size: 0.875rem;">Notifications</span>
+            <button type="button" id="markAllNotificationsReadBtn" class="btn btn-ghost btn-xs" style="font-size: 0.75rem; color: #2563eb; background: transparent; border: none; cursor: pointer;">Mark all read</button>
           </div>
-
-          <!-- Center: Horizontal Top Navigation Links (Desktop) -->
-          <nav class="top-nav-links" id="topNavLinks" aria-label="Main Navigation">
-            <a href="#dashboard" class="nav-link active" data-nav="dashboard">Dashboard</a>
-            <a href="#semesters" class="nav-link" data-nav="semesters">Semesters</a>
-            <a href="#classes" class="nav-link" data-nav="classes">Classes</a>
-            <a href="#assignments" class="nav-link" data-nav="assignments">Assignments</a>
-            <a href="#submissions" class="nav-link" data-nav="submissions">Submissions</a>
-            <a href="#reports" class="nav-link" data-nav="reports">Reports</a>
-          </nav>
-
-          <!-- Right: Search, Notifications, Profile, Mobile Hamburger -->
-          <div class="top-bar-right">
-            <!-- Search Box -->
-            <div class="global-search-box">
-              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input type="text" id="globalSearchInput" placeholder="Search assignments, classes, students..." aria-label="Search assignments">
-            </div>
-
-            <!-- Notification Button -->
-            <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications" onclick="navigateToView('calendar')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-              </svg>
-              <span class="dash-icon-badge-dot"></span>
-            </button>
-
-            <!-- Profile / Account Dropdown -->
-            <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
-              <button class="profile-avatar-btn" id="profileBtn" title="Account profile" aria-label="Account profile" aria-expanded="false">
-                <span id="profileAvatarText">R</span>
-              </button>
-              <div class="profile-dropdown-menu" id="profileMenu" style="display: none;">
-                <div class="profile-menu-header">
-                  <div class="profile-menu-avatar" id="profileMenuAvatar">R</div>
-                  <div class="profile-menu-details">
-                    <div class="profile-menu-name" id="profileMenuName">Rishi</div>
-                    <div class="profile-menu-email" id="profileMenuEmail"></div>
-                    <span class="role-badge" id="profileMenuRole">Teacher</span>
-                  </div>
-                </div>
-                <div class="profile-menu-divider"></div>
-                <button class="profile-menu-item" onclick="navigateToView('settings')">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                  </svg>
-                  <span>Settings</span>
-                </button>
-                <button class="profile-menu-item" id="menuSwitchAccountBtn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                  <span>Switch / Sign In</span>
-                </button>
-                <button class="profile-menu-item profile-menu-danger" id="menuLogoutBtn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                  <span>Log Out</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Mobile Hamburger Button -->
-            <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle Navigation Menu">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-            </button>
+          <div class="notification-list" id="notificationList" style="max-height: 360px; overflow-y: auto;">
+            <div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>
           </div>
         </div>
-      </header>
+      </div>
+
+      <!-- Profile / Account Dropdown -->
+      <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
+        <button class="profile-avatar-btn" id="profileBtn" title="Account profile" aria-label="Account profile" aria-expanded="false">
+          <span id="profileAvatarText">?</span>
+        </button>
+        <div class="profile-dropdown-menu" id="profileMenu" style="display: none;">
+          <div class="profile-menu-header">
+            <div class="profile-menu-avatar" id="profileMenuAvatar">?</div>
+            <div class="profile-menu-details">
+              <div class="profile-menu-name" id="profileMenuName">Loading...</div>
+              <div class="profile-menu-email" id="profileMenuEmail"></div>
+              <span class="role-badge" id="profileMenuRole">User</span>
+            </div>
+          </div>
+          <div class="profile-menu-divider"></div>
+          <button class="profile-menu-item" onclick="navigateToView('settings')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>Settings</span>
+          </button>
+          <button class="profile-menu-item" id="menuSwitchAccountBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>Switch / Sign In</span>
+          </button>
+          <button class="profile-menu-item profile-menu-danger" id="menuLogoutBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Log Out</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle Navigation Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>

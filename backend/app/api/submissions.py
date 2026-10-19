@@ -94,6 +94,10 @@ def list_user_submissions(
                 "graded_at": s.graded_at.isoformat() if (show_grade and s.graded_at) else None,
                 "released_at": s.released_at.isoformat() if (is_released and s.released_at) else None,
                 "max_marks": assignment_max_marks,
+                "resubmission_allowed": s.resubmission_allowed or False,
+                "resubmission_deadline": s.resubmission_deadline.isoformat() if s.resubmission_deadline else None,
+                "resubmission_note": s.resubmission_note,
+                "attempt_number": s.attempt_number or 1,
                 "download_url": f"/api/assignments/{s.assignment_id}/submissions/{s.id}/download",
                 "preview_url": f"/api/assignments/{s.assignment_id}/submissions/{s.id}/preview",
             }

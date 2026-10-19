@@ -320,3 +320,107 @@ def test_unauthenticated_request_to_protected_endpoints_returns_401(client):
     # Download unauthenticated
     res4 = client.get("/api/assignments/1/download")
     assert res4.status_code == 401
+
+
+def test_role_transition_teacher_to_student_and_back(client):
+    """
+    Regression test for Teacher -> Student and Student -> Teacher session transitions.
+    Verifies that:
+    1. Teacher logs in and accesses teacher endpoints.
+    2. Logging out invalidates the session cookie and subsequent protected requests return 401.
+    3. Student logs in and identity resolves to role 'student'.
+    4. Student is strictly forbidden (403) from accessing teacher-only management endpoints.
+    5. Student can access student endpoints.
+    6. Transitioning back to Teacher restores teacher permissions and profile identity.
+    """
+    teacher_email = unique_email("trans_teacher")
+    student_email = unique_email("trans_student")
+    pwd = "ValidPassword123!"
+
+    # Setup accounts
+    r_t = client.post("/api/auth/register", json={
+        "email": teacher_email,
+        "full_name": "Teacher Alice",
+        "password": pwd,
+        "role": "teacher",
+    })
+    assert r_t.status_code == 201
+
+    r_s = client.post("/api/auth/register", json={
+        "email": student_email,
+        "full_name": "Student Bob",
+        "password": pwd,
+        "role": "student",
+    })
+    assert r_s.status_code == 201
+
+    # 1. Login as Teacher
+    login_t = client.post("/api/auth/login", json={"email": teacher_email, "password": pwd})
+    assert login_t.status_code == 200
+    assert "access_token" in login_t.cookies
+
+    # Teacher identity check
+    me_t = client.get("/api/auth/me")
+    assert me_t.status_code == 200
+    assert me_t.json()["role"] == "teacher"
+    assert me_t.json()["email"] == teacher_email
+
+    # Teacher can access teacher endpoints (e.g. create class)
+    cls_res = client.post("/api/classes", json={"name": "Transition Class 101"})
+    assert cls_res.status_code == 201
+    class_id = cls_res.json()["id"]
+
+    # 2. Teacher Logs Out
+    logout_res = client.post("/api/auth/logout")
+    assert logout_res.status_code == 200
+
+    # Cookie cleared, cannot access protected endpoints
+    me_unauth = client.get("/api/auth/me")
+    assert me_unauth.status_code == 401
+
+    # 3. Login as Student
+    login_s = client.post("/api/auth/login", json={"email": student_email, "password": pwd})
+    assert login_s.status_code == 200
+    assert "access_token" in login_s.cookies
+
+    # Student identity check
+    me_s = client.get("/api/auth/me")
+    assert me_s.status_code == 200
+    assert me_s.json()["role"] == "student"
+    assert me_s.json()["email"] == student_email
+
+    # 4. Student is BLOCKED (403 Forbidden) from Teacher-only routes
+    asgn_forbidden = client.post("/api/assignments", data={
+        "title": "Hacked Assignment",
+        "subject": "Math",
+        "due_date": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+        "status": "active",
+        "class_id": str(class_id),
+    })
+    assert asgn_forbidden.status_code == 403
+
+    alerts_forbidden = client.get(f"/api/analytics/classes/{class_id}/alerts")
+    assert alerts_forbidden.status_code == 403
+
+    # 5. Student CAN access student endpoints
+    subs_res = client.get("/api/submissions")
+    assert subs_res.status_code == 200
+    assert isinstance(subs_res.json(), list)
+
+    feedback_res = client.get(f"/api/analytics/student/feedback?class_id={class_id}")
+    assert feedback_res.status_code == 200
+
+    # 6. Student Logs Out & Switch back to Teacher
+    client.post("/api/auth/logout")
+    me_unauth2 = client.get("/api/auth/me")
+    assert me_unauth2.status_code == 401
+
+    login_t2 = client.post("/api/auth/login", json={"email": teacher_email, "password": pwd})
+    assert login_t2.status_code == 200
+    me_t2 = client.get("/api/auth/me")
+    assert me_t2.status_code == 200
+    assert me_t2.json()["role"] == "teacher"
+
+    # Cleanup
+    client.delete(f"/api/classes/{class_id}")
+    client.cookies.clear()

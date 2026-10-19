@@ -14,6 +14,9 @@ from app.api.classes import router as classes_router
 from app.api.dashboard import router as dashboard_router
 from app.api.submissions import router as submissions_router
 from app.api.semesters import router as semesters_router
+from app.api.workflow import router as workflow_router
+from app.api.analytics import router as analytics_router
+from app.api.notifications import router as notifications_router
 
 # Path to the frontend directory
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
@@ -90,6 +93,9 @@ app.include_router(classes_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(submissions_router, prefix="/api")
 app.include_router(semesters_router, prefix="/api")
+app.include_router(workflow_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
 
 # Serve frontend static assets (CSS, JS) if frontend directory exists
 if FRONTEND_DIR.exists():
