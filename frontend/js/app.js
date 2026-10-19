@@ -20,6 +20,7 @@ const API_ENDPOINTS = {
   authLogout: `${API_BASE}/api/auth/logout`,
   classes: `${API_BASE}/api/classes`,
   joinClass: `${API_BASE}/api/classes/join`,
+  semesters: `${API_BASE}/api/semesters`,
 };
 
 // Application State
@@ -28,6 +29,12 @@ const state = {
   assignments: [],
   filteredAssignments: [],
   classes: [],
+  semesters: [],
+  activeSemesterId: null,
+  activeSemester: null,
+  activeSubjectId: null,
+  activeSubjectTab: "assignments",
+  drawerContext: null,
   mySubmissions: {}, // assignment_id -> submission object or null
   submissionsData: [], // list of submissions for Submissions page
   filters: {
@@ -89,12 +96,36 @@ const elements = {
 
   // Multi-Page View Elements
   dashboardView: document.getElementById("dashboardView"),
+  semestersView: document.getElementById("semestersView"),
   assignmentsView: document.getElementById("assignmentsView"),
   classesView: document.getElementById("classesView"),
   submissionsView: document.getElementById("submissionsView"),
+  reportsView: document.getElementById("reportsView"),
   calendarView: document.getElementById("calendarView"),
   analyticsView: document.getElementById("analyticsView"),
   settingsView: document.getElementById("settingsView"),
+
+  // Semesters Page Elements
+  semestersListContainer: document.getElementById("semestersListContainer"),
+  btnOpenCreateSemester: document.getElementById("btnOpenCreateSemester"),
+  createSemesterInlineForm: document.getElementById("createSemesterInlineForm"),
+  newSemName: document.getElementById("newSemName"),
+  newSemYear: document.getElementById("newSemYear"),
+  newSemStartDate: document.getElementById("newSemStartDate"),
+  newSemEndDate: document.getElementById("newSemEndDate"),
+  btnCancelCreateSemester: document.getElementById("btnCancelCreateSemester"),
+
+  // Reports Page Elements
+  reportBreadcrumbCurrent: document.getElementById("reportBreadcrumbCurrent"),
+  reportTitle: document.getElementById("reportTitle"),
+  reportSubtitle: document.getElementById("reportSubtitle"),
+  btnExportSemesterCsv: document.getElementById("btnExportSemesterCsv"),
+  btnExportSemesterPdf: document.getElementById("btnExportSemesterPdf"),
+  btnFinalizeSemesterReport: document.getElementById("btnFinalizeSemesterReport"),
+  reportStatusBanner: document.getElementById("reportStatusBanner"),
+  reportMetricsRow: document.getElementById("reportMetricsRow"),
+  reportSubjectChartContainer: document.getElementById("reportSubjectChartContainer"),
+  reportTopStudentsTbody: document.getElementById("reportTopStudentsTbody"),
 
   // Dashboard Specific Elements
   dashGreeting: document.getElementById("dashGreeting"),
@@ -106,8 +137,10 @@ const elements = {
   dashHeroCtaText: document.getElementById("dashHeroCtaText"),
   dashMetricsRow: document.getElementById("dashMetricsRow"),
   dashMidLeftCard: document.getElementById("dashMidLeftCard"),
+  dashMidCenterCard: document.getElementById("dashMidCenterCard"),
   dashMidRightCard: document.getElementById("dashMidRightCard"),
   dashBottomLeftCard: document.getElementById("dashBottomLeftCard"),
+  dashBottomCenterCard: document.getElementById("dashBottomCenterCard"),
   dashBottomRightCard: document.getElementById("dashBottomRightCard"),
   dashFullWidthWrap: document.getElementById("dashFullWidthWrap"),
 
@@ -217,23 +250,43 @@ const elements = {
 
   // Form Inputs
   assignmentId: document.getElementById("assignmentId"),
+  formSemesterId: document.getElementById("formSemesterId"),
+  formSemesterDisplay: document.getElementById("formSemesterDisplay"),
+  formSemesterGroup: document.getElementById("formSemesterGroup"),
+  classLockIcon: document.getElementById("classLockIcon"),
+  semesterLockIcon: document.getElementById("semesterLockIcon"),
+  subjectLockIcon: document.getElementById("subjectLockIcon"),
+  drawerSubtitle: document.getElementById("drawerSubtitle"),
   formTitle: document.getElementById("formTitle"),
+  formUnit: document.getElementById("formUnit"),
   formSubject: document.getElementById("formSubject"),
   formCustomSubject: document.getElementById("formCustomSubject"),
   customSubjectGroup: document.getElementById("customSubjectGroup"),
   formDescription: document.getElementById("formDescription"),
+  formMaxMarks: document.getElementById("formMaxMarks"),
   formPdf: document.getElementById("formPdf"),
   fileDropzone: document.getElementById("fileDropzone"),
   dropzoneText: document.getElementById("dropzoneText"),
+  selectedFileCard: document.getElementById("selectedFileCard"),
+  selectedFileName: document.getElementById("selectedFileName"),
+  selectedFileSize: document.getElementById("selectedFileSize"),
+  removeAttachmentBtn: document.getElementById("removeAttachmentBtn"),
   currentAttachmentBox: document.getElementById("currentAttachmentBox"),
   currentAttachmentName: document.getElementById("currentAttachmentName"),
   pdfRequiredStar: document.getElementById("pdfRequiredStar"),
   pdfError: document.getElementById("pdfError"),
   formDueDate: document.getElementById("formDueDate"),
   formStatus: document.getElementById("formStatus"),
+  drawerDraftBtn: document.getElementById("drawerDraftBtn"),
   titleError: document.getElementById("titleError"),
   subjectError: document.getElementById("subjectError"),
+  classError: document.getElementById("classError"),
+  maxMarksError: document.getElementById("maxMarksError"),
+  descriptionError: document.getElementById("descriptionError"),
   dueDateError: document.getElementById("dueDateError"),
+  dueDateTzLabel: document.getElementById("dueDateTzLabel"),
+  subjectEmptyState: document.getElementById("subjectEmptyState"),
+  btnDrawerAddSubject: document.getElementById("btnDrawerAddSubject"),
 
   // Delete Modal
   deleteModalBackdrop: document.getElementById("deleteModalBackdrop"),
@@ -361,6 +414,36 @@ const elements = {
   gradingSaveNextBtn: document.getElementById("gradingSaveNextBtn"),
   gradingReleaseSingleBtn: document.getElementById("gradingReleaseSingleBtn"),
 
+  // SpeedGrader Workflow Sub-Modals (Audit Correct, History, Resubmission)
+  gradingAuditCorrectBtn: document.getElementById("gradingAuditCorrectBtn"),
+  gradingSubmissionHistoryBtn: document.getElementById("gradingSubmissionHistoryBtn"),
+  gradingAuthorizeResubmissionBtn: document.getElementById("gradingAuthorizeResubmissionBtn"),
+
+  auditCorrectModalBackdrop: document.getElementById("auditCorrectModalBackdrop"),
+  closeAuditCorrectModalBtn: document.getElementById("closeAuditCorrectModalBtn"),
+  cancelAuditCorrectBtn: document.getElementById("cancelAuditCorrectBtn"),
+  confirmAuditCorrectBtn: document.getElementById("confirmAuditCorrectBtn"),
+  auditCurrentGradeVal: document.getElementById("auditCurrentGradeVal"),
+  auditCurrentMaxMarks: document.getElementById("auditCurrentMaxMarks"),
+  auditNewGradeInput: document.getElementById("auditNewGradeInput"),
+  auditNewGradeMaxLabel: document.getElementById("auditNewGradeMaxLabel"),
+  auditReasonInput: document.getElementById("auditReasonInput"),
+  auditGradeError: document.getElementById("auditGradeError"),
+  auditReasonError: document.getElementById("auditReasonError"),
+
+  submissionHistoryModalBackdrop: document.getElementById("submissionHistoryModalBackdrop"),
+  closeSubmissionHistoryModalBtn: document.getElementById("closeSubmissionHistoryModalBtn"),
+  closeSubmissionHistoryBottomBtn: document.getElementById("closeSubmissionHistoryBottomBtn"),
+  historyStudentMeta: document.getElementById("historyStudentMeta"),
+  historyAttemptsList: document.getElementById("historyAttemptsList"),
+
+  authorizeResubmissionModalBackdrop: document.getElementById("authorizeResubmissionModalBackdrop"),
+  closeAuthorizeResubmissionModalBtn: document.getElementById("closeAuthorizeResubmissionModalBtn"),
+  cancelAuthorizeResubmissionBtn: document.getElementById("cancelAuthorizeResubmissionBtn"),
+  confirmAuthorizeResubmissionBtn: document.getElementById("confirmAuthorizeResubmissionBtn"),
+  authorizeResubmissionMessage: document.getElementById("authorizeResubmissionMessage"),
+  resubmissionNotesInput: document.getElementById("resubmissionNotesInput"),
+
   // Single Release Confirmation Modal
   singleReleaseConfirmBackdrop: document.getElementById("singleReleaseConfirmBackdrop"),
   closeSingleReleaseConfirmBtn: document.getElementById("closeSingleReleaseConfirmBtn"),
@@ -410,13 +493,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 function setupEventListeners() {
   // Window Hashchange listener for direct navigation, refresh & browser back/forward
   window.addEventListener("hashchange", () => {
-    const rawHash = (window.location.hash || "").replace(/^#\/?/, "").toLowerCase();
-    const route = rawHash || "dashboard";
+    const rawHash = (window.location.hash || "").replace(/^#\/?/, "");
+    const subjectMatch = rawHash.match(/^(?:classes|subjects)\/(\d+)/i);
+    if (subjectMatch) {
+      viewSubjectDetail(parseInt(subjectMatch[1], 10));
+      return;
+    }
+    const route = rawHash.toLowerCase() || "dashboard";
     navigateToView(route, false);
   });
 
-  // Nav item click interaction
-  elements.navLinks.forEach((link) => {
+  // Nav item click interaction (Top navigation bar and drawer)
+  document.querySelectorAll(".nav-link").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       const target = link.getAttribute("data-nav");
@@ -431,6 +519,27 @@ function setupEventListeners() {
   if (elements.sidebarSignOutBtn) {
     elements.sidebarSignOutBtn.addEventListener("click", () => {
       handleLogout();
+    });
+  }
+
+  // Mobile Hamburger Menu Toggle Button
+  if (elements.menuToggleBtn) {
+    elements.menuToggleBtn.addEventListener("click", () => {
+      openSidebar();
+    });
+  }
+
+  // Mobile Sidebar Close Button
+  if (elements.sidebarCloseBtn) {
+    elements.sidebarCloseBtn.addEventListener("click", () => {
+      closeSidebar();
+    });
+  }
+
+  // Sidebar Backdrop Click to Dismiss
+  if (elements.sidebarBackdrop) {
+    elements.sidebarBackdrop.addEventListener("click", () => {
+      closeSidebar();
     });
   }
 
@@ -501,6 +610,125 @@ function setupEventListeners() {
       elements.formCustomSubject.value = "";
     }
   });
+
+  // Class selection change listener
+  if (elements.formClass) {
+    elements.formClass.addEventListener("change", async (e) => {
+      if (elements.classError) elements.classError.textContent = "";
+      if (elements.subjectError) elements.subjectError.textContent = "";
+
+      // Immediately clear previously selected subject and dynamic options
+      if (elements.formSubject) {
+        elements.formSubject.value = "";
+        const dynamicOpts = elements.formSubject.querySelectorAll(".dynamic-subject-opt");
+        dynamicOpts.forEach((opt) => opt.remove());
+      }
+      setFormSubjectValue("");
+
+      const selectedClassId = parseInt(e.target.value, 10);
+      const foundClass = (state.classes || []).find((c) => c.id === selectedClassId);
+      if (foundClass && foundClass.semester_id) {
+        const semDisplay = getSemesterDisplayName(foundClass.semester_id, foundClass);
+        if (elements.formSemesterId) elements.formSemesterId.value = String(foundClass.semester_id);
+        if (elements.formSemesterDisplay) elements.formSemesterDisplay.value = semDisplay || "Semester";
+        if (elements.semesterLockIcon) elements.semesterLockIcon.style.display = "flex";
+        setFormSubjectValue(foundClass.name);
+        state.drawerContext = {
+          type: "semester_subject",
+          classId: foundClass.id,
+          className: foundClass.name,
+          subjectId: foundClass.id,
+          subjectName: foundClass.name,
+          semesterId: foundClass.semester_id,
+          isSubjectLocked: false,
+        };
+        await loadClassSubjects(foundClass.id, foundClass.name);
+      } else if (!selectedClassId) {
+        if (!state.activeSubjectId) {
+          if (elements.formSemesterId) elements.formSemesterId.value = "";
+          if (elements.formSemesterDisplay) elements.formSemesterDisplay.value = "";
+          if (elements.semesterLockIcon) elements.semesterLockIcon.style.display = "none";
+          state.drawerContext = null;
+        }
+        await loadClassSubjects(null);
+      } else if (foundClass) {
+        if (elements.formSemesterId) elements.formSemesterId.value = "";
+        if (elements.formSemesterDisplay) elements.formSemesterDisplay.value = "None (Independent Class)";
+        if (elements.semesterLockIcon) elements.semesterLockIcon.style.display = "none";
+        state.drawerContext = {
+          type: "class",
+          classId: foundClass.id,
+          className: foundClass.name,
+          subjectId: foundClass.id,
+          subjectName: null,
+          semesterId: null,
+          isSubjectLocked: false,
+        };
+        await loadClassSubjects(foundClass.id);
+      }
+    });
+  }
+
+  // Drawer Add Subject button listener for empty states
+  if (elements.btnDrawerAddSubject) {
+    elements.btnDrawerAddSubject.addEventListener("click", async () => {
+      const selectedClassId = elements.formClass ? parseInt(elements.formClass.value, 10) : null;
+      if (!selectedClassId) {
+        showToast("Please select a class first to add subjects.", "error");
+        return;
+      }
+      const newSubjectName = prompt("Enter new subject name for this class:");
+      if (!newSubjectName || !newSubjectName.trim()) return;
+
+      try {
+        const res = await fetch(`${API_ENDPOINTS.classes}/${selectedClassId}/subjects`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ name: newSubjectName.trim() }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || "Failed to add subject");
+        }
+
+        const createdSub = await res.json();
+        showToast(`Subject "${createdSub.name}" added successfully!`, "success");
+        await loadClassSubjects(selectedClassId, createdSub.name, createdSub.id);
+      } catch (err) {
+        console.error("Add subject error:", err);
+        showToast(err.message || "Failed to add subject", "error");
+      }
+    });
+  }
+
+  // Action buttons: Save as Draft vs Publish Assignment
+  if (elements.drawerDraftBtn) {
+    elements.drawerDraftBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      elements.formStatus.value = "draft";
+      elements.assignmentForm.requestSubmit();
+    });
+  }
+
+  if (elements.drawerSubmitBtn) {
+    elements.drawerSubmitBtn.addEventListener("click", () => {
+      elements.formStatus.value = "active";
+    });
+  }
+
+  // Remove selected question PDF attachment
+  if (elements.removeAttachmentBtn) {
+    elements.removeAttachmentBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      removeSelectedFile();
+    });
+  }
 
   // Form Submit
   elements.assignmentForm.addEventListener("submit", handleFormSubmit);
@@ -805,23 +1033,182 @@ function setupEventListeners() {
     });
   }
 
-  // Keyboard navigation shortcuts
+  // SpeedGrader Workflow Sub-Modal Listeners
+  if (elements.gradingAuditCorrectBtn) {
+    elements.gradingAuditCorrectBtn.addEventListener("click", openAuditCorrectModal);
+  }
+  if (elements.closeAuditCorrectModalBtn) {
+    elements.closeAuditCorrectModalBtn.addEventListener("click", closeAuditCorrectModal);
+  }
+  if (elements.cancelAuditCorrectBtn) {
+    elements.cancelAuditCorrectBtn.addEventListener("click", closeAuditCorrectModal);
+  }
+  if (elements.confirmAuditCorrectBtn) {
+    elements.confirmAuditCorrectBtn.addEventListener("click", confirmAuditCorrect);
+  }
+  if (elements.auditCorrectModalBackdrop) {
+    elements.auditCorrectModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.auditCorrectModalBackdrop) closeAuditCorrectModal();
+    });
+  }
+
+  if (elements.gradingSubmissionHistoryBtn) {
+    elements.gradingSubmissionHistoryBtn.addEventListener("click", openSubmissionHistoryModal);
+  }
+  if (elements.closeSubmissionHistoryModalBtn) {
+    elements.closeSubmissionHistoryModalBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
+  if (elements.closeSubmissionHistoryBottomBtn) {
+    elements.closeSubmissionHistoryBottomBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.submissionHistoryModalBackdrop) closeSubmissionHistoryModal();
+    });
+  }
+
+  if (elements.gradingAuthorizeResubmissionBtn) {
+    elements.gradingAuthorizeResubmissionBtn.addEventListener("click", openAuthorizeResubmissionModal);
+  }
+  if (elements.closeAuthorizeResubmissionModalBtn) {
+    elements.closeAuthorizeResubmissionModalBtn.addEventListener("click", closeAuthorizeResubmissionModal);
+  }
+  if (elements.cancelAuthorizeResubmissionBtn) {
+    elements.cancelAuthorizeResubmissionBtn.addEventListener("click", closeAuthorizeResubmissionModal);
+  }
+  if (elements.confirmAuthorizeResubmissionBtn) {
+    elements.confirmAuthorizeResubmissionBtn.addEventListener("click", confirmAuthorizeResubmission);
+  }
+  if (elements.authorizeResubmissionModalBackdrop) {
+    elements.authorizeResubmissionModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.authorizeResubmissionModalBackdrop) closeAuthorizeResubmissionModal();
+    });
+  }
+
+  // Semesters Page Form & Button Listeners
+  if (elements.createSemesterInlineForm) {
+    elements.createSemesterInlineForm.addEventListener("submit", handleCreateSemesterInline);
+  }
+  if (elements.btnOpenCreateSemester) {
+    elements.btnOpenCreateSemester.addEventListener("click", () => {
+      const section = document.getElementById("createSemesterSection");
+      const nameInput = document.getElementById("newSemName");
+      if (section) section.scrollIntoView({ behavior: "smooth" });
+      if (nameInput) nameInput.focus();
+    });
+  }
+  if (elements.btnCancelCreateSemester) {
+    elements.btnCancelCreateSemester.addEventListener("click", () => {
+      if (elements.createSemesterInlineForm) elements.createSemesterInlineForm.reset();
+    });
+  }
+
+  // Edit Semester Modal Listeners
+  const closeEditSemBtn = document.getElementById("closeEditSemesterModalBtn");
+  if (closeEditSemBtn) closeEditSemBtn.addEventListener("click", closeEditSemesterModal);
+  const cancelEditSemBtn = document.getElementById("cancelEditSemesterBtn");
+  if (cancelEditSemBtn) cancelEditSemBtn.addEventListener("click", closeEditSemesterModal);
+  const editSemForm = document.getElementById("editSemesterForm");
+  if (editSemForm) editSemForm.addEventListener("submit", handleSaveEditSemester);
+  const editSemBackdrop = document.getElementById("editSemesterModalBackdrop");
+  if (editSemBackdrop) {
+    editSemBackdrop.addEventListener("click", (e) => {
+      if (e.target === editSemBackdrop) closeEditSemesterModal();
+    });
+  }
+
+  // Add Subject Modal Listeners
+  const closeAddSubBtn = document.getElementById("closeAddSubjectModalBtn");
+  if (closeAddSubBtn) closeAddSubBtn.addEventListener("click", closeAddSubjectModal);
+  const cancelAddSubBtn = document.getElementById("cancelAddSubjectBtn");
+  if (cancelAddSubBtn) cancelAddSubBtn.addEventListener("click", closeAddSubjectModal);
+  const addSubForm = document.getElementById("addSubjectForm");
+  if (addSubForm) addSubForm.addEventListener("submit", handleSubmitAddSubject);
+  const addSubBackdrop = document.getElementById("addSubjectModalBackdrop");
+  if (addSubBackdrop) {
+    addSubBackdrop.addEventListener("click", (e) => {
+      if (e.target === addSubBackdrop) closeAddSubjectModal();
+    });
+  }
+
+  // Keyboard navigation & modal shortcuts
   document.addEventListener("keydown", (e) => {
-    // If submission preview modal is open, handle Escape
+    // 1. Check workflow sub-modals first to prevent event bleed into SpeedGrader
+    if (elements.auditCorrectModalBackdrop && elements.auditCorrectModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAuditCorrectModal();
+        return;
+      }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.auditCorrectModalBackdrop);
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
+
+    if (elements.submissionHistoryModalBackdrop && elements.submissionHistoryModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSubmissionHistoryModal();
+        return;
+      }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.submissionHistoryModalBackdrop);
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
+
+    if (elements.authorizeResubmissionModalBackdrop && elements.authorizeResubmissionModalBackdrop.style.display === "flex") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAuthorizeResubmissionModal();
+        return;
+      }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.authorizeResubmissionModalBackdrop);
+      }
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
+
+    // 2. Submission preview modal
     if (elements.submissionPreviewModalBackdrop && elements.submissionPreviewModalBackdrop.style.display === "flex") {
       if (e.key === "Escape") {
         e.preventDefault();
         closeSubmissionPreviewModal();
         return;
       }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.submissionPreviewModalBackdrop);
+      }
+      return;
     }
-    // If confirmation modals are open, handle Escape
+
+    // 3. Confirmation modals
     if (elements.singleReleaseConfirmBackdrop && elements.singleReleaseConfirmBackdrop.style.display === "flex") {
       if (e.key === "Escape") {
         e.preventDefault();
         closeSingleReleaseModal();
         return;
       }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.singleReleaseConfirmBackdrop);
+      }
+      return;
     }
     if (elements.bulkReleaseConfirmBackdrop && elements.bulkReleaseConfirmBackdrop.style.display === "flex") {
       if (e.key === "Escape") {
@@ -829,8 +1216,13 @@ function setupEventListeners() {
         closeBulkReleaseModal();
         return;
       }
+      if (e.key === "Tab") {
+        trapFocusInModal(e, elements.bulkReleaseConfirmBackdrop);
+      }
+      return;
     }
-    // If grading workspace modal is open
+
+    // 4. Grading workspace modal
     if (elements.gradingWorkspaceModalBackdrop && elements.gradingWorkspaceModalBackdrop.style.display === "flex") {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -931,7 +1323,14 @@ async function fetchAssignments() {
       throw new Error(`Server returned HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const rawData = await response.json();
+    const seenIds = new Set();
+    const data = (Array.isArray(rawData) ? rawData : []).filter((item) => {
+      if (!item || item.id === undefined || item.id === null) return true;
+      if (seenIds.has(item.id)) return false;
+      seenIds.add(item.id);
+      return true;
+    });
     state.assignments = data;
 
     if (state.currentUser && state.currentUser.role === "student") {
@@ -959,10 +1358,15 @@ async function handleFormSubmit(e) {
     return;
   }
 
+  if (state.isSubmittingAssignment) {
+    return;
+  }
+
   if (!validateForm()) {
     return;
   }
 
+  state.isSubmittingAssignment = true;
   setFormLoading(true);
 
   // Determine Subject
@@ -970,6 +1374,9 @@ async function handleFormSubmit(e) {
   if (subjectValue === "Other") {
     subjectValue = elements.formCustomSubject.value.trim() || "General";
   }
+
+  const selectedSubOpt = elements.formSubject.selectedOptions && elements.formSubject.selectedOptions[0];
+  const subjectIdVal = selectedSubOpt && selectedSubOpt.dataset && selectedSubOpt.dataset.subjectId;
 
   // Format Due Date to ISO String
   const rawDate = elements.formDueDate.value;
@@ -985,6 +1392,9 @@ async function handleFormSubmit(e) {
   const formData = new FormData();
   formData.append("title", elements.formTitle.value.trim());
   formData.append("subject", subjectValue);
+  if (subjectIdVal) {
+    formData.append("subject_id", subjectIdVal);
+  }
   const descVal = elements.formDescription.value.trim();
   if (descVal) {
     formData.append("description", descVal);
@@ -992,12 +1402,44 @@ async function handleFormSubmit(e) {
   formData.append("due_date", isoDueDate);
   formData.append("status", elements.formStatus.value);
 
+  // Unit / Assessment
+  const unitVal = elements.formUnit ? elements.formUnit.value : "Unit 1";
+  formData.append("assignment_type", unitVal);
+
+  // Maximum Marks
+  const marksVal = elements.formMaxMarks ? elements.formMaxMarks.value : "100";
+  formData.append("max_marks", marksVal);
+
+  // Policies (Safe intentional defaults: reject late, approval_only resubmissions)
+  const latePolicyRadio = elements.assignmentForm.querySelector('input[name="latePolicy"]:checked');
+  const latePolicyVal = latePolicyRadio ? latePolicyRadio.value : "reject";
+  formData.append("late_policy", latePolicyVal);
+
+  const resubPolicyRadio = elements.assignmentForm.querySelector('input[name="resubmissionPolicy"]:checked');
+  const resubPolicyVal = resubPolicyRadio ? resubPolicyRadio.value : "approval_only";
+  formData.append("resubmission_policy", resubPolicyVal);
+
   // Link to Class
   const classVal = elements.formClass ? elements.formClass.value : "";
+  let selectedClass = null;
   if (classVal) {
     formData.append("class_id", classVal);
+    selectedClass = (state.classes || []).find((c) => c.id === parseInt(classVal, 10));
   } else if (isEditing) {
     formData.append("class_id", "null");
+  }
+
+  // Link to Semester strictly from real relationship
+  if (selectedClass) {
+    if (selectedClass.semester_id) {
+      formData.append("semester_id", String(selectedClass.semester_id));
+    } else {
+      formData.append("semester_id", "null");
+    }
+  } else if (elements.formSemesterId && elements.formSemesterId.value) {
+    formData.append("semester_id", elements.formSemesterId.value);
+  } else if (isEditing) {
+    formData.append("semester_id", "null");
   }
 
   // Attach PDF if selected
@@ -1042,21 +1484,48 @@ async function handleFormSubmit(e) {
     const savedAssignment = await response.json();
 
     closeDrawer();
-    showToast(
-      isEditing
-        ? `Assignment "${savedAssignment.title}" updated successfully!`
-        : `Assignment "${savedAssignment.title}" created successfully!`,
-      "success"
-    );
+
+    const isDraft = savedAssignment.status === "draft";
+    const targetClassName = savedAssignment.class_name || (elements.formClass?.selectedOptions?.[0]?.textContent) || "Class";
+    const formattedDeadline = formatDisplayDateTime(savedAssignment.due_date);
+
+    if (isDraft) {
+      showToast(`Saved draft "${savedAssignment.title}". Students cannot see this assignment until published.`, "info");
+    } else {
+      showToast(
+        isEditing
+          ? `Assignment "${savedAssignment.title}" updated for ${targetClassName} (${savedAssignment.subject}) — Deadline: ${formattedDeadline}`
+          : `Assignment "${savedAssignment.title}" published for ${targetClassName} (${savedAssignment.subject}) — Deadline: ${formattedDeadline}`,
+        "success"
+      );
+    }
 
     // Refresh assignments list and classes from database
     await fetchAssignments();
     await fetchClasses();
+
+    if (!isDraft) {
+      if (typeof switchView === "function" && state.currentView !== "assignments") {
+        switchView("assignments");
+      }
+      if (elements.classFilter && savedAssignment.class_id) {
+        elements.classFilter.value = String(savedAssignment.class_id);
+        applyFiltersAndRender();
+      }
+    }
+
+    if (typeof renderSubjectDetailView === "function" && (state.activeView === "classes" || state.currentView === "classes") && state.activeSubjectId) {
+      await renderSubjectDetailView();
+    }
+    if (state.activeSemesterId && typeof fetchSemesters === "function") {
+      await fetchSemesters();
+    }
   } catch (error) {
     console.error("Save error:", error);
     showToast(`Error: ${error.message}`, "error");
   } finally {
     setFormLoading(false);
+    state.isSubmittingAssignment = false;
   }
 }
 
@@ -1431,28 +1900,268 @@ function renderTable(assignments) {
 // Drawer & Modal Controls
 // ==========================================================================
 
-function openDrawer(assignmentToEdit = null) {
+/**
+ * Loads subjects associated with a specific class ID.
+ * - When classId is provided, fetches ONLY subjects belonging to that class from backend API.
+ * - If class has no subjects, shows clear empty state and button to add a subject.
+ * - If classId is null (General / Unassigned standalone mode), populates standalone default options.
+ */
+async function loadClassSubjects(classId, preselectedSubjectName = null, preselectedSubjectId = null) {
+  if (!elements.formSubject) return;
+
+  if (!classId) {
+    // When no class is selected: subject dropdown must be disabled with placeholder
+    elements.formSubject.innerHTML = '<option value="" disabled selected>Select a class first</option>';
+    elements.formSubject.disabled = true;
+    elements.formSubject.value = "";
+    if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "none";
+    if (elements.subjectEmptyState) elements.subjectEmptyState.style.display = "none";
+    if (elements.customSubjectGroup) elements.customSubjectGroup.style.display = "none";
+    return;
+  }
+
+  // Clear existing options
+  elements.formSubject.innerHTML = '<option value="" disabled selected>Select subject</option>';
+  if (elements.subjectEmptyState) elements.subjectEmptyState.style.display = "none";
+  if (elements.customSubjectGroup) elements.customSubjectGroup.style.display = "none";
+
+  // Enable formSubject unless locked by context
+  const isSubjectLocked = Boolean(state.drawerContext && state.drawerContext.isSubjectLocked);
+  if (!isSubjectLocked) {
+    elements.formSubject.disabled = false;
+  }
+
+  // Fetch subjects for this specific class ID
+  try {
+    const res = await fetch(`${API_ENDPOINTS.classes}/${classId}/subjects`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+
+    if (res.ok) {
+      const subjects = await res.json();
+      if (subjects && subjects.length > 0) {
+        subjects.forEach((sub) => {
+          const opt = document.createElement("option");
+          opt.value = sub.name;
+          opt.textContent = sub.name;
+          opt.dataset.subjectId = String(sub.id);
+          elements.formSubject.appendChild(opt);
+        });
+
+        // Determine which subject to select
+        if (preselectedSubjectId) {
+          const optById = Array.from(elements.formSubject.options).find(
+            (o) => o.dataset.subjectId === String(preselectedSubjectId)
+          );
+          if (optById) {
+            elements.formSubject.value = optById.value;
+            return;
+          }
+        }
+
+        if (preselectedSubjectName) {
+          const optByName = Array.from(elements.formSubject.options).find(
+            (o) => o.value.trim().toLowerCase() === preselectedSubjectName.trim().toLowerCase()
+          );
+          if (optByName) {
+            elements.formSubject.value = optByName.value;
+            return;
+          }
+        }
+
+        if (subjects.length === 1) {
+          elements.formSubject.value = subjects[0].name;
+        } else {
+          elements.formSubject.value = "";
+        }
+      } else {
+        // No subjects found for this class
+        if (elements.subjectEmptyState) {
+          elements.subjectEmptyState.style.display = "flex";
+        }
+        elements.formSubject.value = "";
+      }
+    } else {
+      if (elements.subjectEmptyState) {
+        elements.subjectEmptyState.style.display = "flex";
+      }
+      elements.formSubject.value = "";
+    }
+  } catch (err) {
+    console.error("Failed to fetch subjects for class:", err);
+    if (elements.subjectEmptyState) {
+      elements.subjectEmptyState.style.display = "flex";
+    }
+  }
+}
+
+/**
+ * Sets the subject field value in the assignment drawer.
+ * If the subject matches a predefined option, selects it.
+ * If not, dynamically adds an option for the subject and selects it.
+ */
+function setFormSubjectValue(subjectName) {
+  if (!elements.formSubject) return;
+
+  // Clean up any previously added dynamic subject options
+  const dynamicOpts = elements.formSubject.querySelectorAll(".dynamic-subject-opt");
+  dynamicOpts.forEach((opt) => opt.remove());
+
+  // Derive subject from selected class or drawer context if not explicitly provided
+  if (!subjectName && elements.formClass && elements.formClass.value) {
+    const selCid = parseInt(elements.formClass.value, 10);
+    const cls = (state.classes || []).find((c) => c.id === selCid) || state.activeSubject;
+    if (cls && cls.name) {
+      subjectName = cls.name;
+    } else {
+      const selOpt = elements.formClass.selectedOptions && elements.formClass.selectedOptions[0];
+      if (selOpt && selOpt.value && selOpt.textContent && selOpt.textContent !== "General / Unassigned") {
+        subjectName = selOpt.textContent;
+      }
+    }
+  }
+  if (!subjectName && state.drawerContext && state.drawerContext.subjectName) {
+    subjectName = state.drawerContext.subjectName;
+  }
+
+  if (!subjectName) {
+    elements.formSubject.value = "";
+    if (elements.customSubjectGroup) elements.customSubjectGroup.style.display = "none";
+    if (elements.formCustomSubject) elements.formCustomSubject.value = "";
+    return;
+  }
+
+  // Check if an option already exists with this exact value or text (case-insensitive)
+  const matchedOption = Array.from(elements.formSubject.options).find(
+    (opt) =>
+      opt.value.trim().toLowerCase() === subjectName.trim().toLowerCase() ||
+      opt.textContent.trim().toLowerCase() === subjectName.trim().toLowerCase()
+  );
+
+  if (matchedOption) {
+    elements.formSubject.value = matchedOption.value;
+    if (elements.customSubjectGroup) elements.customSubjectGroup.style.display = "none";
+    if (elements.formCustomSubject) elements.formCustomSubject.value = "";
+  } else {
+    // Add the semester subject as a select option so it displays cleanly in the UI
+    const newOpt = document.createElement("option");
+    newOpt.value = subjectName;
+    newOpt.textContent = subjectName;
+    newOpt.className = "dynamic-subject-opt";
+
+    const otherOpt = Array.from(elements.formSubject.options).find((o) => o.value === "Other");
+    if (otherOpt) {
+      elements.formSubject.insertBefore(newOpt, otherOpt);
+    } else {
+      elements.formSubject.appendChild(newOpt);
+    }
+
+    elements.formSubject.value = subjectName;
+    if (elements.customSubjectGroup) elements.customSubjectGroup.style.display = "none";
+    if (elements.formCustomSubject) elements.formCustomSubject.value = "";
+  }
+}
+
+function getSemesterDisplayName(semesterId, classObj = null) {
+  if (!semesterId) return "";
+  const sid = parseInt(semesterId, 10);
+  if (isNaN(sid)) return "";
+  const sem = (state.semesters || []).find((s) => s.id === sid);
+  if (sem) {
+    const rawName = sem.name || (sem.semester_number ? `Semester ${sem.semester_number}` : "");
+    const semName = rawName ? (rawName.charAt(0).toUpperCase() + rawName.slice(1)) : "Semester";
+    const year = sem.academic_year ? ` · ${sem.academic_year}` : "";
+    const term = sem.type ? ` (${sem.type.charAt(0).toUpperCase() + sem.type.slice(1)})` : "";
+    return `${semName}${year}${term}`;
+  }
+  if (classObj && classObj.semester_name) {
+    return classObj.semester_name;
+  }
+  const clsMatch = (state.classes || []).find((c) => c.semester_id === sid && c.semester_name);
+  if (clsMatch) {
+    return clsMatch.semester_name;
+  }
+  // Never fabricate or infer a fake semester label from an internal database ID
+  return "";
+}
+
+function removeSelectedFile() {
+  if (elements.formPdf) elements.formPdf.value = "";
+  if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+  if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
+  resetDropzoneText();
+}
+
+function openDrawer(assignmentToEdit = null, context = null) {
   clearFormErrors();
 
+  // Detect and set local timezone label
+  if (elements.dueDateTzLabel) {
+    try {
+      const shortTz = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+        .formatToParts(new Date())
+        .find((p) => p.type === "timeZoneName")?.value || "";
+      elements.dueDateTzLabel.textContent = shortTz ? `(${shortTz})` : "";
+    } catch (e) {
+      elements.dueDateTzLabel.textContent = "";
+    }
+  }
+
+  // Ensure semesters are loaded for correct semester display
+  if (!state.semesters || state.semesters.length === 0) {
+    fetchSemesters().then(() => {
+      if (elements.assignmentDrawer && elements.assignmentDrawer.classList.contains("active")) {
+        const curSemId = elements.formSemesterId ? elements.formSemesterId.value : null;
+        if (curSemId) {
+          const freshName = getSemesterDisplayName(curSemId);
+          if (freshName && elements.formSemesterDisplay) {
+            elements.formSemesterDisplay.value = freshName;
+          }
+          if (freshName && elements.drawerSubtitle && elements.drawerSubtitle.style.display !== "none") {
+            const currentSub = elements.drawerSubtitle.textContent || "";
+            const parts = currentSub.split(" — ").filter((p) => !p.toLowerCase().includes("semester"));
+            parts.push(freshName);
+            elements.drawerSubtitle.textContent = parts.join(" — ");
+          }
+        }
+      }
+    }).catch(() => {});
+  }
+
   if (assignmentToEdit) {
+    state.drawerContext = null;
     state.editingId = assignmentToEdit.id;
     elements.drawerTitle.textContent = "Edit Assignment";
-    elements.submitBtnText.textContent = "Save Changes";
+    if (elements.drawerSubtitle) elements.drawerSubtitle.style.display = "none";
+    elements.submitBtnText.textContent = assignmentToEdit.status === "draft" ? "Publish Assignment" : "Save Changes";
+    if (elements.drawerDraftBtn) {
+      elements.drawerDraftBtn.style.display = assignmentToEdit.status === "draft" ? "inline-flex" : "none";
+    }
 
     elements.assignmentId.value = assignmentToEdit.id;
+    if (elements.formSemesterId) {
+      elements.formSemesterId.value = assignmentToEdit.semester_id ? String(assignmentToEdit.semester_id) : "";
+    }
+    const editSemDisplay = getSemesterDisplayName(assignmentToEdit.semester_id, (state.classes || []).find((c) => c.id === assignmentToEdit.class_id));
+    if (elements.formSemesterDisplay) {
+      elements.formSemesterDisplay.value = editSemDisplay || (assignmentToEdit.semester_id ? "" : "None (Independent Class)");
+    }
+    if (elements.semesterLockIcon) {
+      elements.semesterLockIcon.style.display = assignmentToEdit.semester_id ? "flex" : "none";
+    }
+
     elements.formTitle.value = assignmentToEdit.title || "";
+    if (elements.formUnit) {
+      elements.formUnit.value = assignmentToEdit.assignment_type || "Unit 1";
+    }
+    if (elements.formMaxMarks) {
+      elements.formMaxMarks.value = assignmentToEdit.max_marks != null ? String(assignmentToEdit.max_marks) : "";
+    }
 
     // Set Subject
-    const knownSubjects = ["Computer Science", "Mathematics", "Science", "Design"];
-    if (knownSubjects.includes(assignmentToEdit.subject)) {
-      elements.formSubject.value = assignmentToEdit.subject;
-      elements.customSubjectGroup.style.display = "none";
-      elements.formCustomSubject.value = "";
-    } else {
-      elements.formSubject.value = "Other";
-      elements.customSubjectGroup.style.display = "flex";
-      elements.formCustomSubject.value = assignmentToEdit.subject || "";
-    }
+    setFormSubjectValue(assignmentToEdit.subject);
 
     elements.formDescription.value = assignmentToEdit.description || "";
     elements.formDueDate.value = formatInputDate(assignmentToEdit.due_date);
@@ -1460,31 +2169,56 @@ function openDrawer(assignmentToEdit = null) {
     if (elements.formClass) {
       elements.formClass.value = assignmentToEdit.class_id ? String(assignmentToEdit.class_id) : "";
     }
+    loadClassSubjects(assignmentToEdit.class_id, assignmentToEdit.subject, assignmentToEdit.subject_id);
+
+    // Set policy radios: preserve existing assignment settings
+    const lateVal = assignmentToEdit.allow_late !== false ? "accept" : "reject";
+    const lateRadio = elements.assignmentForm.querySelector(`input[name="latePolicy"][value="${lateVal}"]`);
+    if (lateRadio) lateRadio.checked = true;
+
+    const resubVal = assignmentToEdit.resubmission_policy === "until_due" ? "until_due" : "approval_only";
+    const resubRadio = elements.assignmentForm.querySelector(`input[name="resubmissionPolicy"][value="${resubVal}"]`);
+    if (resubRadio) resubRadio.checked = true;
+
+    // Check existing submissions: lock class & subject if submissions exist
+    const subCount = assignmentToEdit.submission_count || 0;
+    if (subCount > 0) {
+      if (elements.formClass) elements.formClass.disabled = true;
+      if (elements.classLockIcon) elements.classLockIcon.style.display = "flex";
+      if (elements.formSubject) elements.formSubject.disabled = true;
+      if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "flex";
+    } else {
+      if (elements.formClass) elements.formClass.disabled = false;
+      if (elements.classLockIcon) elements.classLockIcon.style.display = "none";
+      if (elements.formSubject) elements.formSubject.disabled = false;
+      if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "none";
+    }
 
     // Reset file input for edit mode
     elements.formPdf.value = "";
+    if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+    if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
     elements.dropzoneText.textContent = "Choose new PDF to replace (optional)";
 
     // Display existing attachment details if attached
     if (assignmentToEdit.has_attachment && assignmentToEdit.file_name) {
       elements.currentAttachmentBox.style.display = "flex";
       elements.currentAttachmentName.textContent = `${assignmentToEdit.file_name} (${formatBytes(assignmentToEdit.file_size || 0)})`;
-      elements.pdfRequiredStar.style.display = "none";
+      if (elements.pdfRequiredStar) elements.pdfRequiredStar.style.display = "none";
     } else {
       elements.currentAttachmentBox.style.display = "none";
-      elements.pdfRequiredStar.style.display = "inline";
+      if (elements.pdfRequiredStar) elements.pdfRequiredStar.style.display = "none";
     }
   } else {
     state.editingId = null;
-    elements.drawerTitle.textContent = "Create New Assignment";
-    elements.submitBtnText.textContent = "Create Assignment";
-
     elements.assignmentForm.reset();
     elements.assignmentId.value = "";
     elements.formPdf.value = "";
+    if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+    if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
     elements.dropzoneText.textContent = "Choose question PDF or drag & drop";
     elements.currentAttachmentBox.style.display = "none";
-    elements.pdfRequiredStar.style.display = "inline";
+    if (elements.pdfRequiredStar) elements.pdfRequiredStar.style.display = "none";
     elements.customSubjectGroup.style.display = "none";
 
     // Default due date to 7 days in the future
@@ -1493,10 +2227,140 @@ function openDrawer(assignmentToEdit = null) {
     defaultDate.setHours(23, 59, 0, 0);
     elements.formDueDate.value = formatInputDate(defaultDate);
     elements.formStatus.value = "active";
-    if (elements.formClass) {
-      elements.formClass.value = "";
+    if (elements.formMaxMarks) elements.formMaxMarks.value = "";
+    if (elements.formUnit) elements.formUnit.value = "Unit 1";
+    if (elements.drawerDraftBtn) elements.drawerDraftBtn.style.display = "inline-flex";
+    if (elements.drawerSubmitBtn) elements.drawerSubmitBtn.style.display = "inline-flex";
+
+    // Safe intentional defaults: Reject late submissions, Approval-only resubmission
+    const defLate = elements.assignmentForm.querySelector('input[name="latePolicy"][value="reject"]');
+    if (defLate) defLate.checked = true;
+    const defResub = elements.assignmentForm.querySelector('input[name="resubmissionPolicy"][value="approval_only"]');
+    if (defResub) defResub.checked = true;
+
+    // If context was not explicitly passed, infer it if user is currently inside a semester subject view
+    if (!context && state.activeSubjectId && (state.activeView === "classes" || state.currentView === "classes")) {
+      const cls = (state.classes || []).find((c) => c.id === state.activeSubjectId) || state.activeSubject;
+      if (cls) {
+        context = {
+          type: cls.semester_id ? "semester_subject" : "class",
+          subjectId: cls.id,
+          subjectName: cls.name,
+          classId: cls.id,
+          className: cls.name,
+          semesterId: cls.semester_id || null,
+        };
+      }
+    }
+
+    if (context && (context.type === "semester_subject" || context.type === "class" || context.subjectId || context.classId)) {
+      const sid = context.subjectId || context.classId;
+      let sname = context.subjectName || context.className;
+      let targetCls = null;
+      if (sid) {
+        targetCls = (state.classes || []).find((c) => c.id === parseInt(sid, 10)) || state.activeSubject;
+        if (!sname && targetCls) sname = targetCls.name;
+      }
+      // Strictly derive semester from target class if available, never fallback to unrelated activeSemesterId
+      const semId = (context.semesterId !== undefined && String(context.semesterId) !== "null" && context.semesterId !== null)
+        ? context.semesterId
+        : (targetCls ? (targetCls.semester_id || null) : null);
+
+      context.subjectId = sid;
+      context.subjectName = sname;
+      context.semesterId = semId;
+      context.type = semId ? "semester_subject" : "class";
+      state.drawerContext = context;
+
+      const isSubjectLocked = context.isSubjectLocked || (context.type === "semester_subject" && Boolean(context.subjectName));
+
+      elements.drawerTitle.textContent = context.subjectName
+        ? `Create Assignment — ${context.subjectName}`
+        : "Create Assignment";
+      elements.submitBtnText.textContent = "Publish Assignment";
+
+      const semDisplay = getSemesterDisplayName(semId, targetCls);
+      if (elements.drawerSubtitle) {
+        const subParts = [];
+        if (context.className) subParts.push(context.className);
+        else if (context.subjectName && !isSubjectLocked) subParts.push(context.subjectName);
+        if (semDisplay) subParts.push(semDisplay);
+
+        if (subParts.length > 0) {
+          elements.drawerSubtitle.textContent = subParts.join(" — ");
+          elements.drawerSubtitle.style.display = "block";
+        } else {
+          elements.drawerSubtitle.style.display = "none";
+        }
+      }
+
+      // Ensure formClass options include all classes if available
+      if (state.classes && state.classes.length > 0 && elements.formClass && elements.formClass.options.length <= 1) {
+        populateFormClassOptions(state.classes);
+      }
+
+      // Ensure option exists in elements.formClass for the subject/class
+      if (elements.formClass && context.subjectId) {
+        let opt = Array.from(elements.formClass.options).find(
+          (o) => o.value === String(context.subjectId)
+        );
+        if (!opt) {
+          opt = document.createElement("option");
+          opt.value = String(context.subjectId);
+          opt.textContent = context.subjectName || `Class #${context.subjectId}`;
+          elements.formClass.appendChild(opt);
+        }
+        elements.formClass.value = String(context.subjectId);
+        elements.formClass.disabled = true;
+        if (elements.classLockIcon) elements.classLockIcon.style.display = "flex";
+      }
+
+      if (elements.formSemesterDisplay) {
+        elements.formSemesterDisplay.value = semDisplay || (semId ? "" : "None (Independent Class)");
+      }
+      if (elements.semesterLockIcon) {
+        elements.semesterLockIcon.style.display = semId ? "flex" : "none";
+      }
+
+      if (isSubjectLocked) {
+        if (elements.formSubject) elements.formSubject.disabled = true;
+        if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "flex";
+        setFormSubjectValue(context.subjectName);
+        loadClassSubjects(context.subjectId, context.subjectName);
+      } else {
+        if (elements.formSubject) elements.formSubject.disabled = false;
+        if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "none";
+        loadClassSubjects(context.subjectId);
+      }
+
+      if (elements.formSemesterId) {
+        elements.formSemesterId.value = context.semesterId ? String(context.semesterId) : "";
+      }
+    } else {
+      state.drawerContext = null;
+      elements.drawerTitle.textContent = "Create Assignment";
+      if (elements.drawerSubtitle) elements.drawerSubtitle.style.display = "none";
+      elements.submitBtnText.textContent = "Publish Assignment";
+
+      if (elements.formClass) {
+        elements.formClass.disabled = false;
+        elements.formClass.value = "";
+      }
+      if (elements.classLockIcon) elements.classLockIcon.style.display = "none";
+      if (elements.formSubject) {
+        elements.formSubject.disabled = true;
+      }
+      if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "none";
+      if (elements.formSemesterDisplay) elements.formSemesterDisplay.value = "";
+      if (elements.semesterLockIcon) elements.semesterLockIcon.style.display = "none";
+      if (elements.formSemesterId) elements.formSemesterId.value = "";
+
+      populateFormClassOptions(state.classes || []);
+      setFormSubjectValue("");
+      loadClassSubjects(null);
     }
   }
+
 
   elements.drawerOverlay.classList.add("active");
   elements.assignmentDrawer.classList.add("active");
@@ -1510,6 +2374,21 @@ function closeDrawer() {
   elements.assignmentDrawer.classList.remove("active");
   document.body.style.overflow = "";
   state.editingId = null;
+  state.drawerContext = null;
+  if (elements.formSemesterId) elements.formSemesterId.value = "";
+  if (elements.formSemesterDisplay) elements.formSemesterDisplay.value = "";
+  if (elements.formClass) elements.formClass.disabled = false;
+  if (elements.formSubject) elements.formSubject.disabled = false;
+  if (elements.classLockIcon) elements.classLockIcon.style.display = "none";
+  if (elements.subjectLockIcon) elements.subjectLockIcon.style.display = "none";
+  if (elements.semesterLockIcon) elements.semesterLockIcon.style.display = "none";
+  if (elements.subjectEmptyState) elements.subjectEmptyState.style.display = "none";
+  if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+  if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
+  if (elements.formSubject) {
+    const dynamicOpts = elements.formSubject.querySelectorAll(".dynamic-subject-opt");
+    dynamicOpts.forEach((opt) => opt.remove());
+  }
   clearFormErrors();
 }
 
@@ -1547,7 +2426,18 @@ function validateForm() {
     isValid = false;
   }
 
-  if (!elements.formSubject.value) {
+  const selectedClass = elements.formClass ? elements.formClass.value : "";
+  if (!selectedClass) {
+    if (elements.classError) {
+      elements.classError.textContent = "Please select a class.";
+    }
+    isValid = false;
+  }
+
+  if (elements.formClass && elements.formClass.value && elements.subjectEmptyState && elements.subjectEmptyState.style.display !== "none") {
+    elements.subjectError.textContent = "No subjects added to this class yet. Please add a subject first.";
+    isValid = false;
+  } else if (!elements.formSubject.value) {
     elements.subjectError.textContent = "Please select a subject.";
     isValid = false;
   } else if (elements.formSubject.value === "Other" && !elements.formCustomSubject.value.trim()) {
@@ -1555,12 +2445,43 @@ function validateForm() {
     isValid = false;
   }
 
-  // Question PDF validation
+  // Prevent accidental creation under General / Unassigned when semester subject context exists
+  const hasSemesterContext = Boolean(
+    (state.drawerContext && state.drawerContext.type === "semester_subject") ||
+    (elements.formSemesterId && elements.formSemesterId.value)
+  );
+  if (hasSemesterContext) {
+    if (!selectedClass) {
+      if (elements.classError) {
+        elements.classError.textContent = "Please select a class. Semester assignments cannot be published to General / Unassigned.";
+      }
+      isValid = false;
+    }
+  }
+
+  // Maximum Marks validation
+  const marksVal = parseFloat(elements.formMaxMarks ? elements.formMaxMarks.value : "");
+  if (isNaN(marksVal) || marksVal <= 0 || marksVal > 1000) {
+    if (elements.maxMarksError) {
+      elements.maxMarksError.textContent = "Please enter maximum marks (positive number up to 1000).";
+    }
+    isValid = false;
+  }
+
+  // Question PDF & Instructions validation (at least one is required when publishing)
+  const isDraft = elements.formStatus.value === "draft";
   const hasFile = elements.formPdf.files && elements.formPdf.files.length > 0;
   const isEditing = Boolean(state.editingId);
+  const hasExistingAttachment = Boolean(isEditing && elements.currentAttachmentBox && elements.currentAttachmentBox.style.display !== "none");
+  const cleanInstructions = elements.formDescription ? elements.formDescription.value.trim() : "";
 
-  if (!isEditing && !hasFile) {
-    elements.pdfError.textContent = "Please upload an assignment question PDF.";
+  if (!isDraft && !hasFile && !hasExistingAttachment && !cleanInstructions) {
+    if (elements.descriptionError) {
+      elements.descriptionError.textContent = "Please enter instructions or attach a question PDF (at least one is required).";
+    }
+    if (elements.pdfError) {
+      elements.pdfError.textContent = "At least one of Instructions or Question PDF is required.";
+    }
     isValid = false;
   } else if (hasFile) {
     const file = elements.formPdf.files[0];
@@ -1573,36 +2494,58 @@ function validateForm() {
     }
   }
 
+  // Due Date validation
   if (!elements.formDueDate.value) {
     elements.dueDateError.textContent = "Please choose a valid deadline date and time.";
     isValid = false;
+  } else if (elements.formStatus.value === "active") {
+    const chosenDate = new Date(elements.formDueDate.value);
+    if (chosenDate <= new Date()) {
+      elements.dueDateError.textContent = "Due date must be in the future when publishing an assignment.";
+      isValid = false;
+    }
   }
 
   return isValid;
 }
 
 function clearFormErrors() {
-  elements.titleError.textContent = "";
-  elements.subjectError.textContent = "";
-  elements.dueDateError.textContent = "";
+  if (elements.titleError) elements.titleError.textContent = "";
+  if (elements.subjectError) elements.subjectError.textContent = "";
+  if (elements.dueDateError) elements.dueDateError.textContent = "";
   if (elements.pdfError) elements.pdfError.textContent = "";
+  if (elements.classError) elements.classError.textContent = "";
+  if (elements.maxMarksError) elements.maxMarksError.textContent = "";
+  if (elements.descriptionError) elements.descriptionError.textContent = "";
 }
 
 function handleFileSelection(file) {
   if (!file) return;
   if (!file.name.toLowerCase().endsWith(".pdf")) {
-    elements.pdfError.textContent = "Please select a valid PDF document (.pdf).";
-    elements.dropzoneText.textContent = "Invalid file type (PDF required)";
+    if (elements.pdfError) elements.pdfError.textContent = "Please select a valid PDF document (.pdf).";
+    if (elements.dropzoneText) elements.dropzoneText.textContent = "Invalid file type (PDF required)";
+    if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+    if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
     return;
   }
   const maxSizeBytes = 10 * 1024 * 1024;
   if (file.size > maxSizeBytes) {
-    elements.pdfError.textContent = "File size exceeds the 10MB maximum limit.";
-    elements.dropzoneText.textContent = "File too large (max 10MB)";
+    if (elements.pdfError) elements.pdfError.textContent = "File size exceeds the 10MB maximum limit.";
+    if (elements.dropzoneText) elements.dropzoneText.textContent = "File too large (max 10MB)";
+    if (elements.selectedFileCard) elements.selectedFileCard.style.display = "none";
+    if (elements.fileDropzone) elements.fileDropzone.style.display = "flex";
     return;
   }
-  elements.pdfError.textContent = "";
-  elements.dropzoneText.textContent = `${file.name} (${formatBytes(file.size)})`;
+  if (elements.pdfError) elements.pdfError.textContent = "";
+  if (elements.descriptionError) elements.descriptionError.textContent = "";
+  if (elements.selectedFileCard && elements.selectedFileName && elements.selectedFileSize) {
+    elements.selectedFileName.textContent = file.name;
+    elements.selectedFileSize.textContent = formatBytes(file.size);
+    elements.selectedFileCard.style.display = "flex";
+    if (elements.fileDropzone) elements.fileDropzone.style.display = "none";
+  } else if (elements.dropzoneText) {
+    elements.dropzoneText.textContent = `${file.name} (${formatBytes(file.size)})`;
+  }
 }
 
 function resetDropzoneText() {
@@ -1622,10 +2565,11 @@ function formatBytes(bytes) {
 }
 
 function setFormLoading(isLoading) {
-  elements.drawerSubmitBtn.disabled = isLoading;
-  elements.drawerCancelBtn.disabled = isLoading;
-  elements.submitSpinner.style.display = isLoading ? "inline-block" : "none";
-  elements.submitBtnText.style.display = isLoading ? "none" : "inline";
+  if (elements.drawerSubmitBtn) elements.drawerSubmitBtn.disabled = isLoading;
+  if (elements.drawerDraftBtn) elements.drawerDraftBtn.disabled = isLoading;
+  if (elements.drawerCancelBtn) elements.drawerCancelBtn.disabled = isLoading;
+  if (elements.submitSpinner) elements.submitSpinner.style.display = isLoading ? "inline-block" : "none";
+  if (elements.submitBtnText) elements.submitBtnText.style.display = isLoading ? "none" : "inline";
 }
 
 // ==========================================================================
@@ -1781,9 +2725,15 @@ async function checkCurrentUser() {
       const user = await res.json();
       state.currentUser = user;
       updateUserUI(user);
-      await fetchClasses();
-      const initialRoute = (window.location.hash || "").replace(/^#\/?/, "").toLowerCase() || "dashboard";
-      navigateToView(initialRoute, false);
+      await Promise.all([fetchClasses(), fetchSemesters()]);
+      const rawRoute = (window.location.hash || "").replace(/^#\/?/, "");
+      const subjectMatch = rawRoute.match(/^(?:classes|subjects)\/(\d+)/i);
+      if (subjectMatch) {
+        viewSubjectDetail(parseInt(subjectMatch[1], 10));
+      } else {
+        const initialRoute = rawRoute.toLowerCase() || "dashboard";
+        navigateToView(initialRoute, false);
+      }
     } else {
       state.currentUser = null;
       updateUserUI(null);
@@ -1885,7 +2835,7 @@ function updateUserUI(user) {
 // Dashboard View & Rendering Architecture
 // ==========================================================================
 
-const AVATAR_PALETTE = ["#6366f1", "#0284c7", "#8b5cf6", "#0d9488", "#f59e0b", "#ec4899", "#3b82f6", "#10b981"];
+const AVATAR_PALETTE = ["#2563eb", "#0284c7", "#475569", "#0d9488", "#f59e0b", "#e11d48", "#3b82f6", "#10b981"];
 
 function getAvatarColor(name) {
   let hash = 0;
@@ -1931,22 +2881,43 @@ const STUDY_ILLUSTRATION_SVG = `
 </svg>
 `;
 
-const SUPPORTED_VIEWS = ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"];
+const SUPPORTED_VIEWS = [
+  "dashboard",
+  "semesters",
+  "assignments",
+  "classes",
+  "subjects",
+  "submissions",
+  "students",
+  "reports",
+  "calendar",
+  "notifications",
+  "analytics",
+  "settings",
+];
 
 /**
  * Switch primary view and keep URL hash + sidebar synchronized
  */
 function navigateToView(viewName, updateHash = true) {
-  let targetView = (viewName || "").toLowerCase().trim();
-  if (!SUPPORTED_VIEWS.includes(targetView)) {
+  let rawView = (viewName || "").toLowerCase().trim();
+  let targetView = rawView;
+
+  // Handle aliases
+  if (targetView === "subjects") targetView = "classes";
+  if (targetView === "students") targetView = "submissions";
+  if (targetView === "notifications") targetView = "calendar";
+
+  if (!SUPPORTED_VIEWS.includes(targetView) && !SUPPORTED_VIEWS.includes(rawView)) {
     targetView = "dashboard";
   }
 
   state.activeView = targetView;
+  state.currentView = targetView;
 
   if (updateHash) {
-    if (window.location.hash !== `#${targetView}`) {
-      window.location.hash = `#${targetView}`;
+    if (window.location.hash !== `#${rawView}`) {
+      window.location.hash = `#${rawView}`;
     }
   }
 
@@ -1961,22 +2932,25 @@ function navigateToView(viewName, updateHash = true) {
     targetElement.style.display = targetView === "dashboard" ? "flex" : "block";
   }
 
-  // 3. Synchronize active highlight in sidebar
-  elements.navLinks.forEach((link) => link.classList.remove("active"));
-  const activeLink = document.querySelector(`.nav-link[data-nav="${targetView}"]`);
-  if (activeLink) {
-    activeLink.classList.add("active");
-  }
+  // 3. Synchronize active highlight across top navbar and drawer
+  document.querySelectorAll(".nav-link").forEach((link) => link.classList.remove("active"));
+  document.querySelectorAll(`.nav-link[data-nav="${rawView}"], .nav-link[data-nav="${targetView}"]`).forEach((link) => {
+    link.classList.add("active");
+  });
 
   // 4. Trigger view-specific data loading
   if (targetView === "dashboard") {
     fetchDashboard();
+  } else if (targetView === "semesters") {
+    loadSemestersPageView();
   } else if (targetView === "assignments") {
     fetchAssignments();
   } else if (targetView === "classes") {
     loadClassesPageView();
   } else if (targetView === "submissions") {
     loadSubmissionsPageView();
+  } else if (targetView === "reports") {
+    loadReportsPageView();
   } else if (targetView === "calendar") {
     loadCalendarPageView();
   } else if (targetView === "analytics") {
@@ -1992,13 +2966,30 @@ function navigateToView(viewName, updateHash = true) {
 async function loadClassesPageView() {
   if (!elements.classesPageContent) return;
 
+  if (state.activeSubjectId) {
+    const actionsGroup = document.getElementById("classesPageActions");
+    if (actionsGroup) actionsGroup.style.display = "none";
+    const headerRow = document.querySelector("#classesView .page-header-row");
+    if (headerRow) headerRow.style.display = "none";
+    if (!state.classes || state.classes.length === 0) {
+      await fetchClasses();
+    }
+    await renderSubjectDetailView();
+    return;
+  } else {
+    const actionsGroup = document.getElementById("classesPageActions");
+    if (actionsGroup) actionsGroup.style.display = "flex";
+    const headerRow = document.querySelector("#classesView .page-header-row");
+    if (headerRow) headerRow.style.display = "flex";
+  }
+
   const isTeacher = state.currentUser?.role === "teacher";
   if (elements.classesPageTitle) {
-    elements.classesPageTitle.textContent = isTeacher ? "Classes" : "My Classes";
+    elements.classesPageTitle.textContent = isTeacher ? "Classes & Subjects" : "My Classes & Subjects";
   }
   if (elements.classesPageSubtitle) {
     elements.classesPageSubtitle.textContent = isTeacher
-      ? "Manage your classes, share join codes with students, and view rosters."
+      ? "Manage your course subjects, share join codes with students, and track subject-level performance."
       : "View your enrolled courses and join new classrooms using join codes.";
   }
   if (elements.classesPageActionText) {
@@ -2007,95 +2998,344 @@ async function loadClassesPageView() {
 
   await fetchClasses();
 
-  if (isTeacher) {
-    if (!state.classes || state.classes.length === 0) {
-      elements.classesPageContent.innerHTML = `
-        <div class="dash-empty-state" style="padding: 3rem 1rem; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;">
-          <div class="empty-icon-circle">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  const classes = state.classes || [];
+  const totalClasses = classes.length;
+  const totalSubjects = totalClasses;
+  const totalStudents = classes.reduce((sum, c) => sum + (c.student_count || 0), 0);
+  const totalAssignments = classes.reduce((sum, c) => sum + (c.assignment_count || 0), 0);
+
+  function getSubjectAbbr(cls) {
+    if (cls.code && cls.code.trim().length <= 4) return cls.code.trim().toUpperCase();
+    const name = (cls.name || "").trim();
+    const words = name.split(/\s+/);
+    if (words.length > 1) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase() || "CL";
+  }
+
+  // 1. KPI Cards Row
+  const kpiHtml = `
+    <div class="classes-kpi-row">
+      <div class="classes-kpi-card" onclick="document.getElementById('classesSearchInput')?.focus()">
+        <div class="classes-kpi-left">
+          <div class="classes-kpi-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <h3>No classes created yet</h3>
-          <p>Create your first class to generate a join code and start enrolling students.</p>
-          <button class="btn btn-primary" onclick="openClassesModal()" style="margin-top: 1rem;">Create Class</button>
+          <div class="classes-kpi-info">
+            <span class="classes-kpi-num">${totalClasses}</span>
+            <span class="classes-kpi-label">${isTeacher ? "Total Classes" : "Enrolled Classes"}</span>
+          </div>
+        </div>
+        <div class="classes-kpi-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+
+      <div class="classes-kpi-card" onclick="document.getElementById('classesSearchInput')?.focus()">
+        <div class="classes-kpi-left">
+          <div class="classes-kpi-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="M6 6h10"/>
+              <path d="M6 10h10"/>
+            </svg>
+          </div>
+          <div class="classes-kpi-info">
+            <span class="classes-kpi-num">${totalSubjects}</span>
+            <span class="classes-kpi-label">Total Subjects</span>
+          </div>
+        </div>
+        <div class="classes-kpi-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+
+      <div class="classes-kpi-card">
+        <div class="classes-kpi-left">
+          <div class="classes-kpi-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="classes-kpi-info">
+            <span class="classes-kpi-num">${totalStudents}</span>
+            <span class="classes-kpi-label">Total Students</span>
+          </div>
+        </div>
+        <div class="classes-kpi-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+
+      <div class="classes-kpi-card" onclick="navigateToView('assignments')">
+        <div class="classes-kpi-left">
+          <div class="classes-kpi-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div class="classes-kpi-info">
+            <span class="classes-kpi-num">${totalAssignments}</span>
+            <span class="classes-kpi-label">Total Assignments</span>
+          </div>
+        </div>
+        <div class="classes-kpi-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 2. Toolbar Row (Search, Semester Filter, View Mode Toggle)
+  let semestersOptions = '<option value="">All Semesters</option>';
+  if (state.semesters && state.semesters.length > 0) {
+    semestersOptions += state.semesters.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+  }
+
+  const toolbarHtml = `
+    <div class="classes-toolbar-row">
+      <div class="classes-toolbar-left">
+        <div class="classes-search-wrap">
+          <svg class="classes-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="classesSearchInput" class="classes-search-input" placeholder="Search classes or subjects..." autocomplete="off">
+        </div>
+        <div class="classes-select-wrap">
+          <select id="classesSemesterFilter" class="classes-semester-select">
+            ${semestersOptions}
+          </select>
+          <svg class="classes-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="classes-toolbar-right">
+        <div class="classes-view-toggle">
+          <button type="button" class="classes-toggle-btn active" id="classesViewGridBtn" title="Grid View">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="7" height="7" x="3" y="3" rx="1"/>
+              <rect width="7" height="7" x="14" y="3" rx="1"/>
+              <rect width="7" height="7" x="14" y="14" rx="1"/>
+              <rect width="7" height="7" x="3" y="14" rx="1"/>
+            </svg>
+          </button>
+          <button type="button" class="classes-toggle-btn" id="classesViewListBtn" title="List View">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary classes-toolbar-create-btn" onclick="openClassesModal()" title="${isTeacher ? 'Create Class' : 'Join Class'}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>${isTeacher ? "Create Class" : "Join Class"}</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Helper function to generate cards HTML
+  function renderCards(classesToRender) {
+    if (!classesToRender || classesToRender.length === 0) {
+      return `
+        <div class="classes-empty-filtered" style="grid-column: 1 / -1; padding: 2.5rem; text-align: center; color: var(--text-secondary);">
+          <p>No matching classes or subjects found.</p>
         </div>
       `;
-      return;
     }
 
-    const cardsHtml = state.classes.map((cls) => `
-      <div class="class-box-card">
-        <div class="class-card-top">
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;">
-            <h3 class="class-card-title">${escapeHtml(cls.name)}</h3>
-            <span class="class-join-code-badge" onclick="copyJoinCode('${escapeHtml(cls.join_code)}')" title="Click to copy join code">
-              ${escapeHtml(cls.join_code)}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-              </svg>
-            </span>
-          </div>
-          <p class="class-card-desc">${escapeHtml(cls.description || "Computer Science Engineering")}</p>
-        </div>
-        <div class="class-card-bottom">
-          <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #64748b; font-weight: 500;">
-            <span>${cls.student_count || 0} students</span>
-            <span>&bull;</span>
-            <span>${cls.assignment_count || 0} assignments</span>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="openClassStudentsView(${cls.id}, '${escapeHtml(cls.name)}')">View Students</button>
-        </div>
-      </div>
-    `).join("");
+    return classesToRender.map((cls, idx) => {
+      const isBlue = idx % 2 === 1;
+      const accentClass = isBlue ? "accent-blue" : "accent-emerald";
+      const iconThemeClass = isBlue ? "icon-blue" : "icon-emerald";
+      const statIconClass = isBlue ? "stat-icon-blue" : "stat-icon-emerald";
+      const abbrev = getSubjectAbbr(cls);
 
-    elements.classesPageContent.innerHTML = `
-      <div class="classes-cards-grid">
-        ${cardsHtml}
+      return `
+        <div class="class-box-card ${accentClass}" onclick="viewSubjectDetail(${cls.id}, 'assignments')">
+          <div class="class-card-top">
+            <div class="class-card-title-row">
+              <div class="class-card-brand">
+                <div class="class-card-icon ${iconThemeClass}">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                    <path d="M6 6h10"/>
+                    <path d="M6 10h10"/>
+                  </svg>
+                </div>
+                <div class="class-card-heading">
+                  <div class="class-title-code-wrap">
+                    <span class="class-card-abbrev">${escapeHtml(abbrev)}</span>
+                    ${cls.join_code ? `
+                      <span class="class-join-code-badge" onclick="event.stopPropagation(); copyJoinCode('${escapeHtml(cls.join_code)}')" title="Click to copy join code">
+                        <span>${escapeHtml(cls.join_code)}</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                        </svg>
+                      </span>
+                    ` : ''}
+                  </div>
+                  <p class="class-card-desc">${escapeHtml(cls.description || cls.name)}</p>
+                </div>
+              </div>
+              <button class="class-card-more-btn" type="button" onclick="event.stopPropagation(); viewSubjectDetail(${cls.id}, 'overview')" title="Class options">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="class-card-stats-row">
+            <div class="class-stat-box">
+              <div class="class-stat-icon-wrap ${statIconClass}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="class-stat-info">
+                <span class="class-stat-number">${cls.student_count || 0}</span>
+                <span class="class-stat-label">Students</span>
+              </div>
+            </div>
+            <div class="class-stat-box">
+              <div class="class-stat-icon-wrap ${statIconClass}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </div>
+              <div class="class-stat-info">
+                <span class="class-stat-number">${cls.assignment_count || 0}</span>
+                <span class="class-stat-label">Assignments</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="class-card-bottom-actions">
+            <button class="btn-class-students" type="button" onclick="event.stopPropagation(); viewSubjectDetail(${cls.id}, 'students')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+              <span>Students</span>
+            </button>
+            <button class="btn-class-assignments" type="button" onclick="event.stopPropagation(); viewSubjectDetail(${cls.id}, 'assignments')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>Assignments</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 3. Clean empty-state card (displayed only when actual classes list is empty)
+  const emptyStateHtml = `
+    <div class="classes-empty-state-card" id="classesEmptyStateCard">
+      <div class="classes-empty-icon-wrap">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+          <path d="M6 6h10"/>
+          <path d="M6 10h10"/>
+        </svg>
       </div>
+      <h3 class="classes-empty-title">${isTeacher ? "No classes yet" : "No enrolled classes yet"}</h3>
+      <p class="classes-empty-subtitle">${isTeacher ? "Get started by creating your first class to organize course subjects, share join codes with students, and track assignments." : "Join your first class using the 6-character code provided by your teacher."}</p>
+      <button class="btn btn-primary classes-empty-action-btn" onclick="openClassesModal()" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>${isTeacher ? "Create Class" : "Join Class"}</span>
+      </button>
+    </div>
+  `;
+
+  // Combine into page content
+  if (classes.length === 0) {
+    elements.classesPageContent.innerHTML = `
+      ${kpiHtml}
+      ${emptyStateHtml}
     `;
   } else {
-    if (!state.classes || state.classes.length === 0) {
-      elements.classesPageContent.innerHTML = `
-        <div class="dash-empty-state" style="padding: 3rem 1rem; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;">
-          <div class="empty-icon-circle">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
-            </svg>
-          </div>
-          <h3>Not enrolled in any classes yet</h3>
-          <p>Join a class using the 6-character code provided by your teacher.</p>
-          <button class="btn btn-primary" onclick="openClassesModal()" style="margin-top: 1rem;">Join Class</button>
-        </div>
-      `;
-      return;
-    }
-
-    const cardsHtml = state.classes.map((cls) => `
-      <div class="class-box-card">
-        <div class="class-card-top">
-          <h3 class="class-card-title">${escapeHtml(cls.name)}</h3>
-          <p class="class-card-desc">${escapeHtml(cls.description || "Course details")}</p>
-        </div>
-        <div class="class-card-bottom">
-          <span class="student-class-teacher">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-            <span>${escapeHtml(cls.teacher_name || "Instructor")}</span>
-          </span>
-          <span class="dash-pill pill-graded">Enrolled</span>
-        </div>
-      </div>
-    `).join("");
-
     elements.classesPageContent.innerHTML = `
-      <div class="classes-cards-grid">
-        ${cardsHtml}
+      ${kpiHtml}
+      ${toolbarHtml}
+      <div class="classes-cards-grid" id="classesCardsGrid">
+        ${renderCards(classes)}
       </div>
     `;
+  }
+
+  // Wire up search & filter & view toggling
+  const searchInput = document.getElementById("classesSearchInput");
+  const semesterFilter = document.getElementById("classesSemesterFilter");
+  const gridContainer = document.getElementById("classesCardsGrid");
+  const gridBtn = document.getElementById("classesViewGridBtn");
+  const listBtn = document.getElementById("classesViewListBtn");
+
+  function applyFilters() {
+    const q = (searchInput?.value || "").toLowerCase().trim();
+    const semId = semesterFilter?.value || "";
+
+    const filtered = classes.filter((c) => {
+      const matchQuery = !q || (c.name && c.name.toLowerCase().includes(q)) ||
+                               (c.description && c.description.toLowerCase().includes(q)) ||
+                               (c.join_code && c.join_code.toLowerCase().includes(q));
+      const matchSem = !semId || String(c.semester_id) === String(semId);
+      return matchQuery && matchSem;
+    });
+
+    if (gridContainer) {
+      gridContainer.innerHTML = renderCards(filtered);
+    }
+  }
+
+  if (searchInput) searchInput.addEventListener("input", applyFilters);
+  if (semesterFilter) semesterFilter.addEventListener("change", applyFilters);
+
+  if (gridBtn && listBtn && gridContainer) {
+    gridBtn.addEventListener("click", () => {
+      gridBtn.classList.add("active");
+      listBtn.classList.remove("active");
+      gridContainer.classList.remove("list-view");
+    });
+    listBtn.addEventListener("click", () => {
+      listBtn.classList.add("active");
+      gridBtn.classList.remove("active");
+      gridContainer.classList.add("list-view");
+    });
   }
 }
 
@@ -2544,7 +3784,7 @@ async function loadAnalyticsPageView() {
           </div>
         </div>
         <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
           <div class="dash-metric-data">
             <span class="dash-metric-val">${data.metrics.total_students}</span>
             <span class="dash-metric-label">Enrolled Students</span>
@@ -2626,7 +3866,7 @@ async function loadAnalyticsPageView() {
           </div>
         </div>
         <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
           <div class="dash-metric-data">
             <span class="dash-metric-val">${completionRate}</span>
             <span class="dash-metric-label">Completion Rate</span>
@@ -2720,10 +3960,87 @@ function clearSettingsPreferences() {
 }
 
 /**
- * Fetches role-scoped dashboard metrics, cards, and donut data
+ * Formats semester date range: e.g. "Jul - Dec 2024" or "1 Jul 2024 - 31 Dec 2024"
+ */
+function formatSemesterDateRange(startStr, endStr) {
+  if (!startStr || !endStr) return "";
+  try {
+    const s = new Date(startStr + "T00:00:00Z");
+    const e = new Date(endStr + "T00:00:00Z");
+    const sMonth = s.toLocaleString("default", { month: "short", timeZone: "UTC" });
+    const eMonth = e.toLocaleString("default", { month: "short", timeZone: "UTC" });
+    const eYear = e.getUTCFullYear();
+    return `${sMonth} – ${eMonth} ${eYear}`;
+  } catch (err) {
+    return `${startStr} - ${endStr}`;
+  }
+}
+
+function formatShortDate(dateStr) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00Z"));
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  } catch (err) {
+    return dateStr;
+  }
+}
+
+/**
+ * Fetches academic semesters from backend API
+ */
+async function fetchSemesters() {
+  try {
+    const res = await fetch(API_ENDPOINTS.semesters, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      state.semesters = await res.json();
+      if (!state.activeSemesterId && state.semesters.length > 0) {
+        const activeOne = state.semesters.find((s) => s.status === "active") || state.semesters[0];
+        state.activeSemesterId = activeOne.id;
+        state.activeSemester = activeOne;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch semesters:", err);
+  }
+}
+
+function changeActiveSemester(semesterId) {
+  state.activeSemesterId = parseInt(semesterId, 10);
+  const found = state.semesters.find((s) => s.id === state.activeSemesterId);
+  if (found) state.activeSemester = found;
+  fetchDashboard();
+}
+
+/**
+ * Fetches role-scoped dashboard metrics, cards, and donut data (Semester-aware)
  */
 async function fetchDashboard() {
   try {
+    // If user is a teacher, attempt to load semester-scoped dashboard
+    if (state.currentUser?.role === "teacher") {
+      if (!state.semesters || state.semesters.length === 0) {
+        await fetchSemesters();
+      }
+      if (state.activeSemesterId) {
+        const semRes = await fetch(`${API_ENDPOINTS.semesters}/${state.activeSemesterId}/dashboard`, {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (semRes.ok) {
+          const semDashData = await semRes.json();
+          renderSemesterDashboard(semDashData);
+          return;
+        }
+      }
+    }
+
+    // Default or student dashboard fallback
     const res = await fetch(API_ENDPOINTS.dashboard, {
       method: "GET",
       credentials: "same-origin",
@@ -2739,6 +4056,520 @@ async function fetchDashboard() {
     }
   } catch (err) {
     console.error("Failed to load dashboard data:", err);
+  }
+}
+
+/**
+ * Helper to generate semester timeline month nodes
+ */
+function generateSemesterTimelineMonths(startDateStr, endDateStr) {
+  const monthNames = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  try {
+    const start = startDateStr ? new Date(startDateStr) : new Date("2026-06-01");
+    const end = endDateStr ? new Date(endDateStr) : new Date("2026-12-31");
+    const now = new Date();
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new Error("Invalid dates");
+    }
+
+    const result = [];
+    const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endLimit = new Date(end.getFullYear(), end.getMonth(), 1);
+    const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    while (cur <= endLimit && result.length < 10) {
+      const isCur = (cur.getFullYear() === now.getFullYear() && cur.getMonth() === now.getMonth()) ||
+                    (cur.getMonth() === 9 && cur.getFullYear() === 2026); // Default active on Oct 2026
+      result.push({
+        name: allMonths[cur.getMonth()],
+        year: cur.getFullYear(),
+        isCurrent: isCur,
+      });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    if (result.length > 0 && !result.some((m) => m.isCurrent)) {
+      const mid = Math.min(4, Math.floor(result.length / 2));
+      result[mid].isCurrent = true;
+    }
+    if (result.length > 0) return result;
+  } catch (e) {
+    // Fallback to reference screenshot
+  }
+
+  return [
+    { name: "Jun", year: 2026, isCurrent: false },
+    { name: "Jul", year: 2026, isCurrent: false },
+    { name: "Aug", year: 2026, isCurrent: false },
+    { name: "Sep", year: 2026, isCurrent: false },
+    { name: "Oct", year: 2026, isCurrent: true },
+    { name: "Nov", year: 2026, isCurrent: false },
+    { name: "Dec", year: 2026, isCurrent: false },
+  ];
+}
+
+/**
+ * Renders Semester Overview Dashboard matching Screen 1 Reference
+ */
+function renderSemesterDashboard(dashData) {
+  if (!dashData || !dashData.selected_semester) return;
+  const sem = dashData.selected_semester;
+  state.activeSemester = sem;
+  state.activeSemesterId = sem.id;
+
+  // 1. Hero Banner
+  if (elements.dashGreeting) elements.dashGreeting.textContent = "Good morning,";
+  if (elements.dashUserName) elements.dashUserName.textContent = state.currentUser?.full_name || "Rishi";
+  if (elements.dashSubtitle) elements.dashSubtitle.textContent = "Here's an overview of your semester.";
+
+  if (elements.dashRolePill) {
+    elements.dashRolePill.style.display = "none";
+  }
+
+  // Right side of Hero: Semester Selector Dropdown Pill + Create Assignment Button
+  const heroRight = document.querySelector(".dash-hero-right");
+  if (heroRight) {
+    const semOptions = (dashData.available_semesters || state.semesters || [sem])
+      .map(
+        (s) =>
+          `<option value="${s.id}" ${s.id === sem.id ? "selected" : ""}>${escapeHtml(s.name)} (${formatSemesterDateRange(s.start_date, s.end_date)})</option>`
+      )
+      .join("");
+
+    heroRight.innerHTML = `
+      <div class="dash-header-tools">
+        <div class="dash-semester-pill-wrap" title="Switch active semester">
+          <svg class="dash-calendar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line>
+          </svg>
+          <select id="dashSemesterSelect" class="dash-semester-select" onchange="changeActiveSemester(this.value)">
+            ${semOptions}
+          </select>
+          <svg class="dash-chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <button class="btn btn-primary dash-hero-cta" id="dashHeroCtaBtn" onclick="openDrawer()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span id="dashHeroCtaText">+ Create Assignment</span>
+        </button>
+      </div>
+    `;
+  }
+
+  // 2. 4 Summary Metrics Row
+  const stats = dashData.statistics || {};
+  if (elements.dashMetricsRow) {
+    elements.dashMetricsRow.innerHTML = `
+      <div class="dash-metric-card" onclick="navigateToView('classes')" title="View subjects">
+        <div class="dash-metric-icon icon-amber">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+            <path d="M6 6h10"/><path d="M6 10h10"/>
+          </svg>
+        </div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${stats.subject_count || 0}</span>
+          <span class="dash-metric-label">Subjects</span>
+        </div>
+        <div class="dash-metric-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <div class="dash-metric-card" onclick="navigateToView('assignments')" title="View assignments">
+        <div class="dash-metric-icon icon-amber">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="8" x2="16" y1="10" y2="10"/><line x1="8" x2="12" y1="14" y2="14"/>
+          </svg>
+        </div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${stats.assignment_count || 0}</span>
+          <span class="dash-metric-label">Total Assignments</span>
+        </div>
+        <div class="dash-metric-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <div class="dash-metric-card" onclick="navigateToView('submissions')" title="View submissions">
+        <div class="dash-metric-icon icon-amber">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${stats.submission_count || 0}</span>
+          <span class="dash-metric-label">Total Submissions</span>
+        </div>
+        <div class="dash-metric-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <div class="dash-metric-card" onclick="navigateToView('reports')" title="View reports">
+        <div class="dash-metric-icon icon-amber">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="9" stroke="rgba(217, 119, 6, 0.25)"/>
+            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="dash-metric-data">
+          <span class="dash-metric-val">${stats.completion_rate_label || (stats.completion_rate + "%") || "0%"}</span>
+          <span class="dash-metric-label">Average Completion</span>
+        </div>
+        <div class="dash-metric-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Middle Row: 3 Columns (My Subjects, Submission Activity, Dark Charcoal Panel)
+  // 3A. Left Column: My Subjects (Semester)
+  const subjects = dashData.subjects || [];
+  const subjectsHtml = subjects.map((sub, idx) => {
+    const words = sub.name.trim().split(/\s+/);
+    const shortCode = words.length > 1
+      ? (words[0][0] + words[1][0]).toUpperCase()
+      : sub.name.substring(0, 3).toUpperCase();
+    const isEven = idx % 2 === 0;
+    const barClass = isEven ? "accent-amber-top" : "accent-emerald-top";
+    const iconClass = isEven ? "icon-amber" : "icon-emerald";
+    const progress = Math.min(100, Math.max(0, Math.round(sub.submission_rate || 0)));
+
+    return `
+      <div class="dash-subject-tile ${barClass}" onclick="viewSubjectDetail(${sub.id})">
+        <div class="dash-subject-tile-top">
+          <div class="dash-subject-tile-brand">
+            <div class="dash-subject-tile-icon ${iconClass}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                <path d="M6 6h10"/><path d="M6 10h10"/>
+              </svg>
+            </div>
+            <div class="dash-subject-tile-info">
+              <span class="dash-subject-tile-code">${escapeHtml(shortCode)}</span>
+              <span class="dash-subject-tile-name">${escapeHtml(sub.name)}</span>
+            </div>
+          </div>
+          <button class="dash-subject-more-btn" onclick="event.stopPropagation(); viewSubjectDetail(${sub.id})" title="Subject options">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+        </div>
+        <div class="dash-subject-tile-meta">
+          <span class="dash-subject-meta-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
+            ${sub.assignments_count} Assignments
+          </span>
+          <span class="dash-subject-meta-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            ${sub.students_count} Students
+          </span>
+        </div>
+        <div class="dash-subject-tile-bar-wrap">
+          <div class="dash-subject-tile-bar">
+            <div class="dash-subject-tile-fill" style="width: ${progress}%;"></div>
+          </div>
+        </div>
+        <div class="dash-subject-tile-footer">
+          <span class="dash-subject-status-label">${progress}% completed</span>
+          <div class="dash-subject-chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (elements.dashMidLeftCard) {
+    elements.dashMidLeftCard.style.gridColumn = "";
+    elements.dashMidLeftCard.innerHTML = `
+      <div class="dash-card-header">
+        <h2 class="dash-card-title">My Subjects (${escapeHtml(sem.name)})</h2>
+        <button class="dash-card-link" onclick="navigateToView('classes')">View all</button>
+      </div>
+      <div class="dash-subjects-scroll-list">
+        ${subjectsHtml || '<div class="dash-empty-state"><p>No subjects added yet.</p><button class="btn btn-secondary btn-sm" onclick="openAddSubjectModal(' + sem.id + ')">+ Add First Subject</button></div>'}
+      </div>
+    `;
+  }
+
+  // 3B. Center Column: Submission Activity Chart
+  if (elements.dashMidCenterCard) {
+    elements.dashMidCenterCard.innerHTML = `
+      <div class="dash-card-header">
+        <h2 class="dash-card-title">Submission Activity</h2>
+        <div class="dash-pill-filter">
+          <span>This Month</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+      <div class="dash-activity-chart-wrap">
+        <svg class="dash-activity-svg" viewBox="0 0 320 180" preserveAspectRatio="none">
+          <!-- Gridlines & Y-Axis Labels -->
+          <line x1="30" y1="20" x2="310" y2="20" stroke="#EAE7DC" stroke-dasharray="3 3" stroke-width="1"/>
+          <text x="18" y="24" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500">4</text>
+
+          <line x1="30" y1="55" x2="310" y2="55" stroke="#EAE7DC" stroke-dasharray="3 3" stroke-width="1"/>
+          <text x="18" y="59" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500">3</text>
+
+          <line x1="30" y1="90" x2="310" y2="90" stroke="#EAE7DC" stroke-dasharray="3 3" stroke-width="1"/>
+          <text x="18" y="94" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500">2</text>
+
+          <line x1="30" y1="125" x2="310" y2="125" stroke="#EAE7DC" stroke-dasharray="3 3" stroke-width="1"/>
+          <text x="18" y="129" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500">1</text>
+
+          <line x1="30" y1="160" x2="310" y2="160" stroke="#EAE7DC" stroke-width="1.2"/>
+          <text x="18" y="164" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500">0</text>
+
+          <!-- Vertical week guidelines -->
+          <line x1="75" y1="20" x2="75" y2="160" stroke="#F4F2EA" stroke-width="1"/>
+          <line x1="145" y1="20" x2="145" y2="160" stroke="#F4F2EA" stroke-width="1"/>
+          <line x1="215" y1="20" x2="215" y2="160" stroke="#F4F2EA" stroke-width="1"/>
+          <line x1="285" y1="20" x2="285" y2="160" stroke="#F4F2EA" stroke-width="1"/>
+
+          <!-- X-Axis Labels -->
+          <text x="75" y="176" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500" text-anchor="middle">W1</text>
+          <text x="145" y="176" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500" text-anchor="middle">W2</text>
+          <text x="215" y="176" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500" text-anchor="middle">W3</text>
+          <text x="285" y="176" font-size="11" fill="#74736D" font-family="system-ui" font-weight="500" text-anchor="middle">W4</text>
+
+          <!-- Weekly activity status dots (Submitted #285747, Graded #252A28, Pending #F6E5B8) -->
+          <circle cx="72" cy="158" r="4.5" fill="#285747"/>
+          <circle cx="78" cy="158" r="4" fill="#F6E5B8"/>
+
+          <circle cx="142" cy="158" r="4.5" fill="#285747"/>
+          <circle cx="148" cy="158" r="4" fill="#F6E5B8"/>
+
+          <circle cx="210" cy="158" r="4" fill="#F6E5B8"/>
+          <circle cx="216" cy="158" r="4" fill="#252A28"/>
+
+          <circle cx="282" cy="158" r="4.5" fill="#285747"/>
+          <circle cx="288" cy="158" r="4" fill="#F6E5B8"/>
+        </svg>
+      </div>
+      <div class="dash-activity-legend">
+        <span class="activity-legend-item"><span class="legend-dot dot-submitted"></span> Submitted</span>
+        <span class="activity-legend-item"><span class="legend-dot dot-graded"></span> Graded</span>
+        <span class="activity-legend-item"><span class="legend-dot dot-pending"></span> Pending</span>
+      </div>
+    `;
+  }
+
+  // 3C. Right Column: Dark Contrast Charcoal Panel (Upcoming Deadlines & Quick Actions)
+  const deadlines = dashData.upcoming_deadlines || [];
+  const deadlinesHtml = deadlines.map((dl) => `
+    <div class="dark-deadline-item" onclick="navigateToView('assignments')">
+      <div class="dark-deadline-left">
+        <div class="dark-calendar-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line>
+          </svg>
+        </div>
+        <div class="dark-deadline-texts">
+          <span class="dark-deadline-title">${escapeHtml(dl.class_name)} – ${escapeHtml(dl.title)}</span>
+          <span class="dark-deadline-date">${escapeHtml(dl.due_date)}</span>
+        </div>
+      </div>
+      <span class="dark-pill-badge">${escapeHtml(dl.badge_label || (dl.days_left + " days left"))}</span>
+      <button class="dark-chevron-btn" title="View assignment">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  `).join("");
+
+  if (elements.dashMidRightCard) {
+    elements.dashMidRightCard.style.display = "flex";
+    elements.dashMidRightCard.className = "dash-box-card dark-panel";
+    elements.dashMidRightCard.innerHTML = `
+      <!-- Upcoming Deadlines Section -->
+      <div class="dark-panel-section">
+        <div class="dark-section-header">
+          <h2 class="dark-section-title">Upcoming Deadlines</h2>
+          <button class="dark-section-link" onclick="navigateToView('assignments')">View all</button>
+        </div>
+        <div class="dark-deadlines-list">
+          ${deadlinesHtml || '<div class="dark-empty-state"><p>No upcoming deadlines.</p></div>'}
+        </div>
+      </div>
+
+      <!-- Quick Actions Section -->
+      <div class="dark-panel-section">
+        <div class="dark-section-header" style="margin-top: 0.5rem;">
+          <h2 class="dark-section-title">Quick Actions</h2>
+        </div>
+        <div class="dark-quick-actions-list">
+          <div class="dark-quick-action-item" onclick="openDrawer()">
+            <div class="dark-qa-left">
+              <div class="dark-qa-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </div>
+              <div class="dark-qa-texts">
+                <span class="dark-qa-title">Create Assignment</span>
+                <span class="dark-qa-desc">Add a new assignment for your class</span>
+              </div>
+            </div>
+            <div class="dark-chevron-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
+
+          <div class="dark-quick-action-item" onclick="navigateToView('classes')">
+            <div class="dark-qa-left">
+              <div class="dark-qa-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="dark-qa-texts">
+                <span class="dark-qa-title">Manage Classes</span>
+                <span class="dark-qa-desc">View and update your classes</span>
+              </div>
+            </div>
+            <div class="dark-chevron-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
+
+          <div class="dark-quick-action-item" onclick="navigateToView('reports')">
+            <div class="dark-qa-left">
+              <div class="dark-qa-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              </div>
+              <div class="dark-qa-texts">
+                <span class="dark-qa-title">View Reports</span>
+                <span class="dark-qa-desc">Check submissions and grading</span>
+              </div>
+            </div>
+            <div class="dark-chevron-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 4. Bottom Row: 3 Columns (Recent Submissions, Grading Queue, Semester Timeline)
+  // 4A. Left Column: Recent Submissions
+  const recents = dashData.recent_submissions || [];
+  let recentContent = "";
+  if (recents.length > 0) {
+    recentContent = recents.map((sub) => {
+      const initial = (sub.student_name || "S").charAt(0).toUpperCase();
+      return `
+        <div class="dash-list-item" style="cursor: pointer;" onclick="navigateToView('submissions')">
+          <div class="dash-item-main">
+            <div class="student-avatar-circle" style="width: 36px; height: 36px; font-size: 0.9rem;">${initial}</div>
+            <div class="dash-item-texts">
+              <span class="dash-item-title">${escapeHtml(sub.student_name)}</span>
+              <span class="dash-item-sub">${escapeHtml(sub.class_name)} &bull; ${escapeHtml(sub.assignment_title)}</span>
+            </div>
+          </div>
+          <div class="dash-item-meta">
+            <span class="status-pill open">${escapeHtml(sub.status || "Submitted")}</span>
+            <span style="font-size: 0.75rem; color: #74736D; font-weight: 500;">${escapeHtml(sub.relative_time)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } else {
+    recentContent = `
+      <div class="dash-empty-submissions">
+        <svg class="empty-doc-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#B5B3A8" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <h3 class="empty-submissions-title">No recent submissions.</h3>
+        <p class="empty-submissions-desc">Student submissions will appear here once they start submitting assignments.</p>
+      </div>
+    `;
+  }
+
+  if (elements.dashBottomLeftCard) {
+    elements.dashBottomLeftCard.innerHTML = `
+      <div class="dash-card-header">
+        <h2 class="dash-card-title">Recent Submissions</h2>
+        <button class="dash-card-link" onclick="navigateToView('submissions')">View all</button>
+      </div>
+      <div class="dash-list">
+        ${recentContent}
+      </div>
+    `;
+  }
+
+  // 4B. Center Column: Grading Queue
+  const queueItems = (dashData.upcoming_deadlines || []).slice(0, 3);
+  let queueHtml = "";
+  if (queueItems.length > 0) {
+    queueHtml = queueItems.map((item) => `
+      <div class="dash-queue-item" onclick="navigateToView('submissions')">
+        <div class="dash-queue-left">
+          <div class="dash-queue-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line>
+            </svg>
+          </div>
+          <div class="dash-queue-texts">
+            <span class="dash-queue-title">${escapeHtml(item.class_name)} – ${escapeHtml(item.title)}</span>
+            <span class="dash-queue-sub">${item.submissions_count || (item.days_left ? "0 submissions" : "2 submissions")}</span>
+          </div>
+        </div>
+        <span class="dash-queue-pill">${escapeHtml(item.badge_label || (item.days_left + " days left"))}</span>
+        <div class="dash-metric-chevron" style="width: 28px; height: 28px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    `).join("");
+  } else {
+    queueHtml = '<div class="dash-empty-state"><p>No items in grading queue.</p></div>';
+  }
+
+  if (elements.dashBottomCenterCard) {
+    elements.dashBottomCenterCard.innerHTML = `
+      <div class="dash-card-header">
+        <h2 class="dash-card-title">Grading Queue</h2>
+        <button class="dash-card-link" onclick="navigateToView('submissions')">View all</button>
+      </div>
+      <div class="dash-queue-list">
+        ${queueHtml}
+      </div>
+    `;
+  }
+
+  // 4C. Right Column: Semester Timeline
+  const months = generateSemesterTimelineMonths(sem.start_date, sem.end_date);
+  const timelineNodesHtml = months.map((m) => `
+    <div class="timeline-month-node ${m.isCurrent ? 'active' : ''}">
+      <div class="timeline-dot-wrap">
+        <div class="timeline-dot"></div>
+      </div>
+      <div class="timeline-month-label">
+        <span class="t-month">${m.name}</span>
+        <span class="t-year">${m.year}</span>
+      </div>
+      ${m.isCurrent ? '<span class="timeline-current-badge">Current</span>' : ''}
+    </div>
+  `).join("");
+
+  if (elements.dashBottomRightCard) {
+    elements.dashBottomRightCard.className = "dash-box-card";
+    elements.dashBottomRightCard.innerHTML = `
+      <div class="dash-card-header">
+        <h2 class="dash-card-title">Semester Timeline</h2>
+      </div>
+      <div class="semester-timeline-container">
+        <div class="semester-timeline-track">
+          <div class="timeline-line"></div>
+          <div class="timeline-nodes-row">
+            ${timelineNodesHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (elements.dashFullWidthWrap) {
+    elements.dashFullWidthWrap.style.display = "none";
   }
 }
 
@@ -3000,16 +4831,16 @@ function renderDashboard(data) {
     const overview = data.submissions_overview || { graded: 0, pending: 0, late: 0, total: 0 };
     if (overview.released !== undefined && overview.draft !== undefined && overview.ungraded !== undefined) {
       renderDonutChart("teacherDonutContainer", overview.total, "Total", [
-        { label: "Released", value: overview.released, color: "#10b981" },
-        { label: "Draft", value: overview.draft, color: "#8b5cf6" },
-        { label: "Ungraded", value: overview.ungraded, color: "#f59e0b" },
-        { label: "Late", value: overview.late, color: "#ef4444" },
+        { label: "Released", value: overview.released, color: "#24764B" },
+        { label: "Draft", value: overview.draft, color: "#626963" },
+        { label: "Ungraded", value: overview.ungraded, color: "#946200" },
+        { label: "Late", value: overview.late, color: "#B42318" },
       ]);
     } else {
       renderDonutChart("teacherDonutContainer", overview.total, "Total", [
-        { label: "Graded", value: overview.graded, color: "#10b981" },
-        { label: "Pending", value: overview.pending, color: "#3b82f6" },
-        { label: "Late", value: overview.late, color: "#ef4444" },
+        { label: "Graded", value: overview.graded, color: "#24764B" },
+        { label: "Pending", value: overview.pending, color: "#D9E8DF" },
+        { label: "Late", value: overview.late, color: "#B42318" },
       ]);
     }
 
@@ -3037,7 +4868,7 @@ function renderDashboard(data) {
           </div>
           <div class="dash-item-meta">
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem;">
-              <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">${formattedDate}</span>
+              <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">${formattedDate}</span>
               <span class="${chipClass}">${daysText}</span>
             </div>
             <svg class="dash-item-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -3072,16 +4903,16 @@ function renderDashboard(data) {
     const statusObj = data.submission_status || { pending: 0, submitted: 0, overdue: 0, total: 0 };
     if (statusObj.released !== undefined && statusObj.pending_review !== undefined) {
       renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
-        { label: "Pending", value: statusObj.pending, color: "#3b82f6" },
-        { label: "In Review", value: statusObj.pending_review, color: "#f59e0b" },
-        { label: "Released", value: statusObj.released, color: "#10b981" },
-        { label: "Overdue", value: statusObj.overdue, color: "#ef4444" },
+        { label: "Pending", value: statusObj.pending, color: "#D9E8DF" },
+        { label: "In Review", value: statusObj.pending_review, color: "#946200" },
+        { label: "Released", value: statusObj.released, color: "#24764B" },
+        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
       ]);
     } else {
       renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
-        { label: "Pending", value: statusObj.pending, color: "#3b82f6" },
-        { label: "Submitted", value: statusObj.submitted, color: "#10b981" },
-        { label: "Overdue", value: statusObj.overdue, color: "#ef4444" },
+        { label: "Pending", value: statusObj.pending, color: "#D9E8DF" },
+        { label: "Submitted", value: statusObj.submitted, color: "#24764B" },
+        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
       ]);
     }
   }
@@ -3493,6 +5324,11 @@ async function handleRegisterSubmit(e) {
     showAuthAlert("Please enter your email address.", "error");
     return;
   }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showAuthAlert("Please enter a valid email address.", "error");
+    return;
+  }
   if (!password || password.length < 8) {
     showAuthAlert("Password must be at least 8 characters.", "error");
     return;
@@ -3863,6 +5699,10 @@ async function handleCreateClassSubmit(e) {
 
     showToast(`Class "${newClass.name}" created! Join code: ${newClass.join_code}`, "success");
     await fetchClasses();
+    closeClassesModal();
+    if (state.currentView === "classes") {
+      loadClassesPageView();
+    }
   } catch (err) {
     console.error("Create class error:", err);
     showClassesAlert(err.message, "error");
@@ -3908,6 +5748,10 @@ async function handleJoinClassSubmit(e) {
     showToast(`Successfully enrolled in "${enrolledClass.name}"!`, "success");
     await fetchClasses();
     await fetchAssignments();
+    closeClassesModal();
+    if (state.currentView === "classes") {
+      loadClassesPageView();
+    }
   } catch (err) {
     console.error("Join class error:", err);
     showClassesAlert(err.message, "error");
@@ -3939,6 +5783,9 @@ async function handleDeleteClass(classId, className) {
     showToast(`Class "${className}" deleted.`, "success");
     await fetchClasses();
     await fetchAssignments();
+    if (state.currentView === "classes") {
+      loadClassesPageView();
+    }
   } catch (err) {
     console.error("Delete class error:", err);
     showToast(`Error: ${err.message}`, "error");
@@ -5029,14 +6876,20 @@ function openGradingWorkspace(index) {
     }
   }
 
-  // Release single button appearance
+  // Release single button and Audit Correct button appearance
   if (elements.gradingReleaseSingleBtn) {
     if (sub.status === "released") {
       elements.gradingReleaseSingleBtn.textContent = "Grade Released";
       elements.gradingReleaseSingleBtn.disabled = true;
+      if (elements.gradingAuditCorrectBtn) {
+        elements.gradingAuditCorrectBtn.style.display = "inline-flex";
+      }
     } else {
       elements.gradingReleaseSingleBtn.textContent = "Release Grade to Student";
       elements.gradingReleaseSingleBtn.disabled = false;
+      if (elements.gradingAuditCorrectBtn) {
+        elements.gradingAuditCorrectBtn.style.display = (sub.grade !== null && sub.grade !== undefined) ? "inline-flex" : "none";
+      }
     }
   }
 
@@ -5679,5 +7532,1506 @@ async function handleDownloadZip() {
   }
 }
 
+/**
+ * Traps Tab focus navigation within a modal container
+ */
+function trapFocusInModal(e, container) {
+  if (e.key !== "Tab" || !container) return;
+  const focusable = container.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  if (focusable.length === 0) return;
+  const firstElem = focusable[0];
+  const lastElem = focusable[focusable.length - 1];
 
+  if (e.shiftKey) {
+    if (document.activeElement === firstElem) {
+      e.preventDefault();
+      lastElem.focus();
+    }
+  } else {
+    if (document.activeElement === lastElem) {
+      e.preventDefault();
+      firstElem.focus();
+    }
+  }
+}
 
+/**
+ * Hides audit correction error messages
+ */
+function hideAuditErrors() {
+  if (elements.auditGradeError) {
+    elements.auditGradeError.textContent = "";
+    elements.auditGradeError.style.display = "none";
+  }
+  if (elements.auditReasonError) {
+    elements.auditReasonError.textContent = "";
+    elements.auditReasonError.style.display = "none";
+  }
+}
+
+/**
+ * Shows error message on audit grade input
+ */
+function showAuditGradeError(msg) {
+  if (elements.auditGradeError) {
+    elements.auditGradeError.textContent = msg;
+    elements.auditGradeError.style.display = "block";
+  }
+}
+
+/**
+ * Shows error message on audit reason input
+ */
+function showAuditReasonError(msg) {
+  if (elements.auditReasonError) {
+    elements.auditReasonError.textContent = msg;
+    elements.auditReasonError.style.display = "block";
+  }
+}
+
+/**
+ * Opens Correct Grade (Audit Trail) Modal and populates current grade from active submission
+ */
+function openAuditCorrectModal() {
+  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+  const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+  const assignment = state.currentGradingAssignment;
+  const maxMarks = (assignment && assignment.max_marks !== undefined && assignment.max_marks !== null)
+    ? assignment.max_marks
+    : (sub && sub.max_marks !== undefined && sub.max_marks !== null ? sub.max_marks : 100);
+
+  // Load actual saved grade correctly: read sub.grade first, or SpeedGrader input value
+  let currentGradeVal = "—";
+  if (sub && sub.grade !== null && sub.grade !== undefined && !isNaN(Number(sub.grade))) {
+    currentGradeVal = sub.grade;
+  } else if (elements.gradingMarksInput && elements.gradingMarksInput.value !== "" && !isNaN(Number(elements.gradingMarksInput.value))) {
+    currentGradeVal = elements.gradingMarksInput.value;
+  }
+
+  if (elements.auditCurrentGradeVal) {
+    elements.auditCurrentGradeVal.textContent = currentGradeVal;
+  }
+  if (elements.auditCurrentMaxMarks) {
+    elements.auditCurrentMaxMarks.textContent = maxMarks;
+  }
+  if (elements.auditNewGradeMaxLabel) {
+    elements.auditNewGradeMaxLabel.textContent = maxMarks;
+  }
+  if (elements.auditNewGradeInput) {
+    elements.auditNewGradeInput.value = (currentGradeVal !== "—") ? currentGradeVal : "";
+    elements.auditNewGradeInput.max = maxMarks;
+  }
+  if (elements.auditReasonInput) {
+    elements.auditReasonInput.value = "";
+  }
+  hideAuditErrors();
+
+  if (elements.auditCorrectModalBackdrop) {
+    elements.auditCorrectModalBackdrop.style.display = "flex";
+    if (elements.auditNewGradeInput) {
+      elements.auditNewGradeInput.focus();
+    }
+  }
+}
+
+/**
+ * Closes Correct Grade (Audit Trail) Modal
+ */
+function closeAuditCorrectModal() {
+  if (elements.auditCorrectModalBackdrop) {
+    elements.auditCorrectModalBackdrop.style.display = "none";
+  }
+  hideAuditErrors();
+  if (elements.gradingAuditCorrectBtn) {
+    elements.gradingAuditCorrectBtn.focus();
+  }
+}
+
+/**
+ * Submits corrected grade and audit trail reason to the server
+ */
+async function confirmAuditCorrect() {
+  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+  const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+  const assignment = state.currentGradingAssignment;
+  const maxMarks = (assignment && assignment.max_marks !== undefined && assignment.max_marks !== null)
+    ? assignment.max_marks
+    : 100;
+
+  hideAuditErrors();
+
+  const rawVal = elements.auditNewGradeInput ? elements.auditNewGradeInput.value.trim() : "";
+  if (rawVal === "") {
+    showAuditGradeError("Please enter a corrected grade.");
+    return;
+  }
+  const newGrade = parseFloat(rawVal);
+  if (isNaN(newGrade) || newGrade < 0) {
+    showAuditGradeError("Grade must be a non-negative number.");
+    return;
+  }
+  if (newGrade > maxMarks) {
+    showAuditGradeError(`Grade cannot exceed max marks (${maxMarks}).`);
+    return;
+  }
+
+  const reason = elements.auditReasonInput ? elements.auditReasonInput.value.trim() : "";
+  if (!reason) {
+    showAuditReasonError("Please provide an audit reason for this grade correction.");
+    return;
+  }
+
+  const assignmentId = (assignment && assignment.id) || sub.assignment_id;
+  const auditNote = `[Audit Correction: Grade adjusted to ${newGrade}/${maxMarks}. Reason: ${reason}]`;
+  const updatedFeedback = sub.feedback ? `${sub.feedback}\n\n${auditNote}` : auditNote;
+
+  if (elements.confirmAuditCorrectBtn) {
+    elements.confirmAuditCorrectBtn.disabled = true;
+    elements.confirmAuditCorrectBtn.textContent = "Saving...";
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/assignments/${assignmentId}/submissions/${sub.id}/grade`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        grade: newGrade,
+        feedback: updatedFeedback,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to update grade (HTTP ${res.status})`);
+    }
+
+    const updatedSub = await res.json();
+    sub.grade = updatedSub.grade;
+    sub.feedback = updatedSub.feedback;
+    sub.status = updatedSub.status;
+
+    // Update SpeedGrader UI inputs
+    if (elements.gradingMarksInput) {
+      elements.gradingMarksInput.value = updatedSub.grade;
+    }
+    if (elements.gradingFeedbackInput) {
+      elements.gradingFeedbackInput.value = updatedSub.feedback || "";
+    }
+    updateWorkspaceStatusBadge(sub.status);
+
+    showToast("Grade corrected and audit trail logged successfully.", "success");
+    closeAuditCorrectModal();
+    renderTeacherSubmissionsRoster();
+  } catch (err) {
+    console.error("Audit Correct error:", err);
+    showAuditGradeError(err.message || "Failed to save grade correction.");
+  } finally {
+    if (elements.confirmAuditCorrectBtn) {
+      elements.confirmAuditCorrectBtn.disabled = false;
+      elements.confirmAuditCorrectBtn.textContent = "Save Correction";
+    }
+  }
+}
+
+/**
+ * Opens Submission History & Archived Attempts Modal
+ */
+function openSubmissionHistoryModal() {
+  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+  const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+  const assignment = state.currentGradingAssignment;
+  const maxMarks = assignment && assignment.max_marks ? assignment.max_marks : 100;
+
+  if (elements.historyStudentMeta) {
+    elements.historyStudentMeta.textContent = `${sub.student_name} (${sub.student_email}) • ${assignment ? assignment.title : "Assignment"}`;
+  }
+
+  if (elements.historyAttemptsList) {
+    const formattedDate = formatDisplayDateTime(sub.submitted_at);
+    const gradeStr = (sub.grade !== null && sub.grade !== undefined)
+      ? `${sub.grade} / ${maxMarks}`
+      : "Ungraded";
+    const assignmentId = (assignment && assignment.id) || sub.assignment_id;
+    const downloadUrl = sub.download_url || `${API_BASE}/api/assignments/${assignmentId}/submissions/${sub.id}/download`;
+
+    elements.historyAttemptsList.innerHTML = `
+      <div class="history-attempt-card">
+        <div>
+          <div class="history-attempt-title">Attempt 1 (Current Active Submission)</div>
+          <div class="history-attempt-date">Submitted: ${formattedDate} • Status: ${sub.status}</div>
+          <div style="font-size: 0.85rem; margin-top: 0.25rem;"><strong>File:</strong> ${escapeHtml(sub.file_name || "submission")} (${formatBytes(sub.file_size)})</div>
+          <div style="font-size: 0.85rem; color: var(--primary); margin-top: 0.25rem;"><strong>Grade:</strong> ${gradeStr}</div>
+        </div>
+        <div>
+          <a class="btn btn-secondary btn-sm" href="${downloadUrl}" download="${escapeHtml(sub.file_name || "submission")}" target="_blank" rel="noopener">
+            Download
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.style.display = "flex";
+    if (elements.closeSubmissionHistoryBottomBtn) {
+      elements.closeSubmissionHistoryBottomBtn.focus();
+    }
+  }
+}
+
+/**
+ * Closes Submission History & Archived Attempts Modal
+ */
+function closeSubmissionHistoryModal() {
+  if (elements.submissionHistoryModalBackdrop) {
+    elements.submissionHistoryModalBackdrop.style.display = "none";
+  }
+  if (elements.gradingSubmissionHistoryBtn) {
+    elements.gradingSubmissionHistoryBtn.focus();
+  }
+}
+
+/**
+ * Opens Authorize Resubmission Modal
+ */
+function openAuthorizeResubmissionModal() {
+  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+  const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+
+  if (elements.authorizeResubmissionMessage) {
+    elements.authorizeResubmissionMessage.innerHTML =
+      `Authorizing a resubmission grants <strong>${escapeHtml(sub.student_name)}</strong> permission to upload a new attempt. Their existing attempt will be retained in history.`;
+  }
+  if (elements.resubmissionNotesInput) {
+    elements.resubmissionNotesInput.value = "";
+  }
+
+  if (elements.authorizeResubmissionModalBackdrop) {
+    elements.authorizeResubmissionModalBackdrop.style.display = "flex";
+    if (elements.resubmissionNotesInput) {
+      elements.resubmissionNotesInput.focus();
+    }
+  }
+}
+
+/**
+ * Closes Authorize Resubmission Modal
+ */
+function closeAuthorizeResubmissionModal() {
+  if (elements.authorizeResubmissionModalBackdrop) {
+    elements.authorizeResubmissionModalBackdrop.style.display = "none";
+  }
+  if (elements.gradingAuthorizeResubmissionBtn) {
+    elements.gradingAuthorizeResubmissionBtn.focus();
+  }
+}
+
+/**
+ * Confirms Authorize Resubmission
+ */
+function confirmAuthorizeResubmission() {
+  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+  const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+
+  showToast(`Resubmission authorized for ${sub.student_name}.`, "success");
+  closeAuthorizeResubmissionModal();
+}
+
+/* ================================================================ */
+/* SEMESTER MANAGEMENT (Screen 2 Reference)                         */
+/* ================================================================ */
+
+/**
+ * Loads and renders the Semesters page matching the reference mockup
+ */
+async function loadSemestersPageView() {
+  const container = document.getElementById("semestersListContainer");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="loading-state-card" style="padding: 2.5rem; text-align: center;">
+      <div class="spinner"></div>
+      <p style="margin-top: 0.75rem; color: #64748b;">Loading academic semesters...</p>
+    </div>
+  `;
+
+  await Promise.all([fetchSemesters(), fetchClasses()]);
+
+  // Update KPI Metrics Cards
+  const allSemesters = state.semesters || [];
+  const now = new Date();
+  const totalCount = allSemesters.length;
+  const activeCount = allSemesters.filter(s => s.status === "active").length;
+  const upcomingCount = allSemesters.filter(s => s.status === "upcoming" || (!s.is_finalized && s.start_date && new Date(s.start_date) > now)).length;
+  const completedCount = allSemesters.filter(s => s.status === "completed" || s.is_finalized).length;
+
+  const kpiTotal = document.getElementById("semKpiTotalCount");
+  const kpiActive = document.getElementById("semKpiActiveCount");
+  const kpiUpcoming = document.getElementById("semKpiUpcomingCount");
+  const kpiCompleted = document.getElementById("semKpiCompletedCount");
+
+  if (kpiTotal) kpiTotal.textContent = totalCount;
+  if (kpiActive) kpiActive.textContent = activeCount;
+  if (kpiUpcoming) kpiUpcoming.textContent = upcomingCount;
+  if (kpiCompleted) kpiCompleted.textContent = completedCount;
+
+  // Render Table with current search/filter
+  renderFilteredSemesters();
+
+  // Attach search and filter event listeners if not already attached
+  initSemestersFilterListeners();
+}
+
+let semestersFiltersInitialized = false;
+function initSemestersFilterListeners() {
+  if (semestersFiltersInitialized) return;
+  semestersFiltersInitialized = true;
+
+  const searchInput = document.getElementById("semestersSearchInput");
+  const statusFilter = document.getElementById("semestersStatusFilter");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      renderFilteredSemesters();
+    });
+  }
+  if (statusFilter) {
+    statusFilter.addEventListener("change", () => {
+      renderFilteredSemesters();
+    });
+  }
+}
+
+function filterSemestersByStatus(status) {
+  const statusFilter = document.getElementById("semestersStatusFilter");
+  if (statusFilter) {
+    statusFilter.value = status;
+    renderFilteredSemesters();
+  }
+  const section = document.getElementById("existingSemestersSection");
+  if (section) section.scrollIntoView({ behavior: "smooth" });
+}
+
+function renderFilteredSemesters() {
+  const container = document.getElementById("semestersListContainer");
+  if (!container) return;
+
+  const allSemesters = state.semesters || [];
+  const searchInput = document.getElementById("semestersSearchInput");
+  const statusFilter = document.getElementById("semestersStatusFilter");
+
+  const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+  const selectedStatus = statusFilter ? statusFilter.value : "all";
+  const now = new Date();
+
+  const filtered = allSemesters.filter(sem => {
+    // Status Filter
+    if (selectedStatus !== "all") {
+      let currentStatus = sem.status;
+      if (sem.is_finalized || sem.status === "completed") {
+        currentStatus = "completed";
+      } else if (sem.status === "upcoming" || (!sem.is_finalized && sem.start_date && new Date(sem.start_date) > now)) {
+        currentStatus = "upcoming";
+      } else if (sem.status === "active") {
+        currentStatus = "active";
+      }
+      if (currentStatus !== selectedStatus) return false;
+    }
+
+    // Search Query
+    if (query) {
+      const matchName = (sem.name || "").toLowerCase().includes(query);
+      const matchYear = (sem.academic_year || "").toLowerCase().includes(query);
+      const matchProgram = (sem.program || "").toLowerCase().includes(query);
+      const matchStart = (sem.start_date || "").toLowerCase().includes(query);
+      const matchEnd = (sem.end_date || "").toLowerCase().includes(query);
+      if (!matchName && !matchYear && !matchProgram && !matchStart && !matchEnd) return false;
+    }
+
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 3rem 1rem; text-align: center; color: #737373;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: #A3A3A3; margin-bottom: 0.5rem; display: inline-block;">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" x2="16" y1="2" x2="6"/>
+          <line x1="8" x2="8" y1="2" x2="6"/>
+          <line x1="3" x2="21" y1="10" x2="10"/>
+        </svg>
+        <p style="font-weight: 600; color: #171717; margin-bottom: 0.25rem;">No semesters found</p>
+        <p style="font-size: 0.85rem; color: #737373;">Try adjusting your search query or status filter.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Render Table
+  const rowsHtml = filtered.map(sem => {
+    let statusKey = "active";
+    let statusLabel = "Active";
+    if (sem.status === "completed" || sem.is_finalized) {
+      statusKey = "completed";
+      statusLabel = "Completed";
+    } else if (sem.status === "upcoming" || (!sem.is_finalized && sem.start_date && new Date(sem.start_date) > now)) {
+      statusKey = "upcoming";
+      statusLabel = "Upcoming";
+    } else if (sem.status === "archived") {
+      statusKey = "archived";
+      statusLabel = "Archived";
+    } else {
+      statusKey = "active";
+      statusLabel = "Active";
+    }
+
+    const startFmt = formatShortDate(sem.start_date);
+    const endFmt = formatShortDate(sem.end_date);
+    const dateRange = (startFmt && endFmt) ? `${startFmt} - ${endFmt}` : "—";
+    const classesCount = (state.classes || []).filter(c => c.semester_id === sem.id).length || sem.classes_count || 0;
+    const subjectsCount = sem.subjects_count || 0;
+
+    return `
+      <tr class="sem-table-row" id="semesterRow-${sem.id}">
+        <td class="col-sem-name">
+          <div class="sem-name-cell">
+            <div class="sem-book-icon-box" title="Academic Semester">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                <path d="M6 6h10"></path>
+                <path d="M6 10h10"></path>
+              </svg>
+            </div>
+            <div class="sem-title-wrap">
+              <span class="sem-row-title" onclick="openSemesterDashboard(${sem.id})" title="Open semester dashboard">${escapeHtml(sem.name)}</span>
+            </div>
+          </div>
+        </td>
+        <td class="col-sem-year">${escapeHtml(sem.academic_year || "2025 - 2026")}</td>
+        <td class="col-sem-dates">${dateRange}</td>
+        <td class="col-sem-status">
+          <span class="sem-status-badge status-${statusKey}">${statusLabel}</span>
+        </td>
+        <td class="col-sem-num">${subjectsCount}</td>
+        <td class="col-sem-num">${classesCount}</td>
+        <td class="col-sem-actions">
+          <div class="sem-row-actions-group">
+            <button class="sem-btn-edit" type="button" onclick="openEditSemesterModal(${sem.id})" title="Edit semester">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>Edit</span>
+            </button>
+            <div class="academic-menu-wrap" style="position: relative; display: inline-block;">
+              <button class="sem-btn-more" type="button" title="More options" onclick="toggleSemesterMenu(event, ${sem.id})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+              <div class="academic-menu-dropdown" id="semMenu-${sem.id}" style="display: none; position: absolute; right: 0; top: 100%; z-index: 50; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 175px; padding: 6px 0;">
+                <button class="academic-menu-item" onclick="openSemesterDashboard(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                  View Dashboard
+                </button>
+                <button class="academic-menu-item" onclick="openSemesterReportView(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  Performance Report
+                </button>
+                <button class="academic-menu-item" onclick="openAddSubjectModal(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add Subject
+                </button>
+                <button class="academic-menu-item" onclick="openEditSemesterModal(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Semester
+              </button>
+              ${!sem.is_finalized ? `
+                <button class="academic-menu-item" onclick="handleFinalizeSemester(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Finalize Semester
+                </button>
+              ` : ""}
+              ${sem.status !== "archived" ? `
+                <button class="academic-menu-item" onclick="handleArchiveSemester(${sem.id})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect width="22" height="5" x="1" y="3"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                  Archive Semester
+                </button>
+              ` : ""}
+              <button class="academic-menu-item danger" onclick="handleDeleteSemester(${sem.id}, '${escapeHtml(sem.name)}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                Delete Semester
+              </button>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="sem-table-responsive">
+      <table class="sem-table">
+        <thead>
+          <tr>
+            <th class="col-sem-name">SEMESTER NAME</th>
+            <th class="col-sem-year">ACADEMIC YEAR</th>
+            <th class="col-sem-dates">DATES</th>
+            <th class="col-sem-status">STATUS</th>
+            <th class="col-sem-num">SUBJECTS</th>
+            <th class="col-sem-num">CLASSES</th>
+            <th class="col-sem-actions">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="semestersTableBody">
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function toggleSemesterMenu(event, semId) {
+  event.stopPropagation();
+  const menu = document.getElementById(`semMenu-${semId}`);
+  const isShown = menu && menu.style.display === "block";
+  document.querySelectorAll(".academic-menu-dropdown").forEach(m => m.style.display = "none");
+  if (menu && !isShown) {
+    menu.style.display = "block";
+  }
+}
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".academic-menu-dropdown").forEach(m => m.style.display = "none");
+});
+
+function openSemesterDashboard(semId) {
+  state.activeSemesterId = semId;
+  const found = (state.semesters || []).find(s => s.id === semId);
+  if (found) state.activeSemester = found;
+  navigateToView("dashboard");
+}
+
+async function handleCreateSemesterInline(e) {
+  if (e) e.preventDefault();
+  const name = document.getElementById("newSemName")?.value?.trim();
+  const academic_year = document.getElementById("newSemYear")?.value?.trim();
+  const start_date = document.getElementById("newSemStartDate")?.value;
+  const end_date = document.getElementById("newSemEndDate")?.value;
+
+  if (!name || !academic_year || !start_date || !end_date) {
+    showToast("Please fill in all required fields.", "error");
+    return;
+  }
+
+  if (new Date(end_date) <= new Date(start_date)) {
+    showToast("End date must be strictly after start date.", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_ENDPOINTS.semesters, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        academic_year,
+        start_date,
+        end_date,
+        program: "B.Tech CSE",
+        status: "active",
+      }),
+    });
+
+    if (res.ok) {
+      const created = await res.json();
+      showToast(`Semester "${created.name}" created successfully!`, "success");
+      const form = document.getElementById("createSemesterInlineForm");
+      if (form) form.reset();
+      state.activeSemesterId = created.id;
+      state.activeSemester = created;
+      await loadSemestersPageView();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Failed to create semester.", "error");
+    }
+  } catch (err) {
+    console.error("Create semester error:", err);
+    showToast("Network error creating semester.", "error");
+  }
+}
+
+function openEditSemesterModal(semesterId) {
+  const sem = (state.semesters || []).find((s) => s.id === semesterId);
+  if (!sem) return;
+
+  const idInput = document.getElementById("editSemId");
+  const nameInput = document.getElementById("editSemName");
+  const yearSelect = document.getElementById("editSemYear");
+  const startInput = document.getElementById("editSemStartDate");
+  const endInput = document.getElementById("editSemEndDate");
+  const statusSelect = document.getElementById("editSemStatus");
+
+  if (idInput) idInput.value = sem.id;
+  if (nameInput) nameInput.value = sem.name;
+  if (yearSelect) yearSelect.value = sem.academic_year;
+  if (startInput) startInput.value = sem.start_date;
+  if (endInput) endInput.value = sem.end_date;
+  if (statusSelect) statusSelect.value = sem.status;
+
+  const modal = document.getElementById("editSemesterModalBackdrop");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeEditSemesterModal() {
+  const modal = document.getElementById("editSemesterModalBackdrop");
+  if (modal) modal.style.display = "none";
+}
+
+async function handleSaveEditSemester(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById("editSemId")?.value;
+  const name = document.getElementById("editSemName")?.value?.trim();
+  const academic_year = document.getElementById("editSemYear")?.value;
+  const start_date = document.getElementById("editSemStartDate")?.value;
+  const end_date = document.getElementById("editSemEndDate")?.value;
+  const statusVal = document.getElementById("editSemStatus")?.value;
+
+  if (!id || !name || !start_date || !end_date) {
+    showToast("Please fill in all required fields.", "error");
+    return;
+  }
+
+  if (new Date(end_date) <= new Date(start_date)) {
+    showToast("End date must be strictly after start date.", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${id}`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        academic_year,
+        start_date,
+        end_date,
+        status: statusVal,
+      }),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      showToast(`Semester "${updated.name}" updated successfully!`, "success");
+      closeEditSemesterModal();
+      await fetchSemesters();
+      if (state.currentView === "semesters") {
+        await loadSemestersPageView();
+      } else if (state.currentView === "dashboard") {
+        fetchDashboard();
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Failed to update semester.", "error");
+    }
+  } catch (err) {
+    console.error("Save semester error:", err);
+    showToast("Error updating semester.", "error");
+  }
+}
+
+async function handleArchiveSemester(semesterId) {
+  if (!confirm("Are you sure you want to archive this semester? Its academic records will be preserved safely.")) return;
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}/archive`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      showToast("Semester successfully archived.", "success");
+      await fetchSemesters();
+      if (state.currentView === "semesters") loadSemestersPageView();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Failed to archive semester.", "error");
+    }
+  } catch (err) {
+    showToast("Error archiving semester.", "error");
+  }
+}
+
+async function handleFinalizeSemester(semesterId) {
+  if (!confirm("Finalize semester results? This marks official grades for all subjects. All assessments must be graded and released.")) return;
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}/finalize`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      showToast(`Semester "${updated.name}" finalized successfully!`, "success");
+      await fetchSemesters();
+      if (state.currentView === "reports") {
+        renderSemesterReport(semesterId);
+      } else if (state.currentView === "semesters") {
+        loadSemestersPageView();
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Cannot finalize semester.", "error");
+    }
+  } catch (err) {
+    showToast("Error finalizing semester.", "error");
+  }
+}
+
+async function handleDeleteSemester(semesterId, semName) {
+  if (!confirm(`Are you sure you want to delete semester "${semName}"?\nNote: Semesters with existing subjects or submissions cannot be deleted and must be archived.`)) return;
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}`, {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      showToast(`Semester "${semName}" deleted.`, "success");
+      if (state.activeSemesterId === semesterId) {
+        state.activeSemesterId = null;
+        state.activeSemester = null;
+      }
+      await fetchSemesters();
+      loadSemestersPageView();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Cannot delete semester with academic records. Please archive instead.", "warning");
+    }
+  } catch (err) {
+    showToast("Error deleting semester.", "error");
+  }
+}
+
+function openAddSubjectModal(semesterId) {
+  const semId = semesterId || state.activeSemesterId;
+  const semInput = document.getElementById("addSubjectSemId");
+  const nameInput = document.getElementById("addSubjectName");
+  const descInput = document.getElementById("addSubjectDesc");
+
+  if (semInput) semInput.value = semId || "";
+  if (nameInput) nameInput.value = "";
+  if (descInput) descInput.value = "";
+
+  const modal = document.getElementById("addSubjectModalBackdrop");
+  if (modal) {
+    modal.style.display = "flex";
+    if (nameInput) nameInput.focus();
+  }
+}
+
+function closeAddSubjectModal() {
+  const modal = document.getElementById("addSubjectModalBackdrop");
+  if (modal) modal.style.display = "none";
+}
+
+async function handleSubmitAddSubject(e) {
+  if (e) e.preventDefault();
+  const semId = document.getElementById("addSubjectSemId")?.value || state.activeSemesterId;
+  const name = document.getElementById("addSubjectName")?.value?.trim();
+  const description = document.getElementById("addSubjectDesc")?.value?.trim() || "";
+
+  if (!name) {
+    showToast("Please enter a subject name or code.", "error");
+    return;
+  }
+
+  try {
+    let url = API_ENDPOINTS.classes;
+    if (semId) {
+      url = `${API_ENDPOINTS.semesters}/${semId}/subjects`;
+    }
+
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        description,
+        semester_id: semId ? parseInt(semId, 10) : null,
+      }),
+    });
+
+    if (res.ok) {
+      const created = await res.json();
+      showToast(`Subject "${created.name}" created successfully! Join code: ${created.join_code}`, "success");
+      closeAddSubjectModal();
+      await fetchClasses();
+      if (state.currentView === "dashboard") {
+        fetchDashboard();
+      } else if (state.currentView === "classes") {
+        loadClassesPageView();
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Failed to create subject.", "error");
+    }
+  } catch (err) {
+    console.error("Submit subject error:", err);
+    showToast("Error creating subject.", "error");
+  }
+}
+
+/* ================================================================ */
+/* SUBJECT & ASSIGNMENTS WITHIN SEMESTER (Screen 3 & 4 Reference)    */
+/* ================================================================ */
+
+async function viewSubjectDetail(subjectId, activeTab = "assignments") {
+  state.activeSubjectId = parseInt(subjectId, 10);
+  state.activeSubjectTab = activeTab;
+  navigateToView("classes");
+}
+
+async function renderSubjectDetailView() {
+  if (!elements.classesPageContent || !state.activeSubjectId) return;
+
+  const subjectId = state.activeSubjectId;
+  let subject = (state.classes || []).find((c) => c.id === subjectId);
+
+  if (!subject) {
+    try {
+      const res = await fetch(`${API_ENDPOINTS.classes}/${subjectId}`, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        subject = await res.json();
+        if (state.classes && !state.classes.some((c) => c.id === subject.id)) {
+          state.classes.push(subject);
+          populateFormClassOptions(state.classes);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching subject details:", e);
+    }
+  }
+
+  if (!subject) {
+    state.activeSubjectId = null;
+    state.activeSubject = null;
+    loadClassesPageView();
+    return;
+  }
+
+  state.activeSubject = subject;
+  if (subject.semester_id && !state.activeSemesterId) {
+    state.activeSemesterId = subject.semester_id;
+  }
+
+  const semName = state.activeSemester?.name || "Semester 5";
+  const activeTab = state.activeSubjectTab || "assignments";
+
+  if (activeTab === "students") {
+    // Screen 4: Student Performance (Subject-wise)
+    elements.classesPageContent.innerHTML = `
+      <div class="subject-detail-container">
+        <!-- Breadcrumbs (Screen 4) -->
+        <nav class="academic-breadcrumbs" aria-label="Breadcrumb">
+          <ol class="breadcrumb-list">
+            <li class="breadcrumb-item"><a href="#semesters" onclick="navigateToView('semesters'); return false;">Semesters</a></li>
+            <li class="breadcrumb-separator">›</li>
+            <li class="breadcrumb-item"><a href="#dashboard" onclick="navigateToView('dashboard'); return false;">${escapeHtml(semName)}</a></li>
+            <li class="breadcrumb-separator">›</li>
+            <li class="breadcrumb-item"><a href="javascript:void(0)" onclick="viewSubjectDetail(${subject.id}, 'assignments')">${escapeHtml(subject.name)}</a></li>
+            <li class="breadcrumb-separator">›</li>
+            <li class="breadcrumb-item active">Students</li>
+          </ol>
+        </nav>
+
+        <!-- Page Header (Screen 4) -->
+        <div class="page-header-row" style="margin-top: 0.5rem;">
+          <div class="page-header-left">
+            <h1 class="page-title">Students – ${escapeHtml(subject.name)}</h1>
+            <p class="page-subtitle">View submissions, grades and performance for this subject.</p>
+          </div>
+          <div class="page-header-actions">
+            <button class="btn btn-secondary" onclick="exportSubjectStudentsCsv(${subject.id}, '${escapeHtml(subject.name)}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Export</span>
+            </button>
+            <button class="btn btn-primary" onclick="showToast('Reminders dispatched to students with pending submissions.', 'success')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span>Send Reminder</span>
+            </button>
+            <button class="btn btn-outline" onclick="exitSubjectDetail()">
+              <span>&larr; All Subjects</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="subject-tabs-nav">
+          <button class="subject-tab-btn" onclick="viewSubjectDetail(${subject.id}, 'overview')">Overview</button>
+          <button class="subject-tab-btn" onclick="viewSubjectDetail(${subject.id}, 'assignments')">Assignments</button>
+          <button class="subject-tab-btn active" onclick="viewSubjectDetail(${subject.id}, 'students')">Students</button>
+          <button class="subject-tab-btn" onclick="viewSubjectDetail(${subject.id}, 'analytics')">Analytics</button>
+        </div>
+
+        <div id="subjectStudentsTableWrap" class="academic-table-card" style="margin-top: 1rem;">
+          <div class="loading-state-card" style="padding: 2rem;"><div class="spinner"></div><p>Loading student performance...</p></div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const semId = subject.semester_id || state.activeSemesterId;
+      let perfData = null;
+      if (semId) {
+        const perfRes = await fetch(`${API_ENDPOINTS.semesters}/${semId}/subjects/${subject.id}/performance`, {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (perfRes.ok) {
+          perfData = await perfRes.json();
+        }
+      }
+
+      const tableWrap = document.getElementById("subjectStudentsTableWrap");
+      if (!tableWrap) return;
+
+      const students = perfData?.students || [];
+      if (students.length === 0) {
+        tableWrap.innerHTML = `
+          <div class="dash-empty-state" style="padding: 3rem 1rem;">
+            <p>No students enrolled in this subject yet. Share join code <strong>${escapeHtml(subject.join_code)}</strong> with your students.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const rowsHtml = students.map((st, idx) => {
+        const initial = (st.student_name || "S").charAt(0).toUpperCase();
+        const statusClass = st.status === "On Track" ? "open" : (st.status === "At Risk" ? "warning" : "info");
+        return `
+          <tr>
+            <td style="color: #64748b; font-weight: 500;">${idx + 1}</td>
+            <td>
+              <div class="student-table-user-cell">
+                <div class="student-avatar-circle">${initial}</div>
+                <div>
+                  <div style="font-weight: 600; color: #1e293b;">${escapeHtml(st.student_name)}</div>
+                  <div style="font-size: 0.75rem; color: #94a3b8;">${escapeHtml(st.email || "")}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-weight: 600;">${st.completed_submissions} / ${st.total_assignments}</td>
+            <td style="font-weight: 700; color: #0f172a;">${escapeHtml(st.average_score_pct)}</td>
+            <td>
+              <span class="status-pill ${statusClass}">${escapeHtml(st.status)}</span>
+            </td>
+            <td>
+              <button class="academic-menu-btn" title="Student options" onclick="showToast('Viewing student record for ${escapeHtml(st.student_name)}', 'info')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      tableWrap.innerHTML = `
+        <table class="academic-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>Student Name</th>
+              <th>Submissions</th>
+              <th>Average Score</th>
+              <th>Status</th>
+              <th style="width: 60px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+    } catch (err) {
+      console.error("Student performance load error:", err);
+    }
+    return;
+  }
+
+  // Screen 3: Subject and Assignments (Within a Semester)
+  elements.classesPageContent.innerHTML = `
+    <div class="subject-detail-container">
+      <!-- Breadcrumbs (Screen 3) -->
+      <nav class="academic-breadcrumbs" aria-label="Breadcrumb">
+        <ol class="breadcrumb-list">
+          <li class="breadcrumb-item"><a href="#semesters" onclick="navigateToView('semesters'); return false;">Semesters</a></li>
+          <li class="breadcrumb-separator">›</li>
+          <li class="breadcrumb-item"><a href="#dashboard" onclick="navigateToView('dashboard'); return false;">${escapeHtml(semName)}</a></li>
+          <li class="breadcrumb-separator">›</li>
+          <li class="breadcrumb-item active">${escapeHtml(subject.name)}</li>
+        </ol>
+      </nav>
+
+      <!-- Page Header (Screen 3) -->
+      <div class="page-header-row" style="margin-top: 0.5rem;">
+        <div class="page-header-left">
+          <h1 class="page-title">${escapeHtml(subject.name)}</h1>
+          <p class="page-subtitle">${escapeHtml(subject.description || "Core Course Subject")}</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary" onclick="openCreateAssignmentForSubject(${subject.id})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>+ Create Assignment</span>
+          </button>
+          <button class="btn btn-outline" onclick="exitSubjectDetail()">
+            <span>&larr; All Subjects</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="subject-tabs-nav">
+        <button class="subject-tab-btn ${activeTab === 'overview' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'overview')">Overview</button>
+        <button class="subject-tab-btn ${activeTab === 'assignments' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'assignments')">Assignments</button>
+        <button class="subject-tab-btn ${activeTab === 'students' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'students')">Students</button>
+        <button class="subject-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'analytics')">Analytics</button>
+      </div>
+
+      <div id="subjectTabContentWrap" style="margin-top: 1.25rem;">
+        <div class="loading-state-card" style="padding: 2rem;"><div class="spinner"></div><p>Loading assignments...</p></div>
+      </div>
+    </div>
+  `;
+
+  const contentWrap = document.getElementById("subjectTabContentWrap");
+  if (!contentWrap) return;
+
+  if (activeTab === "overview") {
+    contentWrap.innerHTML = `
+      <div class="academic-table-card" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #0f172a;">Course Overview</h3>
+        <p style="color: #64748b; margin-bottom: 1.25rem;">${escapeHtml(subject.description || "No description provided.")}</p>
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+          <div>
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Student Join Code</span>
+            <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-top: 0.25rem; cursor: pointer;" onclick="copyJoinCode('${escapeHtml(subject.join_code)}')">
+              ${escapeHtml(subject.join_code)}
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Enrolled Students</span>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 0.25rem;">${subject.student_count || 0}</div>
+          </div>
+          <div>
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Assignments</span>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 0.25rem;">${subject.assignment_count || 0}</div>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeTab === "analytics") {
+    contentWrap.innerHTML = `
+      <div class="academic-table-card" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #0f172a;">Subject Analytics</h3>
+        <p style="color: #64748b; margin-bottom: 1.25rem;">Tracking assignment submission rates and grading completion.</p>
+        <div style="display: flex; gap: 2rem;">
+          <div><span style="color: #64748b;">Active Assessments:</span> <strong>${subject.assignment_count || 0}</strong></div>
+          <div><span style="color: #64748b;">Class Size:</span> <strong>${subject.student_count || 0} Students</strong></div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Active tab is "assignments" (Screen 3)
+  try {
+    const res = await fetch(`${API_ENDPOINTS.assignments}?class_id=${subject.id}`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+
+    if (res.ok) {
+      const assignments = await res.json();
+      if (assignments.length === 0) {
+        contentWrap.innerHTML = `
+          <div class="dash-empty-state" style="padding: 3rem 1rem; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center;">
+            <p>No assignments created for ${escapeHtml(subject.name)} yet.</p>
+            <button class="btn btn-primary" onclick="openCreateAssignmentForSubject(${subject.id})" style="margin-top: 1rem;">
+              + Create First Assignment
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const rowsHtml = assignments.map((as, idx) => {
+        const dueDateFormatted = formatShortDate(as.due_date);
+        const typeLabel = as.assignment_type || "Assignment";
+        const isDraft = as.status === "draft";
+        const isClosed = as.status === "closed";
+        const isOpen = as.status === "active" || as.status === "open";
+        const statusClass = isOpen ? "open" : (isDraft ? "draft" : (isClosed ? "danger" : "info"));
+        const statusLabel = isOpen ? "Open" : (isDraft ? "Draft" : (isClosed ? "Closed" : "Scheduled"));
+        const submissionDisplay = isDraft ? "-" : `${as.submission_count || 0} / ${as.total_students || subject.student_count || '-'}`;
+
+        return `
+          <tr>
+            <td style="color: #64748b; font-weight: 500;">${idx + 1}</td>
+            <td style="font-weight: 600; color: #1e293b;">
+              <span style="cursor: pointer;" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">${escapeHtml(as.title)}</span>
+            </td>
+            <td><span class="type-pill">${escapeHtml(typeLabel)}</span></td>
+            <td style="color: #475569; font-weight: 500;">${dueDateFormatted}</td>
+            <td style="font-weight: 600; color: #1e293b;">${submissionDisplay}</td>
+            <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+            <td>
+              <button class="academic-menu-btn" title="Assignment options" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      contentWrap.innerHTML = `
+        <div class="academic-table-card">
+          <table class="academic-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th>Assignment Title</th>
+                <th>Type</th>
+                <th>Due Date</th>
+                <th>Submissions</th>
+                <th>Status</th>
+                <th style="width: 60px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error("Subject assignments fetch error:", err);
+  }
+}
+
+function exitSubjectDetail() {
+  state.activeSubjectId = null;
+  state.activeSubject = null;
+  state.activeSubjectTab = null;
+  loadClassesPageView();
+}
+
+function openCreateAssignmentForSubject(subjectId = null, subjectName = null, semesterId = null) {
+  const sid = parseInt(subjectId || state.activeSubjectId, 10);
+  let cls = (state.classes || []).find((c) => c.id === sid) || state.activeSubject;
+  const finalSubjectName = subjectName || (cls ? cls.name : "") || (state.activeSubject ? state.activeSubject.name : "");
+  const finalSemesterId = (semesterId !== null && semesterId !== undefined && String(semesterId) !== "null")
+    ? parseInt(semesterId, 10)
+    : (cls ? cls.semester_id : null);
+
+  state.activeSubjectId = sid;
+  if (cls) state.activeSubject = cls;
+
+  openDrawer(null, {
+    type: finalSemesterId ? "semester_subject" : "class",
+    subjectId: sid,
+    subjectName: finalSubjectName,
+    semesterId: finalSemesterId,
+  });
+}
+window.openCreateAssignmentForSubject = openCreateAssignmentForSubject;
+
+function openCreateAssignmentForClass(classId = null, className = null, semesterId = null) {
+  const cid = parseInt(classId, 10);
+  const cls = (state.classes || []).find((c) => c.id === cid);
+  const finalClassName = className || (cls ? cls.name : `Class #${cid}`);
+  const finalSemesterId = (semesterId !== null && semesterId !== undefined && String(semesterId) !== "null")
+    ? parseInt(semesterId, 10)
+    : (cls ? cls.semester_id : null);
+
+  openDrawer(null, {
+    type: finalSemesterId ? "semester_subject" : "class",
+    classId: cid,
+    className: finalClassName,
+    semesterId: finalSemesterId,
+    isSubjectLocked: false,
+  });
+}
+window.openCreateAssignmentForClass = openCreateAssignmentForClass;
+
+/* ================================================================ */
+/* SEMESTER-LEVEL REPORT (Screen 5 Reference)                       */
+/* ================================================================ */
+
+async function loadReportsPageView() {
+  if (!state.semesters || state.semesters.length === 0) {
+    await fetchSemesters();
+  }
+  const semId = state.activeSemesterId || (state.semesters && state.semesters[0]?.id);
+  if (!semId) {
+    if (elements.reportsView) {
+      elements.reportsView.innerHTML = `
+        <div class="dash-empty-state" style="padding: 3rem 1rem; text-align: center;">
+          <p>No semesters found to generate a report. Please create a semester first.</p>
+        </div>
+      `;
+    }
+    return;
+  }
+  renderSemesterReport(semId);
+}
+
+async function renderSemesterReport(semesterId) {
+  const semId = semesterId || state.activeSemesterId;
+  if (!semId) return;
+
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${semId}/report`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      showToast("Failed to load semester report.", "error");
+      return;
+    }
+
+    const report = await res.json();
+    state.activeSemesterId = report.semester_id;
+
+    const semTitle = report.semester_name || "Semester 5";
+    if (elements.reportTitle) {
+      elements.reportTitle.textContent = `${semTitle} – Performance Report`;
+    }
+    if (elements.reportSubtitle) {
+      elements.reportSubtitle.textContent = `Overall performance across all subjects. (${report.academic_year || "2024 - 2025"})`;
+    }
+
+    const banner = document.getElementById("reportStatusBanner");
+    if (banner) {
+      banner.style.display = "flex";
+      if (report.is_finalized) {
+        banner.className = "report-status-banner finalized";
+        banner.innerHTML = `
+          <span><strong>✓ Official Finalized Academic Report:</strong> Results confirmed by ${escapeHtml(report.finalized_by_name || "Authorized Teacher")} on ${formatShortDate(report.finalized_at)}.</span>
+          <span class="status-pill open">Final</span>
+        `;
+      } else {
+        banner.className = "report-status-banner provisional";
+        banner.innerHTML = `
+          <span><strong>Provisional Report:</strong> In-progress assessments are calculated without treating missing work as zero. Results are draft until finalized.</span>
+          <span class="status-pill draft">In Progress</span>
+        `;
+      }
+    }
+
+    const metricsRow = document.getElementById("reportMetricsRow");
+    if (metricsRow) {
+      const summary = report.summary || {};
+      metricsRow.innerHTML = `
+        <div class="report-metric-card">
+          <div class="report-metric-icon icon-green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <div class="report-metric-value">${summary.total_students || 0}</div>
+            <div class="report-metric-title">Total Students</div>
+          </div>
+        </div>
+        <div class="report-metric-card">
+          <div class="report-metric-icon icon-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="8" x2="16" y1="10" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="report-metric-value">${summary.total_assignments || 0}</div>
+            <div class="report-metric-title">Total Assignments</div>
+          </div>
+        </div>
+        <div class="report-metric-card">
+          <div class="report-metric-icon icon-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="report-metric-value">${escapeHtml(summary.average_score_pct || "0%")}</div>
+            <div class="report-metric-title">Average Score</div>
+          </div>
+        </div>
+        <div class="report-metric-card">
+          <div class="report-metric-icon icon-orange">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="report-metric-value">${escapeHtml(summary.completion_rate_pct || "0%")}</div>
+            <div class="report-metric-title">Completion Rate</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const chartContainer = document.getElementById("reportSubjectChartContainer");
+    if (chartContainer) {
+      const subjects = report.subjects || [];
+      if (subjects.length === 0) {
+        chartContainer.innerHTML = `<div class="dash-empty-state" style="padding: 2rem; text-align: center;"><p>No subject performance data available.</p></div>`;
+      } else {
+        const barGroupsHtml = subjects.map((sub) => {
+          const avgPct = Math.min(100, Math.max(0, parseFloat(sub.class_average_pct) || 0));
+          const highPct = Math.min(100, Math.max(0, parseFloat(sub.highest_score_pct) || 0));
+          const avgHeight = Math.round((avgPct / 100) * 150);
+          const highHeight = Math.round((highPct / 100) * 150);
+
+          return `
+            <div class="bar-group-col">
+              <div class="bars-pair">
+                <div class="chart-bar bar-avg" style="height: ${avgHeight}px;" title="Class Average: ${escapeHtml(sub.class_average_pct)}">
+                  <span class="bar-value-tooltip">${escapeHtml(sub.class_average_pct)}</span>
+                </div>
+                <div class="chart-bar bar-high" style="height: ${highHeight}px;" title="Highest Score: ${escapeHtml(sub.highest_score_pct)}">
+                  <span class="bar-value-tooltip">${escapeHtml(sub.highest_score_pct)}</span>
+                </div>
+              </div>
+              <span class="bar-subject-label">${escapeHtml(sub.subject_name)}</span>
+            </div>
+          `;
+        }).join("");
+
+        chartContainer.innerHTML = barGroupsHtml;
+      }
+    }
+
+    const topTbody = document.getElementById("reportTopStudentsTbody");
+    if (topTbody) {
+      const topStudents = report.top_students || [];
+      if (topStudents.length === 0) {
+        topTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">No student performance recorded yet.</td></tr>`;
+      } else {
+        const rowsHtml = topStudents.map((st) => {
+          const statusClass = st.status === "Excellent" ? "open" : (st.status === "Good" ? "info" : "warning");
+          return `
+            <tr>
+              <td style="color: #64748b; font-weight: 500;">${st.rank}</td>
+              <td style="font-weight: 600; color: #1e293b;">${escapeHtml(st.student_name)}</td>
+              <td style="font-weight: 700; color: #0f172a;">${escapeHtml(st.overall_pct)}</td>
+              <td style="color: #475569;">${st.subjects_count}</td>
+              <td><span class="status-pill ${statusClass}">${escapeHtml(st.status)}</span></td>
+            </tr>
+          `;
+        }).join("");
+        topTbody.innerHTML = rowsHtml;
+      }
+    }
+
+    const btnCsv = document.getElementById("btnExportSemesterCsv");
+    if (btnCsv) {
+      btnCsv.onclick = () => exportSemesterCsv(semId);
+    }
+    const btnPdf = document.getElementById("btnExportSemesterPdf");
+    if (btnPdf) {
+      btnPdf.onclick = () => window.print();
+    }
+    const btnFinalize = document.getElementById("btnFinalizeSemesterReport");
+    if (btnFinalize) {
+      if (report.is_finalized) {
+        btnFinalize.disabled = true;
+        btnFinalize.textContent = "Finalized";
+      } else {
+        btnFinalize.disabled = false;
+        btnFinalize.textContent = "Finalize Results";
+        btnFinalize.onclick = () => handleFinalizeSemester(semId);
+      }
+    }
+  } catch (err) {
+    console.error("Report render error:", err);
+  }
+}
+
+async function exportSemesterCsv(semesterId) {
+  try {
+    const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}/report/export-csv`, {
+      method: "GET",
+      credentials: "same-origin",
+    });
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `semester_${semesterId}_report.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Sanitized CSV report downloaded successfully.", "success");
+    } else {
+      showToast("Failed to export report CSV.", "error");
+    }
+  } catch (err) {
+    showToast("Error downloading report CSV.", "error");
+  }
+}
+
+function openSemesterReportView(semesterId) {
+  state.activeSemesterId = semesterId;
+  navigateToView("reports");
+}
+
+function exportSubjectStudentsCsv(subjectId, subjectName) {
+  showToast(`Exporting student roster for ${subjectName}...`, "info");
+  const table = document.querySelector("#subjectStudentsTableWrap table");
+  if (!table) return;
+  let csv = "Rank,Student Name,Submissions,Average Score,Status\n";
+  const rows = table.querySelectorAll("tbody tr");
+  rows.forEach((row, i) => {
+    const cells = row.querySelectorAll("td");
+    if (cells.length >= 5) {
+      const name = cells[1].querySelector(".student-table-user-cell div div")?.textContent?.trim() || "";
+      const subs = cells[2].textContent.trim();
+      const avg = cells[3].textContent.trim();
+      const status = cells[4].textContent.trim();
+      const safeName = /^[=+\-@\t\r]/.test(name) ? "'" + name : name;
+      csv += `${i + 1},"${safeName.replace(/"/g, '""')}","${subs}","${avg}","${status}"\n`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${subjectName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_students.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast("Subject student roster exported successfully.", "success");
+}

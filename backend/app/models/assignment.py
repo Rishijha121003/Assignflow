@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, CheckConstraint, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, CheckConstraint, func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -30,7 +30,7 @@ class Assignment(Base):
     )
     creator = relationship("User", backref="assignments")
 
-    # Class association
+    # Class and Semester association
     class_id = Column(
         Integer,
         ForeignKey("assignflow.classes.id", ondelete="SET NULL"),
@@ -38,6 +38,27 @@ class Assignment(Base):
         index=True,
     )
     classroom = relationship("Class", back_populates="assignments")
+
+    semester_id = Column(
+        Integer,
+        ForeignKey("assignflow.semesters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    semester = relationship("Semester", backref="assignments")
+
+    subject_id = Column(
+        Integer,
+        ForeignKey("assignflow.subjects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    subject_ref = relationship("Subject", backref="assignments")
+
+    assignment_type = Column(String(50), nullable=False, default="Assignment")
+    allow_late = Column(Boolean, nullable=False, default=True)
+    resubmission_policy = Column(String(50), nullable=False, default="approval_only")
+    submissions = relationship("Submission", back_populates="assignment", cascade="all, delete-orphan", passive_deletes=True)
 
     # Attachment metadata (Teacher-uploaded question PDF)
     file_path = Column(String(500), nullable=True)
@@ -55,6 +76,14 @@ class Assignment(Base):
     @property
     def class_name(self) -> str | None:
         return self.classroom.name if self.classroom else None
+
+    @property
+    def submission_count(self) -> int:
+        return len(self.submissions) if self.submissions else 0
+
+    @property
+    def total_students(self) -> int:
+        return len(self.classroom.enrollments) if self.classroom and self.classroom.enrollments else 0
 
     def __repr__(self) -> str:
         return f"<Assignment(id={self.id}, title='{self.title}', subject='{self.subject}', status='{self.status}', file='{self.file_name}')>"

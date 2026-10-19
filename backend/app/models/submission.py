@@ -63,7 +63,7 @@ class Submission(Base):
     released_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    assignment = relationship("Assignment", backref="submissions")
+    assignment = relationship("Assignment", back_populates="submissions")
     student = relationship("User", foreign_keys=[student_id], backref="submissions")
     grader = relationship("User", foreign_keys=[graded_by_id])
 

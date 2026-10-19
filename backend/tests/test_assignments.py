@@ -1,7 +1,12 @@
-from datetime import datetime, timezone, timedelta
+import uuid
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.models.assignment import Assignment
+from app.models.classroom import Class
+from app.models.semester import Semester
 
 
 def sample_assignment_payload(title="Calculus I - Problem Set 1"):
@@ -524,3 +529,514 @@ def test_malformed_request_with_binary_data_returns_422_not_500(client, teacher_
     )
     # Must return 422, NEVER 500
     assert response.status_code == 422
+
+
+def test_create_assignment_from_semester_subject(client, teacher_user, teacher_headers, db_engine):
+    """
+    Regression Test:
+    Verify creating an assignment from a semester subject:
+    - Subject is custom (e.g. 'CD — Compiler Design').
+    - Class is the semester subject class.
+    - Semester is the parent semester.
+    - Persists class_id, semester_id, subject accurately in backend database.
+    """
+    with Session(db_engine) as session:
+        sem = Semester(
+            teacher_id=teacher_user["id"],
+            name="Semester 7 (Autumn 2026)",
+            academic_year="2026 - 2027",
+            start_date=date(2026, 7, 1),
+            end_date=date(2026, 12, 31),
+            program="B.Tech CSE",
+            status="active",
+        )
+        session.add(sem)
+        session.commit()
+        session.refresh(sem)
+        sem_id = sem.id
+
+        cls = Class(
+            teacher_id=teacher_user["id"],
+            name="CD — Compiler Design",
+            description="Lexical analysis, parsing, syntax directed translation",
+            join_code=uuid.uuid4().hex[:8].upper(),
+            semester_id=sem_id,
+        )
+        session.add(cls)
+        session.commit()
+        session.refresh(cls)
+        cls_id = cls.id
+
+    dummy_pdf = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
+    future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+
+    try:
+        # 1. Create assignment using multipart/form-data (as done by frontend drawer)
+        data = {
+            "title": "Lab 1: Lexical Analyzer with Lex/Flex",
+            "subject": "CD — Compiler Design",
+            "description": "Construct a lexical analyzer recognizing tokens of a subset of C.",
+            "due_date": future_date,
+            "status": "active",
+            "class_id": str(cls_id),
+            "semester_id": str(sem_id),
+        }
+        files = {
+            "file": ("lab1_compiler_design.pdf", dummy_pdf, "application/pdf")
+        }
+
+        res = client.post("/api/assignments", data=data, files=files, headers=teacher_headers)
+        assert res.status_code == 201, res.text
+        res_data = res.json()
+        as_id = res_data["id"]
+
+        assert res_data["subject"] == "CD — Compiler Design"
+        assert res_data["class_id"] == cls_id
+        assert res_data["semester_id"] == sem_id
+
+        # Verify DB directly
+        with Session(db_engine) as session:
+            db_as = session.query(Assignment).filter(Assignment.id == as_id).first()
+            assert db_as is not None
+            assert db_as.subject == "CD — Compiler Design"
+            assert db_as.class_id == cls_id
+            assert db_as.semester_id == sem_id
+
+        # Verify list filtering by class_id and semester_id
+        list_class_res = client.get(f"/api/assignments?class_id={cls_id}", headers=teacher_headers)
+        assert list_class_res.status_code == 200
+        assert any(a["id"] == as_id for a in list_class_res.json())
+
+        list_sem_res = client.get(f"/api/assignments?semester_id={sem_id}", headers=teacher_headers)
+        assert list_sem_res.status_code == 200
+        assert any(a["id"] == as_id for a in list_sem_res.json())
+
+        # Clean up assignment
+        del_res = client.delete(f"/api/assignments/{as_id}", headers=teacher_headers)
+        assert del_res.status_code == 200
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Class).filter(Class.id == cls_id).delete()
+            session.query(Semester).filter(Semester.id == sem_id).delete()
+            session.commit()
+
+
+def test_prevent_accidental_unassigned_in_semester_context(client, teacher_user, teacher_headers, db_engine):
+    """
+    Regression Test:
+    Ensure that attempting to create or update an assignment within a semester context
+    without linking to a specific class (i.e. leaving it General / Unassigned) is rejected with 422.
+    """
+    with Session(db_engine) as session:
+        sem = Semester(
+            teacher_id=teacher_user["id"],
+            name="Semester 7 (Autumn 2026)",
+            academic_year="2026 - 2027",
+            start_date=date(2026, 7, 1),
+            end_date=date(2026, 12, 31),
+            program="B.Tech CSE",
+            status="active",
+        )
+        session.add(sem)
+        session.commit()
+        session.refresh(sem)
+        sem_id = sem.id
+
+    dummy_pdf = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
+    future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+
+    try:
+        # Multipart without class_id but with semester_id
+        data = {
+            "title": "Unassigned Semester Assignment",
+            "subject": "CD — Compiler Design",
+            "due_date": future_date,
+            "status": "active",
+            "semester_id": str(sem_id),
+            # class_id omitted / left unassigned
+        }
+        files = {
+            "file": ("test.pdf", dummy_pdf, "application/pdf")
+        }
+        res = client.post("/api/assignments", data=data, files=files, headers=teacher_headers)
+        assert res.status_code == 422
+        assert "must be assigned to a specific subject/class" in res.text
+
+        # Explicit null class_id with semester_id
+        data["class_id"] = "null"
+        res = client.post("/api/assignments", data=data, files=files, headers=teacher_headers)
+        assert res.status_code == 422
+        assert "must be assigned to a specific subject/class" in res.text
+
+        # JSON payload without class_id but with semester_id
+        json_data = {
+            "title": "JSON Unassigned Semester Assignment",
+            "subject": "CD — Compiler Design",
+            "due_date": future_date,
+            "status": "active",
+            "semester_id": sem_id,
+            "class_id": None,
+        }
+        res = client.post("/api/assignments", json=json_data, headers=teacher_headers)
+        assert res.status_code == 422
+        assert "must be assigned to a specific subject/class" in res.text
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Semester).filter(Semester.id == sem_id).delete()
+            session.commit()
+
+
+def test_mismatched_class_and_semester_rejected(client, teacher_user, teacher_headers, db_engine):
+    """
+    Regression Test:
+    Verify that submitting a class that belongs to Semester A with semester_id set to Semester B returns 422.
+    """
+    with Session(db_engine) as session:
+        sem1 = Semester(
+            teacher_id=teacher_user["id"],
+            name="Semester 5",
+            academic_year="2025 - 2026",
+            start_date=date(2025, 7, 1),
+            end_date=date(2025, 12, 31),
+            program="B.Tech CSE",
+            status="active",
+        )
+        sem2 = Semester(
+            teacher_id=teacher_user["id"],
+            name="Semester 7",
+            academic_year="2026 - 2027",
+            start_date=date(2026, 7, 1),
+            end_date=date(2026, 12, 31),
+            program="B.Tech CSE",
+            status="active",
+        )
+        session.add_all([sem1, sem2])
+        session.commit()
+        session.refresh(sem1)
+        session.refresh(sem2)
+
+        cls1 = Class(
+            teacher_id=teacher_user["id"],
+            name="Operating Systems",
+            join_code=uuid.uuid4().hex[:8].upper(),
+            semester_id=sem1.id,
+        )
+        session.add(cls1)
+        session.commit()
+        session.refresh(cls1)
+        cls_id = cls1.id
+        sem1_id = sem1.id
+        sem2_id = sem2.id
+
+    future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    try:
+        # Try to publish cls1 (belongs to sem1) under sem2
+        json_payload = {
+            "title": "Mismatched Semester Assignment",
+            "subject": "Operating Systems",
+            "due_date": future_date,
+            "status": "active",
+            "class_id": cls_id,
+            "semester_id": sem2_id,
+        }
+        res = client.post("/api/assignments", json=json_payload, headers=teacher_headers)
+        assert res.status_code == 422
+        assert f"belongs to semester {sem1_id}, not semester {sem2_id}" in res.text
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Class).filter(Class.id == cls_id).delete()
+            session.query(Semester).filter(Semester.id.in_([sem1_id, sem2_id])).delete()
+            session.commit()
+
+
+def test_standalone_non_semester_assignment_workflow(client, teacher_headers):
+    """
+    Regression Test:
+    Preserve existing standalone assignment creation for teachers not using semesters.
+    Ensures class_id=None and semester_id=None succeeds with 201 without restrictions.
+    """
+    future_date = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+    payload = {
+        "title": "Standalone Assignment - General",
+        "subject": "Computer Science",
+        "description": "General homework without semester association.",
+        "due_date": future_date,
+        "status": "active",
+        "class_id": None,
+        "semester_id": None,
+    }
+
+    res = client.post("/api/assignments", json=payload, headers=teacher_headers)
+    assert res.status_code == 201
+    data = res.json()
+    as_id = data["id"]
+
+    try:
+        assert data["class_id"] is None
+        assert data["semester_id"] is None
+        assert data["subject"] == "Computer Science"
+
+        # Update standalone assignment without adding semester
+        update_res = client.put(
+            f"/api/assignments/{as_id}",
+            json={"title": "Standalone Assignment - Updated"},
+            headers=teacher_headers,
+        )
+        assert update_res.status_code == 200
+        assert update_res.json()["title"] == "Standalone Assignment - Updated"
+        assert update_res.json()["class_id"] is None
+        assert update_res.json()["semester_id"] is None
+
+    finally:
+        client.delete(f"/api/assignments/{as_id}", headers=teacher_headers)
+
+
+def test_assignment_list_data_isolation_and_no_duplication(client, db_engine):
+    """
+    Regression Test:
+    Ensures that assignments belonging to other teachers' classes (even if created_by_id is None)
+    are NOT leaked or duplicated in GET /api/assignments for another teacher.
+    Preserves legacy unassigned assignments (created_by_id=None and class_id=None).
+    """
+    from app.core.security import hash_password, create_access_token
+    from app.models.user import User
+
+    # 1. Create two separate teachers
+    with Session(db_engine) as session:
+        t1 = User(
+            email=f"iso_teacher_1_{uuid.uuid4().hex[:6]}@assignflow.edu",
+            full_name="Teacher One",
+            hashed_password=hash_password("Pass123!"),
+            role="teacher",
+            is_active=True,
+        )
+        t2 = User(
+            email=f"iso_teacher_2_{uuid.uuid4().hex[:6]}@assignflow.edu",
+            full_name="Teacher Two",
+            hashed_password=hash_password("Pass123!"),
+            role="teacher",
+            is_active=True,
+        )
+        session.add_all([t1, t2])
+        session.commit()
+        session.refresh(t1)
+        session.refresh(t2)
+        t1_id, t2_id = t1.id, t2.id
+
+        # Teacher 2 owns a class
+        t2_class = Class(
+            teacher_id=t2_id,
+            name="Cloud Computing",
+            join_code=uuid.uuid4().hex[:8].upper(),
+        )
+        session.add(t2_class)
+        session.commit()
+        session.refresh(t2_class)
+        t2_class_id = t2_class.id
+
+        # Assignment in Teacher 2's class with created_by_id=None (simulating fixture/orphaned records)
+        t2_as1 = Assignment(
+            title="Cloud Architecture Design",
+            subject="Cloud Computing",
+            due_date=datetime.now(timezone.utc) + timedelta(days=7),
+            status="active",
+            class_id=t2_class_id,
+            created_by_id=None,
+        )
+        # Assignment in Teacher 2's class created by Teacher 2
+        t2_as2 = Assignment(
+            title="Kubernetes Deployment",
+            subject="Cloud Computing",
+            due_date=datetime.now(timezone.utc) + timedelta(days=7),
+            status="active",
+            class_id=t2_class_id,
+            created_by_id=t2_id,
+        )
+        # Legacy unassigned assignment (created_by_id=None, class_id=None)
+        legacy_as = Assignment(
+            title="Legacy Unassigned General Paper",
+            subject="Computer Science",
+            due_date=datetime.now(timezone.utc) + timedelta(days=10),
+            status="active",
+            class_id=None,
+            created_by_id=None,
+        )
+        session.add_all([t2_as1, t2_as2, legacy_as])
+        session.commit()
+        session.refresh(t2_as1)
+        session.refresh(t2_as2)
+        session.refresh(legacy_as)
+        t2_as1_id = t2_as1.id
+        t2_as2_id = t2_as2.id
+        legacy_as_id = legacy_as.id
+
+    t1_token = create_access_token({"sub": str(t1_id), "role": "teacher", "email": "t1@assignflow.edu"})
+    t1_headers = {"Authorization": f"Bearer {t1_token}"}
+
+    try:
+        # Teacher 1 fetches assignments
+        res = client.get("/api/assignments", headers=t1_headers)
+        assert res.status_code == 200
+        items = res.json()
+        item_ids = [item["id"] for item in items]
+
+        # Teacher 1 MUST see the legacy unassigned assignment
+        assert legacy_as_id in item_ids
+
+        # Teacher 1 MUST NOT see Teacher 2's assignments (neither the created_by_id=None nor created_by_id=t2_id)
+        assert t2_as1_id not in item_ids
+        assert t2_as2_id not in item_ids
+
+        # Ensure no duplicates in the returned list
+        assert len(item_ids) == len(set(item_ids)), "Returned assignments contain duplicate IDs"
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Assignment).filter(Assignment.id.in_([t2_as1_id, t2_as2_id, legacy_as_id])).delete()
+            session.query(Class).filter(Class.id == t2_class_id).delete()
+            session.query(User).filter(User.id.in_([t1_id, t2_id])).delete()
+            session.commit()
+
+
+def test_class_specific_subject_binding_and_persistence(client, teacher_user, teacher_headers, db_engine):
+    """
+    Regression Test:
+    Verify that an assignment created for a specific class accurately binds:
+    - class_id
+    - semester_id
+    - subject (exact class name, NEVER generic 'Computer Science')
+    And returns class_name in AssignmentResponse.
+    """
+    with Session(db_engine) as session:
+        sem = Semester(
+            teacher_id=teacher_user["id"],
+            name="Semester 4 (Spring 2026)",
+            academic_year="2025 - 2026",
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 6, 30),
+            program="B.Tech CSE",
+            status="active",
+        )
+        session.add(sem)
+        session.commit()
+        session.refresh(sem)
+        sem_id = sem.id
+
+        cls = Class(
+            teacher_id=teacher_user["id"],
+            name="Algorithms & Data Structures",
+            description="Sorting, searching, dynamic programming, graph algorithms",
+            join_code=uuid.uuid4().hex[:8].upper(),
+            semester_id=sem_id,
+        )
+        session.add(cls)
+        session.commit()
+        session.refresh(cls)
+        cls_id = cls.id
+
+    future_date = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+    dummy_pdf = b"%PDF-1.4\nAlgorithms Question Sheet\n%%EOF"
+
+    try:
+        data = {
+            "title": "Problem Set 3: Dynamic Programming",
+            "subject": "Algorithms & Data Structures",
+            "description": "Solve the 0/1 knapsack and longest common subsequence problems.",
+            "due_date": future_date,
+            "status": "active",
+            "class_id": str(cls_id),
+            "semester_id": str(sem_id),
+        }
+        files = {"file": ("algo_ps3.pdf", dummy_pdf, "application/pdf")}
+
+        res = client.post("/api/assignments", data=data, files=files, headers=teacher_headers)
+        assert res.status_code == 201, res.text
+        created = res.json()
+        as_id = created["id"]
+
+        # Verify response attributes
+        assert created["class_id"] == cls_id
+        assert created["semester_id"] == sem_id
+        assert created["subject"] == "Algorithms & Data Structures"
+        assert created["subject"] != "Computer Science"
+        assert created["class_name"] == "Algorithms & Data Structures"
+
+        # Verify DB persistence directly
+        with Session(db_engine) as session:
+            db_record = session.query(Assignment).filter(Assignment.id == as_id).first()
+            assert db_record is not None
+            assert db_record.class_id == cls_id
+            assert db_record.semester_id == sem_id
+            assert db_record.subject == "Algorithms & Data Structures"
+            assert db_record.created_by_id == teacher_user["id"]
+
+        # Verify GET /api/assignments returns the correct associations
+        list_res = client.get("/api/assignments", headers=teacher_headers)
+        assert list_res.status_code == 200
+        found = next((a for a in list_res.json() if a["id"] == as_id), None)
+        assert found is not None
+        assert found["class_id"] == cls_id
+        assert found["class_name"] == "Algorithms & Data Structures"
+        assert found["subject"] == "Algorithms & Data Structures"
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Assignment).filter(Assignment.title == "Problem Set 3: Dynamic Programming").delete()
+            session.query(Class).filter(Class.id == cls_id).delete()
+            session.query(Semester).filter(Semester.id == sem_id).delete()
+            session.commit()
+
+
+def test_teacher_cannot_filter_by_unowned_semester(client, teacher_user, db_engine):
+    """
+    Regression Test:
+    Ensures that a teacher cannot list assignments using another teacher's semester_id (returns 403).
+    """
+    from app.core.security import hash_password, create_access_token
+    from app.models.user import User
+
+    with Session(db_engine) as session:
+        other_teacher = User(
+            email=f"other_teacher_{uuid.uuid4().hex[:6]}@assignflow.edu",
+            full_name="Other Teacher",
+            hashed_password=hash_password("Pass123!"),
+            role="teacher",
+            is_active=True,
+        )
+        session.add(other_teacher)
+        session.commit()
+        session.refresh(other_teacher)
+
+        other_sem = Semester(
+            teacher_id=other_teacher.id,
+            name="Other Semester",
+            academic_year="2026 - 2027",
+            start_date=date(2026, 7, 1),
+            end_date=date(2026, 12, 31),
+            program="B.Tech CSE",
+            status="active",
+        )
+        session.add(other_sem)
+        session.commit()
+        session.refresh(other_sem)
+        other_teacher_id = other_teacher.id
+        other_sem_id = other_sem.id
+
+    t_token = create_access_token({"sub": str(teacher_user["id"]), "role": "teacher", "email": teacher_user["email"]})
+    t_headers = {"Authorization": f"Bearer {t_token}"}
+
+    try:
+        res = client.get(f"/api/assignments?semester_id={other_sem_id}", headers=t_headers)
+        assert res.status_code == 403
+        assert "You do not own this semester" in res.text
+
+    finally:
+        with Session(db_engine) as session:
+            session.query(Semester).filter(Semester.id == other_sem_id).delete()
+            session.query(User).filter(User.id == other_teacher_id).delete()
+            session.commit()
+
+

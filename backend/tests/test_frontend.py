@@ -1,3 +1,6 @@
+import re
+
+
 def test_frontend_root_serves_html(client):
     """Verify that root endpoint GET / serves the AssignFlow dashboard HTML."""
     response = client.get("/")
@@ -15,7 +18,7 @@ def test_frontend_static_css_served(client):
     response = client.get("/css/style.css")
     assert response.status_code == 200
     assert "text/css" in response.headers.get("content-type", "")
-    assert "--primary: #6366f1;" in response.text
+    assert "--primary: #2563eb;" in response.text
 
 
 def test_frontend_static_js_served(client):
@@ -601,6 +604,9 @@ def test_frontend_modular_components_key_elements():
     assert 'id="teacherSubmissionsModalBackdrop"' in modals_html
     assert 'id="gradingWorkspaceModalBackdrop"' in modals_html
     assert 'id="submissionPreviewModalBackdrop"' in modals_html
+    assert 'id="auditCorrectModalBackdrop"' in modals_html
+    assert 'id="submissionHistoryModalBackdrop"' in modals_html
+    assert 'id="authorizeResubmissionModalBackdrop"' in modals_html
 
     # Pages
     assert 'id="dashboardView"' in (frontend_dir / "pages/dashboard.html").read_text(encoding="utf-8")
@@ -627,3 +633,480 @@ def test_frontend_assembly_integrity():
         text=True,
     )
     assert result.returncode == 0, f"Assembly integrity check failed:\n{result.stderr}\n{result.stdout}"
+
+
+def test_frontend_includes_speedgrader_workflow_modals_ui(client):
+    """Verify that index.html contains all 3 SpeedGrader workflow sub-modals with correct ARIA attributes and elements."""
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+
+    # Header and Trigger Buttons in SpeedGrader
+    assert 'id="gradingSubmissionHistoryBtn"' in html
+    assert 'id="gradingAuthorizeResubmissionBtn"' in html
+    assert 'id="gradingAuditCorrectBtn"' in html
+
+    # 1. Correct Grade (Audit Trail) Modal
+    assert 'id="auditCorrectModalBackdrop"' in html
+    assert 'id="auditCorrectModalTitle"' in html
+    assert 'id="closeAuditCorrectModalBtn"' in html
+    assert 'id="auditCurrentGradeVal"' in html
+    assert 'id="auditCurrentMaxMarks"' in html
+    assert 'id="auditNewGradeInput"' in html
+    assert 'id="auditNewGradeMaxLabel"' in html
+    assert 'id="auditReasonInput"' in html
+    assert 'id="auditGradeError"' in html
+    assert 'id="auditReasonError"' in html
+    assert 'id="cancelAuditCorrectBtn"' in html
+    assert 'id="confirmAuditCorrectBtn"' in html
+
+    # 2. Submission History & Archived Attempts Modal
+    assert 'id="submissionHistoryModalBackdrop"' in html
+    assert 'id="submissionHistoryModalTitle"' in html
+    assert 'id="closeSubmissionHistoryModalBtn"' in html
+    assert 'id="closeSubmissionHistoryBottomBtn"' in html
+    assert 'id="historyStudentMeta"' in html
+    assert 'id="historyAttemptsList"' in html
+
+    # 3. Authorize Resubmission Modal
+    assert 'id="authorizeResubmissionModalBackdrop"' in html
+    assert 'id="authorizeResubmissionModalTitle"' in html
+    assert 'id="closeAuthorizeResubmissionModalBtn"' in html
+    assert 'id="authorizeResubmissionMessage"' in html
+    assert 'id="resubmissionNotesInput"' in html
+    assert 'id="cancelAuthorizeResubmissionBtn"' in html
+    assert 'id="confirmAuthorizeResubmissionBtn"' in html
+
+    # Accessibility attributes on modal dialogs
+    for modal_id in [
+        "auditCorrectModalBackdrop",
+        "submissionHistoryModalBackdrop",
+        "authorizeResubmissionModalBackdrop",
+    ]:
+        idx = html.find(f'id="{modal_id}"')
+        assert idx != -1
+        snippet = html[idx : idx + 250]
+        assert 'role="dialog"' in snippet
+        assert 'aria-modal="true"' in snippet
+
+
+def test_frontend_css_workflow_modal_stacking_and_backdrop(client):
+    """Verify that style.css enforces full viewport coverage, blur backdrop, and higher z-index stacking for workflow modals."""
+    response = client.get("/css/style.css")
+    assert response.status_code == 200
+    css = response.text
+
+    # Verify workflow modal backdrop rules
+    assert ".workflow-modal-backdrop {" in css
+    wf_idx = css.find(".workflow-modal-backdrop {")
+    wf_block = css[wf_idx : wf_idx + 450]
+
+    assert "position: fixed;" in wf_block
+    assert "width: 100vw;" in wf_block
+    assert "height: 100vh;" in wf_block
+    assert "z-index: 1200;" in wf_block
+    assert "pointer-events: auto;" in wf_block
+    assert "backdrop-filter: blur" in wf_block
+
+    # Verify workflow modal card rules
+    assert ".workflow-modal-card {" in css
+    card_idx = css.find(".workflow-modal-card {")
+    card_block = css[card_idx : card_idx + 400]
+    assert "z-index: 1201;" in card_block
+    assert "pointer-events: auto;" in card_block
+
+    # Verify z-index hierarchy: workflow modal (1200) > confirm modals (1100) > SpeedGrader (1050)
+    assert 1200 > 1100 > 1050
+
+    # Verify toast container appears above all modals
+    toast_idx = css.find(".toast-container {")
+    toast_block = css[toast_idx : toast_idx + 250]
+    assert "z-index: 2000;" in toast_block
+
+
+def test_frontend_js_workflow_modals_handlers_and_keyboard_trapping(client):
+    """Verify that app.js includes open/close/confirm handlers, focus trapping, and keyboard isolation for workflow modals."""
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+
+    # Functions exist
+    assert "openAuditCorrectModal" in js
+    assert "closeAuditCorrectModal" in js
+    assert "confirmAuditCorrect" in js
+    assert "openSubmissionHistoryModal" in js
+    assert "closeSubmissionHistoryModal" in js
+    assert "openAuthorizeResubmissionModal" in js
+    assert "closeAuthorizeResubmissionModal" in js
+    assert "confirmAuthorizeResubmission" in js
+    assert "trapFocusInModal" in js
+
+    # Keydown listener checks workflow modals before grading workspace modal
+    audit_pos = js.find("elements.auditCorrectModalBackdrop")
+    history_pos = js.find("elements.submissionHistoryModalBackdrop")
+    resub_pos = js.find("elements.authorizeResubmissionModalBackdrop")
+    speedgrader_pos = js.find("elements.gradingWorkspaceModalBackdrop")
+
+    assert audit_pos != -1
+    assert history_pos != -1
+    assert resub_pos != -1
+    assert speedgrader_pos != -1
+
+    # Verify event blocking in keydown listener
+    assert "e.stopPropagation()" in js
+    assert "ArrowLeft" in js
+    assert "ArrowRight" in js
+
+
+def test_frontend_js_audit_correct_grade_population_logic(client):
+    """Verify that openAuditCorrectModal correctly loads sub.grade without defaulting to 0 when a saved grade exists."""
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+
+    fn_idx = js.find("function openAuditCorrectModal()")
+    assert fn_idx != -1, "openAuditCorrectModal function not found in app.js"
+    fn_body = js[fn_idx : fn_idx + 1400]
+
+    # Verify that sub.grade is inspected directly and not defaulted to 0
+    assert "sub.grade !== null" in fn_body
+    assert "sub.grade !== undefined" in fn_body
+    assert "currentGradeVal = sub.grade" in fn_body
+    assert "elements.auditCurrentGradeVal.textContent = currentGradeVal" in fn_body
+    assert "elements.auditNewGradeInput.value = (currentGradeVal !== " in fn_body
+    # Ensure bug pattern (hardcoding 0 or sub.current_grade) is NOT present
+    assert "sub.current_grade" not in fn_body
+    assert "sub.score || 0" not in fn_body
+
+
+# ============================================================================
+# Regression Tests: Registration Form & Email Typing Crash Prevention
+# ============================================================================
+
+
+def test_registration_form_attributes_prevent_browser_autofill_crash(client):
+    """
+    Regression Test:
+    Verify that #regEmail uses autocomplete="off" with scoped name attributes,
+    preventing Chromium's AutofillPopupControllerImpl from crashing on typing
+    (assertion failure due to kAddressEntry bitmask mismatch in on-typing popups),
+    while preserving type="email" and required for HTML5 validation.
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+
+    # Registration Form attributes
+    assert 'id="registerForm"' in html
+    assert 'id="regEmail"' in html
+
+    reg_email_match = re.search(r'<input[^>]*id="regEmail"[^>]*>', html)
+    assert reg_email_match is not None, "Could not find #regEmail input tag in HTML"
+    reg_email_tag = reg_email_match.group(0)
+
+    # Verify #regEmail has autocomplete="off", name="regEmail", type="email", and required
+    assert 'autocomplete="off"' in reg_email_tag
+    assert 'name="regEmail"' in reg_email_tag
+    assert 'type="email"' in reg_email_tag
+    assert 'required' in reg_email_tag
+
+    # Crucial regression check: #regEmail MUST NOT have autocomplete="email"
+    # because autocomplete="email" triggers Chromium's on-typing address suggestion crash
+    assert 'autocomplete="email"' not in reg_email_tag
+
+    # Verify #regFullName has autocomplete="off" and name="regFullName"
+    reg_name_match = re.search(r'<input[^>]*id="regFullName"[^>]*>', html)
+    assert reg_name_match is not None
+    reg_name_tag = reg_name_match.group(0)
+    assert 'autocomplete="off"' in reg_name_tag
+    assert 'name="regFullName"' in reg_name_tag
+
+    # Verify #regPassword has autocomplete="new-password" and minlength="8"
+    reg_pwd_match = re.search(r'<input[^>]*id="regPassword"[^>]*>', html)
+    assert reg_pwd_match is not None
+    reg_pwd_tag = reg_pwd_match.group(0)
+    assert 'autocomplete="new-password"' in reg_pwd_tag
+    assert 'minlength="8"' in reg_pwd_tag
+    assert 'name="regPassword"' in reg_pwd_tag
+
+    # Verify form isolation: #signInForm inputs have scoped names
+    login_email_match = re.search(r'<input[^>]*id="loginEmail"[^>]*>', html)
+    assert login_email_match is not None
+    assert 'name="loginEmail"' in login_email_match.group(0)
+
+    login_pwd_match = re.search(r'<input[^>]*id="loginPassword"[^>]*>', html)
+    assert login_pwd_match is not None
+    assert 'name="loginPassword"' in login_pwd_match.group(0)
+
+
+def test_registration_js_event_handlers_and_no_blocking_input_listeners(client):
+    """
+    Verify that app.js does not attach recursive, repeated, or blocking input event listeners
+    to #regEmail, and that handleRegisterSubmit performs client-side email format validation.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+
+    # Ensure elements.regEmail does not have blocking or recursive 'input' event listeners
+    assert "elements.regEmail.addEventListener(\"input\"" not in js
+    assert "elements.regEmail.addEventListener('input'" not in js
+
+    # Verify handleRegisterSubmit contains client-side email trimming and regex format validation
+    fn_idx = js.find("async function handleRegisterSubmit(e)")
+    assert fn_idx != -1, "handleRegisterSubmit function not found"
+    fn_body = js[fn_idx : fn_idx + 1800]
+
+    assert "const email = elements.regEmail.value.trim();" in fn_body
+    assert "emailRegex.test(email)" in fn_body
+    assert "Please enter a valid email address." in fn_body
+    assert "Please enter your email address." in fn_body
+    assert "Password must be at least 8 characters." in fn_body
+
+
+def test_registration_flow_typing_normal_email(client):
+    """
+    Verify registration flow with a normally typed email address.
+    """
+    import uuid
+    client.cookies.clear()
+    email = f"typed_teacher_{uuid.uuid4().hex[:8]}@university.edu"
+    payload = {
+        "email": email,
+        "full_name": "Dr. Normal Typing",
+        "password": "Password1234!",
+        "role": "teacher",
+    }
+    try:
+        response = client.post("/api/auth/register", json=payload)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["user"]["email"] == email
+        assert data["user"]["full_name"] == "Dr. Normal Typing"
+        assert data["user"]["role"] == "teacher"
+        assert "access_token" in data
+    finally:
+        client.cookies.clear()
+
+
+def test_registration_flow_pasting_email_with_whitespace(client):
+    """
+    Verify registration flow when a user pastes an email with surrounding whitespace.
+    The frontend trims the email before sending it to the registration endpoint.
+    """
+    import uuid
+    client.cookies.clear()
+    clean_email = f"pasted_student_{uuid.uuid4().hex[:8]}@college.edu"
+    # Simulating what the frontend sends after elements.regEmail.value.trim()
+    raw_pasted = f"   {clean_email}   "
+    trimmed_email = raw_pasted.strip()
+
+    payload = {
+        "email": trimmed_email,
+        "full_name": "Pasted Email User",
+        "password": "StrongPassword999!",
+        "role": "student",
+    }
+    try:
+        response = client.post("/api/auth/register", json=payload)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["user"]["email"] == clean_email
+        assert data["user"]["role"] == "student"
+    finally:
+        client.cookies.clear()
+
+
+def test_registration_validation_rejects_invalid_email_formats(client):
+    """
+    Verify that invalid email addresses are properly rejected by validation.
+    """
+    client.cookies.clear()
+    invalid_emails = [
+        "notanemail",
+        "missingatsign.com",
+        "user@",
+        "@domain.com",
+        "user@domain",
+        "",
+        "   ",
+    ]
+    for inv_email in invalid_emails:
+        payload = {
+            "email": inv_email,
+            "full_name": "Test Invalid Email",
+            "password": "ValidPassword123!",
+            "role": "student",
+        }
+        response = client.post("/api/auth/register", json=payload)
+        assert response.status_code == 422, f"Expected 422 for invalid email '{inv_email}', got {response.status_code}"
+
+
+def test_registration_validation_rejects_short_password(client):
+    """
+    Verify that passwords shorter than 8 characters are rejected.
+    """
+    import uuid
+    client.cookies.clear()
+    payload = {
+        "email": f"valid_{uuid.uuid4().hex[:8]}@test.edu",
+        "full_name": "Short Password User",
+        "password": "short",
+        "role": "student",
+    }
+    response = client.post("/api/auth/register", json=payload)
+    assert response.status_code == 422
+    client.cookies.clear()
+
+
+def test_frontend_drawer_has_semester_id_and_class_error(client):
+    """
+    Regression Test:
+    Verify that index.html contains #formSemesterId hidden input and #classError field container
+    for linking semester assignments and displaying class validation errors.
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="formSemesterId"' in html
+    assert 'id="classError"' in html
+
+
+def test_frontend_js_open_create_assignment_for_subject_logic(client):
+    """
+    Regression Test:
+    Verify that app.js includes openCreateAssignmentForSubject with correct subject & class preselection,
+    dynamic subject option insertion, drawerContext tracking, and General/Unassigned validation.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "openCreateAssignmentForSubject" in js
+    assert "setFormSubjectValue" in js
+    assert "formSemesterId" in js
+    assert "dynamic-subject-opt" in js
+    assert "drawerContext" in js
+    assert "cannot be published to General / Unassigned" in js
+
+
+def test_frontend_drawer_auto_infers_semester_subject_context(client):
+    """
+    Regression Test:
+    Verify that when Create Assignment is opened from within a semester subject view,
+    app.js automatically infers the active subject context, preselects the subject and
+    class in the form, and sets formSemesterId.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    # Check that openDrawer auto-infers context from state.activeSubjectId
+    assert "state.activeSubjectId && (state.activeView === \"classes\" || state.currentView === \"classes\")" in js
+    # Check that drawerContext gets assigned
+    assert "state.drawerContext = context;" in js
+    # Check that formClass option is ensured and set
+    assert "elements.formClass.value = String(context.subjectId);" in js
+    # Check that setFormSubjectValue is called with context.subjectName
+    assert "setFormSubjectValue(context.subjectName);" in js
+    # Check that formSemesterId is set
+    assert "elements.formSemesterId.value = context.semesterId ? String(context.semesterId) : \"\";" in js
+
+
+def test_frontend_standalone_drawer_mode_preserved(client):
+    """
+    Regression Test:
+    Verify that when opening Create Assignment outside a semester subject (standalone workflow),
+    app.js sets standalone defaults: Computer Science subject, General/Unassigned class, empty semester ID.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "setFormSubjectValue(\"\");" in js
+    assert "elements.formClass.value = \"\";" in js
+    assert "elements.formSemesterId.value = \"\";" in js
+    assert "state.drawerContext = null;" in js
+
+
+def test_frontend_form_class_change_syncs_subject_and_semester(client):
+    """
+    Regression Test:
+    Verify that choosing a semester class in Publish to Class automatically synchronizes
+    the subject dropdown and sets formSemesterId and drawerContext.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "elements.formClass.addEventListener(\"change\"" in js
+    assert "setFormSubjectValue(foundClass.name);" in js
+    assert "if (elements.formSemesterId) elements.formSemesterId.value = String(foundClass.semester_id);" in js
+
+
+def test_frontend_subject_detail_view_buttons_binding(client):
+    """
+    Regression Test:
+    Verify that renderSubjectDetailView renders buttons calling openCreateAssignmentForSubject
+    with subject ID cleanly.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "openCreateAssignmentForSubject(${subject.id})" in js
+
+
+def test_frontend_prevent_accidental_unassigned_in_semester_context(client):
+    """
+    Regression Test:
+    Verify that validateForm() checks for semester context and flags an error
+    when Publish to Class is left as General / Unassigned.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "const hasSemesterContext = Boolean(" in js
+    assert "state.drawerContext.type === \"semester_subject\"" in js
+    assert "Semester assignments cannot be published to General / Unassigned." in js
+
+
+def test_frontend_fetch_assignments_client_deduplication(client):
+    """
+    Regression Test:
+    Verify that fetchAssignments() in app.js implements client-side ID deduplication
+    to prevent duplicate assignment records from accumulating or repeating in the table.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "seenIds = new Set();" in js
+    assert "if (seenIds.has(item.id)) return false;" in js
+    assert "seenIds.add(item.id);" in js
+
+
+def test_frontend_class_specific_subject_binding_prevents_computer_science_fallback(client):
+    """
+    Regression Test:
+    Verify that setFormSubjectValue() derives the subject name from the selected class
+    or active drawerContext and never substitutes 'Computer Science' when a class is selected.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "if (!subjectName && elements.formClass && elements.formClass.value)" in js
+    assert "if (!subjectName && state.drawerContext && state.drawerContext.subjectName)" in js
+    assert "subjectName = cls.name;" in js
+
+
+def test_frontend_open_drawer_supports_class_and_semester_binding(client):
+    """
+    Regression Test:
+    Verify that openDrawer() supports both semester subjects and standalone classes,
+    automatically selecting the exact class in formClass and setting the subject.
+    """
+    response = client.get("/js/app.js")
+    assert response.status_code == 200
+    js = response.text
+    assert "context.type === \"semester_subject\" || context.type === \"class\"" in js
+    assert "elements.drawerTitle.textContent = context.subjectName" in js
+    assert "setFormSubjectValue(context.subjectName);" in js
+
+
+
+

@@ -71,11 +71,11 @@
       <form id="signInForm" class="auth-form" novalidate>
         <div class="form-group">
           <label for="loginEmail" class="form-label">Email Address</label>
-          <input type="email" id="loginEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+          <input type="email" id="loginEmail" name="loginEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="username email" required>
         </div>
         <div class="form-group">
           <label for="loginPassword" class="form-label">Password</label>
-          <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
+          <input type="password" id="loginPassword" name="loginPassword" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
         </div>
         <button type="submit" class="btn btn-primary auth-submit-btn" id="loginSubmitBtn">
           <span class="btn-spinner" id="loginSpinner" style="display: none;"></span>
@@ -87,18 +87,18 @@
       <form id="registerForm" class="auth-form" style="display: none;" novalidate>
         <div class="form-group">
           <label for="regFullName" class="form-label">Full Name</label>
-          <input type="text" id="regFullName" class="form-input" placeholder="e.g. Dr. Jane Smith" autocomplete="name" required>
+          <input type="text" id="regFullName" name="regFullName" class="form-input" placeholder="e.g. Dr. Jane Smith" autocomplete="off" required>
         </div>
         <div class="form-group">
           <label for="regEmail" class="form-label">Email Address</label>
-          <input type="email" id="regEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+          <input type="email" id="regEmail" name="regEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="off" required>
         </div>
         <div class="form-group">
           <label for="regPassword" class="form-label">
             <span>Password</span>
             <span class="field-hint">(min 8 characters)</span>
           </label>
-          <input type="password" id="regPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password" required minlength="8">
+          <input type="password" id="regPassword" name="regPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password" required minlength="8">
         </div>
         
         <!-- Role Selector -->
@@ -445,7 +445,7 @@
         <div class="submissions-counter-banner">
           <div class="submissions-counter-info">
             <span>Submissions Received: <strong id="teacherSubmissionsCount">0</strong></span>
-            <span id="teacherSelectedCountBanner" style="display: none; margin-left: 0.75rem; color: var(--brand-primary, #4361ee); font-weight: 600;">
+            <span id="teacherSelectedCountBanner" style="display: none; margin-left: 0.75rem; color: var(--primary); font-weight: 600;">
               (<span id="teacherSelectedCount">0</span> selected)
             </span>
           </div>
@@ -545,6 +545,19 @@
           </button>
         </div>
         <div class="grading-header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="gradingSubmissionHistoryBtn" type="button" title="View Submission History &amp; Archived Attempts">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>History &amp; Attempts</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" id="gradingAuthorizeResubmissionBtn" type="button" title="Authorize Resubmission for Student">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+            <span>Authorize Resubmission</span>
+          </button>
           <a class="btn btn-secondary btn-sm" id="gradingDownloadBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -655,6 +668,13 @@
             <div class="grading-release-container">
               <button class="btn btn-success" id="gradingReleaseSingleBtn" type="button" style="width: 100%;">
                 Release Grade to Student
+              </button>
+              <button class="btn btn-warning" id="gradingAuditCorrectBtn" type="button" style="width: 100%; margin-top: 0.5rem; display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Audit Correct
               </button>
               <p class="grading-release-hint">Released grades are visible immediately to the student.</p>
             </div>
@@ -772,5 +792,202 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 8. Correct Grade (Audit Trail) Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="auditCorrectModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="auditCorrectModalTitle">
+    <div class="modal-card workflow-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand" style="background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="auditCorrectModalTitle">Correct Grade (Audit Trail)</h3>
+            <p class="modal-subtitle" id="auditCorrectModalSubtitle">Adjust released score and log audit reason</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAuditCorrectModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="audit-current-grade-box">
+          <span class="meta-label">Current Grade:</span>
+          <span class="audit-grade-display"><strong id="auditCurrentGradeVal">—</strong> / <strong id="auditCurrentMaxMarks">100</strong></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="auditNewGradeInput" class="form-label">
+            Corrected Marks <span class="required">*</span>
+          </label>
+          <div class="grading-input-group">
+            <input type="number" step="any" min="0" id="auditNewGradeInput" class="form-input" placeholder="0.0" />
+            <span class="grading-max-label">/ <strong id="auditNewGradeMaxLabel">100</strong></span>
+          </div>
+          <span class="field-error" id="auditGradeError" style="display: none;"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="auditReasonInput" class="form-label">
+            Audit Reason / Justification <span class="required">*</span>
+          </label>
+          <textarea id="auditReasonInput" class="form-textarea" rows="3" placeholder="Explain the rationale for correcting this released grade (e.g. recalculated rubric item 2)..."></textarea>
+          <span class="field-error" id="auditReasonError" style="display: none;"></span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelAuditCorrectBtn" type="button">Cancel</button>
+        <button class="btn btn-primary" id="confirmAuditCorrectBtn" type="button">Save Correction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Submission History & Archived Attempts Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="submissionHistoryModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="submissionHistoryModalTitle">
+    <div class="modal-card workflow-modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="submissionHistoryModalTitle">Submission History &amp; Archived Attempts</h3>
+            <p class="modal-subtitle" id="historyStudentMeta">Student Name • Assignment</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeSubmissionHistoryModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="history-attempts-list" id="historyAttemptsList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="closeSubmissionHistoryBottomBtn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Authorize Resubmission Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="authorizeResubmissionModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="authorizeResubmissionModalTitle">
+    <div class="modal-card workflow-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand" style="background: rgba(99, 102, 241, 0.12); color: var(--primary);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="authorizeResubmissionModalTitle">Authorize Resubmission</h3>
+            <p class="modal-subtitle" id="authorizeResubmissionSubtitle">Grant another attempt for this student</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAuthorizeResubmissionModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-body-text" id="authorizeResubmissionMessage">
+          Authorizing a resubmission grants the student permission to upload a new attempt. Their existing submission and grade record will be safely archived.
+        </p>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="resubmissionNotesInput" class="form-label">
+            Guidance for Student (Optional)
+          </label>
+          <textarea id="resubmissionNotesInput" class="form-textarea" rows="3" placeholder="Provide instructions or requirements for the new attempt..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelAuthorizeResubmissionBtn" type="button">Cancel</button>
+        <button class="btn btn-primary" id="confirmAuthorizeResubmissionBtn" type="button">Authorize Resubmission</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Edit Semester Modal -->
+  <div class="modal-backdrop" id="editSemesterModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="editSemesterModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="editSemesterModalTitle">Edit Semester</h3>
+        <button class="modal-close-icon-btn" id="closeEditSemesterModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <form id="editSemesterForm" onsubmit="return false;" style="margin-top: 1rem;">
+        <input type="hidden" id="editSemId" value="">
+        <div class="form-group">
+          <label for="editSemName" class="form-label">Semester Name <span class="required">*</span></label>
+          <input type="text" id="editSemName" class="form-input" required maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="editSemYear" class="form-label">Academic Year <span class="required">*</span></label>
+          <select id="editSemYear" class="form-input" required>
+            <option value="2025 - 2026">2025 - 2026</option>
+            <option value="2024 - 2025">2024 - 2025</option>
+            <option value="2023 - 2024">2023 - 2024</option>
+            <option value="2022 - 2023">2022 - 2023</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="editSemStartDate" class="form-label">Start Date <span class="required">*</span></label>
+            <input type="date" id="editSemStartDate" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editSemEndDate" class="form-label">End Date <span class="required">*</span></label>
+            <input type="date" id="editSemEndDate" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editSemStatus" class="form-label">Status</label>
+          <select id="editSemStatus" class="form-input">
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" id="cancelEditSemesterBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEditSemesterBtn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 12. Add Subject to Semester Modal -->
+  <div class="modal-backdrop" id="addSubjectModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="addSubjectModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="addSubjectModalTitle">Add Subject to Semester</h3>
+          <p class="modal-subtitle" id="addSubjectModalSubtitle">Create a new subject or link an existing class</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAddSubjectModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <form id="addSubjectForm" onsubmit="return false;" style="margin-top: 1rem;">
+        <input type="hidden" id="addSubjectSemId" value="">
+        <div class="form-group">
+          <label for="addSubjectName" class="form-label">Subject Code / Name <span class="required">*</span></label>
+          <input type="text" id="addSubjectName" class="form-input" placeholder="e.g. DBMS or CS301" required maxlength="150">
+        </div>
+        <div class="form-group">
+          <label for="addSubjectDesc" class="form-label">Full Title / Description</label>
+          <input type="text" id="addSubjectDesc" class="form-input" placeholder="e.g. Database Management Systems" maxlength="500">
+        </div>
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" id="cancelAddSubjectBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitAddSubjectBtn">Add Subject</button>
+        </div>
+      </form>
     </div>
   </div>

@@ -19,7 +19,7 @@
                 <div class="avatar-circle" id="settingsAvatar" style="width: 56px; height: 56px; font-size: 1.25rem;">?</div>
                 <div class="settings-profile-info">
                   <h3 id="settingsFullName" style="font-size: 1.2rem; font-weight: 700;">Loading...</h3>
-                  <p id="settingsEmail" style="color: #64748b; font-size: 0.875rem;">user@example.com</p>
+                  <p id="settingsEmail" style="color: var(--text-secondary); font-size: 0.875rem;">user@example.com</p>
                   <span class="dash-role-pill teacher" id="settingsRoleBadge" style="margin-top: 0.35rem;">Role</span>
                 </div>
               </div>
@@ -30,7 +30,7 @@
                 </div>
                 <div class="settings-detail-item">
                   <span class="settings-lbl">Account Status:</span>
-                  <span class="settings-val" style="color: #10b981; font-weight: 600;">Active</span>
+                  <span class="settings-val" style="color: var(--success); font-weight: 600;">Active</span>
                 </div>
               </div>
             </div>
@@ -54,8 +54,8 @@
 
               <div class="settings-toggle-row">
                 <div>
-                  <span style="font-weight: 600; color: #1e293b; display: block; font-size: 0.9rem;">Deadline Reminders</span>
-                  <p style="color: #64748b; font-size: 0.8rem; margin-top: 0.15rem;">Show deadline countdown chips for assignments due soon.</p>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Deadline Reminders</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Show deadline countdown chips for assignments due soon.</p>
                 </div>
                 <input type="checkbox" id="settingsReminderToggle" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
               </div>
@@ -70,7 +70,7 @@
               <div class="dash-card-header">
                 <h2 class="dash-card-title">Session & Security</h2>
               </div>
-              <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">Active session authenticated with secure HTTP cookies.</p>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Active session authenticated with secure HTTP cookies.</p>
               <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <button class="btn btn-danger" id="settingsLogoutBtn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_teacher, require_student
 from app.db.session import get_db
-from app.models.classroom import Class, ClassEnrollment, generate_join_code
+from app.models.classroom import Class, ClassEnrollment, Subject, generate_join_code
 from app.models.assignment import Assignment
 from app.models.user import User
 from app.schemas.classroom import (
@@ -14,9 +14,14 @@ from app.schemas.classroom import (
     ClassJoin,
     ClassResponse,
     StudentEnrollmentResponse,
+    SubjectCreate,
+    SubjectResponse,
 )
 
 router = APIRouter(prefix="/classes", tags=["classes"])
+
+
+from app.models.semester import Semester
 
 
 def serialize_class(cls: Class, db: Session) -> ClassResponse:
@@ -24,6 +29,7 @@ def serialize_class(cls: Class, db: Session) -> ClassResponse:
     student_count = db.query(ClassEnrollment).filter(ClassEnrollment.class_id == cls.id).count()
     assignment_count = db.query(Assignment).filter(Assignment.class_id == cls.id).count()
     teacher_name = cls.teacher.full_name if cls.teacher else None
+    semester_name = cls.semester.name if cls.semester else None
 
     return ClassResponse(
         id=cls.id,
@@ -32,6 +38,8 @@ def serialize_class(cls: Class, db: Session) -> ClassResponse:
         join_code=cls.join_code,
         teacher_id=cls.teacher_id,
         teacher_name=teacher_name,
+        semester_id=cls.semester_id,
+        semester_name=semester_name,
         student_count=student_count,
         assignment_count=assignment_count,
         created_at=cls.created_at,
@@ -51,7 +59,7 @@ def create_class(
     db: Session = Depends(get_db),
 ):
     """
-    Creates a new class with a name, optional description, and a unique join code.
+    Creates a new class with a name, optional description, optional semester_id, and a unique join code.
     Only authenticated teachers may create classes.
     """
     clean_name = payload.name.strip()
@@ -60,6 +68,17 @@ def create_class(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Class name cannot be empty.",
         )
+
+    # Validate semester_id if supplied
+    semester_id = None
+    if payload.semester_id:
+        sem = db.query(Semester).filter(Semester.id == payload.semester_id, Semester.teacher_id == teacher.id).first()
+        if not sem:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Semester with ID {payload.semester_id} not found or not owned by you.",
+            )
+        semester_id = sem.id
 
     # Generate a unique, non-guessable join code
     join_code = None
@@ -81,6 +100,7 @@ def create_class(
         description=payload.description.strip() if payload.description else None,
         join_code=join_code,
         teacher_id=teacher.id,
+        semester_id=semester_id,
     )
 
     db.add(new_class)
@@ -96,30 +116,30 @@ def create_class(
     summary="List classes for the current user",
 )
 def list_classes(
+    semester_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Lists classes:
-    - If Teacher: returns only classes owned by this teacher.
-    - If Student: returns only classes the student is enrolled in.
+    - If Teacher: returns classes owned by this teacher, optionally filtered by semester_id.
+    - If Student: returns classes the student is enrolled in, optionally filtered by semester_id.
     """
     if current_user.role == "teacher":
-        classes = (
-            db.query(Class)
-            .filter(Class.teacher_id == current_user.id)
-            .order_by(Class.created_at.desc())
-            .all()
-        )
+        query = db.query(Class).filter(Class.teacher_id == current_user.id)
+        if semester_id is not None:
+            query = query.filter(Class.semester_id == semester_id)
+        classes = query.order_by(Class.created_at.desc()).all()
     else:
         # Student enrolled classes
-        classes = (
+        query = (
             db.query(Class)
             .join(ClassEnrollment, Class.id == ClassEnrollment.class_id)
             .filter(ClassEnrollment.student_id == current_user.id)
-            .order_by(ClassEnrollment.enrolled_at.desc())
-            .all()
         )
+        if semester_id is not None:
+            query = query.filter(Class.semester_id == semester_id)
+        classes = query.order_by(ClassEnrollment.enrolled_at.desc()).all()
 
     return [serialize_class(c, db) for c in classes]
 
@@ -209,6 +229,18 @@ def update_class(
 
     if payload.description is not None:
         cls.description = payload.description.strip() if payload.description else None
+
+    if payload.semester_id is not None:
+        if payload.semester_id == 0:
+            cls.semester_id = None
+        else:
+            sem = db.query(Semester).filter(Semester.id == payload.semester_id, Semester.teacher_id == teacher.id).first()
+            if not sem:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Semester with ID {payload.semester_id} not found or not owned by you.",
+                )
+            cls.semester_id = sem.id
 
     db.commit()
     db.refresh(cls)
@@ -346,3 +378,102 @@ def list_class_students(
         )
 
     return results
+
+
+@router.get(
+    "/{id}/subjects",
+    response_model=List[SubjectResponse],
+    summary="List subjects for a class",
+)
+def list_class_subjects(
+    id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves all subjects belonging to the specified class.
+    - Teachers can only view subjects for classes they own.
+    - Students can only view subjects for classes they are enrolled in.
+    """
+    cls = db.query(Class).filter(Class.id == id).first()
+    if not cls:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {id} not found.",
+        )
+
+    if current_user.role == "teacher":
+        if cls.teacher_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not own this class.",
+            )
+    else:
+        enrollment = (
+            db.query(ClassEnrollment)
+            .filter(
+                ClassEnrollment.class_id == id,
+                ClassEnrollment.student_id == current_user.id,
+            )
+            .first()
+        )
+        if not enrollment:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You are not enrolled in this class.",
+            )
+
+    subjects = db.query(Subject).filter(Subject.class_id == id).order_by(Subject.id.asc()).all()
+    return subjects
+
+
+@router.post(
+    "/{id}/subjects",
+    response_model=SubjectResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a subject to a class (Teacher only)",
+)
+def create_class_subject(
+    id: int,
+    payload: SubjectCreate,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a new subject associated with this class.
+    Only the teacher who owns the class can create subjects for it.
+    """
+    cls = db.query(Class).filter(Class.id == id).first()
+    if not cls:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {id} not found.",
+        )
+
+    if cls.teacher_id != teacher.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You can only add subjects to classes you own.",
+        )
+
+    clean_name = payload.name.strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Subject name cannot be empty.",
+        )
+
+    # Check for duplicate subject in same class
+    existing = db.query(Subject).filter(
+        Subject.class_id == id,
+        func.lower(Subject.name) == clean_name.lower(),
+    ).first()
+    if existing:
+        return existing
+
+    new_subject = Subject(name=clean_name, class_id=id)
+    db.add(new_subject)
+    db.commit()
+    db.refresh(new_subject)
+    return new_subject
+

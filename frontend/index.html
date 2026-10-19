@@ -49,6 +49,28 @@
             </a>
           </li>
           <li class="nav-item">
+            <a href="#semesters" class="nav-link" data-nav="semesters" id="navSemesters">
+              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                <line x1="16" x2="16" y1="2" y2="6"></line>
+                <line x1="8" x2="8" y1="2" y2="6"></line>
+                <line x1="3" x2="21" y1="10" y2="10"></line>
+                <path d="m9 16 2 2 4-4"></path>
+              </svg>
+              <span id="navTextSemesters">Semesters</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#classes" class="nav-link" data-nav="classes" id="sidebarClassesLink">
+              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                <path d="M6 6h10"></path>
+                <path d="M6 10h10"></path>
+              </svg>
+              <span id="navTextClasses">Subjects</span>
+            </a>
+          </li>
+          <li class="nav-item">
             <a href="#assignments" class="nav-link" data-nav="assignments" id="navAssignments">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="16" height="20" x="4" y="2" rx="2"></rect>
@@ -60,46 +82,38 @@
             </a>
           </li>
           <li class="nav-item">
-            <a href="#classes" class="nav-link" data-nav="classes" id="sidebarClassesLink">
-              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-                <path d="M6 6h10"></path>
-                <path d="M6 10h10"></path>
-              </svg>
-              <span id="navTextClasses">Classes</span>
-            </a>
-          </li>
-          <li class="nav-item">
             <a href="#submissions" class="nav-link" data-nav="submissions" id="navSubmissions">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
-              <span id="navTextSubmissions">Submissions</span>
+              <span id="navTextSubmissions">Students</span>
             </a>
           </li>
           <li class="nav-item">
-            <a href="#calendar" class="nav-link" data-nav="calendar" id="navCalendar">
-              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-                <line x1="16" x2="16" y1="2" y2="6"></line>
-                <line x1="8" x2="8" y1="2" y2="6"></line>
-                <line x1="3" x2="21" y1="10" y2="10"></line>
-              </svg>
-              <span>Calendar</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#analytics" class="nav-link" data-nav="analytics" id="navAnalytics">
+            <a href="#reports" class="nav-link" data-nav="reports" id="navReports">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="20" x2="18" y2="10"></line>
                 <line x1="12" y1="20" x2="12" y2="4"></line>
                 <line x1="6" y1="20" x2="6" y2="14"></line>
               </svg>
+              <span id="navTextReports">Reports</span>
+            </a>
+          </li>
+          <li class="nav-item" style="display: none;">
+            <a href="#analytics" class="nav-link" data-nav="analytics" id="navAnalytics">
               <span id="navTextAnalytics">Analytics</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#calendar" class="nav-link" data-nav="calendar" id="navCalendar">
+              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+              </svg>
+              <span id="navTextNotifications">Notifications</span>
             </a>
           </li>
           <li class="nav-item">
@@ -141,63 +155,96 @@
     <div class="main-wrapper">
       
       <!-- BEGIN COMPONENT: components/navbar.html -->
-<!-- Top Bar -->
+<!-- Top Navigation Bar -->
       <header class="top-bar">
-        <div class="top-bar-left">
-          <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle Navigation Menu">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-          
-          <div class="global-search-box">
-            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="globalSearchInput" placeholder="Search assignments, subjects..." aria-label="Search assignments">
-          </div>
-        </div>
-
-        <div class="top-bar-right">
-          <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="1 unread notification">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-            </svg>
-            <span class="notification-badge">1</span>
-          </button>
-
-          <!-- Profile / Account Dropdown -->
-          <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
-            <button class="profile-avatar-btn" id="profileBtn" title="Account profile" aria-label="Account profile" aria-expanded="false">
-              <span id="profileAvatarText">?</span>
-            </button>
-            <div class="profile-dropdown-menu" id="profileMenu" style="display: none;">
-              <div class="profile-menu-header">
-                <div class="profile-menu-avatar" id="profileMenuAvatar">?</div>
-                <div class="profile-menu-details">
-                  <div class="profile-menu-name" id="profileMenuName">Loading...</div>
-                  <div class="profile-menu-email" id="profileMenuEmail"></div>
-                  <span class="role-badge" id="profileMenuRole">User</span>
-                </div>
-              </div>
-              <div class="profile-menu-divider"></div>
-              <button class="profile-menu-item" id="menuSwitchAccountBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span>Switch / Sign In</span>
-              </button>
-              <button class="profile-menu-item profile-menu-danger" id="menuLogoutBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-                <span>Log Out</span>
-              </button>
+        <div class="top-bar-container">
+          <!-- Left: Brand Logo & Product Name -->
+          <div class="top-nav-brand" onclick="navigateToView('dashboard')" style="cursor: pointer;" title="AssignFlow Dashboard">
+            <div class="brand-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                <path d="M6 6h10"></path>
+                <path d="M6 10h10"></path>
+                <path d="M6 14h6"></path>
+              </svg>
             </div>
+            <span class="brand-name">AssignFlow</span>
+          </div>
+
+          <!-- Center: Horizontal Top Navigation Links (Desktop) -->
+          <nav class="top-nav-links" id="topNavLinks" aria-label="Main Navigation">
+            <a href="#dashboard" class="nav-link active" data-nav="dashboard">Dashboard</a>
+            <a href="#semesters" class="nav-link" data-nav="semesters">Semesters</a>
+            <a href="#classes" class="nav-link" data-nav="classes">Classes</a>
+            <a href="#assignments" class="nav-link" data-nav="assignments">Assignments</a>
+            <a href="#submissions" class="nav-link" data-nav="submissions">Submissions</a>
+            <a href="#reports" class="nav-link" data-nav="reports">Reports</a>
+          </nav>
+
+          <!-- Right: Search, Notifications, Profile, Mobile Hamburger -->
+          <div class="top-bar-right">
+            <!-- Search Box -->
+            <div class="global-search-box">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="globalSearchInput" placeholder="Search assignments, classes, students..." aria-label="Search assignments">
+            </div>
+
+            <!-- Notification Button -->
+            <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications" onclick="navigateToView('calendar')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+              </svg>
+              <span class="dash-icon-badge-dot"></span>
+            </button>
+
+            <!-- Profile / Account Dropdown -->
+            <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
+              <button class="profile-avatar-btn" id="profileBtn" title="Account profile" aria-label="Account profile" aria-expanded="false">
+                <span id="profileAvatarText">R</span>
+              </button>
+              <div class="profile-dropdown-menu" id="profileMenu" style="display: none;">
+                <div class="profile-menu-header">
+                  <div class="profile-menu-avatar" id="profileMenuAvatar">R</div>
+                  <div class="profile-menu-details">
+                    <div class="profile-menu-name" id="profileMenuName">Rishi</div>
+                    <div class="profile-menu-email" id="profileMenuEmail"></div>
+                    <span class="role-badge" id="profileMenuRole">Teacher</span>
+                  </div>
+                </div>
+                <div class="profile-menu-divider"></div>
+                <button class="profile-menu-item" onclick="navigateToView('settings')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                  <span>Settings</span>
+                </button>
+                <button class="profile-menu-item" id="menuSwitchAccountBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Switch / Sign In</span>
+                </button>
+                <button class="profile-menu-item profile-menu-danger" id="menuLogoutBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle Navigation Menu">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
           </div>
         </div>
       </header>
@@ -216,8 +263,8 @@
             <div class="dash-hero-left">
               <span class="dash-greeting-label" id="dashGreeting">Good morning,</span>
               <div class="dash-name-role-row">
-                <h1 class="dash-greeting-name" id="dashUserName">Rishi Jha</h1>
-                <span class="dash-role-pill teacher" id="dashRolePill">
+                <h1 class="dash-greeting-name" id="dashUserName">Rishi</h1>
+                <span class="dash-role-pill teacher" id="dashRolePill" style="display: none;">
                   <svg class="role-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -225,7 +272,7 @@
                   <span id="dashRolePillText">Teacher</span>
                 </span>
               </div>
-              <p class="dash-hero-desc" id="dashSubtitle">Manage your classes, create assignments and track student progress.</p>
+              <p class="dash-hero-desc" id="dashSubtitle">Here's an overview of your semester.</p>
             </div>
             <div class="dash-hero-right">
               <button class="btn btn-primary dash-hero-cta" id="dashHeroCtaBtn">
@@ -233,7 +280,7 @@
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                <span id="dashHeroCtaText">Create Assignment</span>
+                <span id="dashHeroCtaText">+ Create Assignment</span>
               </button>
             </div>
           </div>
@@ -243,48 +290,285 @@
             <!-- Populated dynamically via renderDashboard() -->
           </section>
 
-          <!-- Middle Row: 2 Columns (60% / 40%) -->
-          <section class="dash-cards-grid dash-mid-row">
-            <!-- Left: Recent Submissions (Teacher) / Upcoming Assignments (Student) -->
-            <div class="dash-box-card" id="dashMidLeftCard">
-              <!-- Dynamically populated -->
-            </div>
-            <!-- Right: Submissions Overview (Teacher) / Submission Status (Student) -->
-            <div class="dash-box-card" id="dashMidRightCard">
-              <!-- Dynamically populated -->
-            </div>
+          <!-- Middle Row: 3 Columns (Subjects, Activity, Dark Panel) -->
+          <section class="dash-cards-grid dash-mid-row" id="dashMidSection">
+            <!-- Left: My Subjects (Teacher) / Upcoming Assignments (Student) -->
+            <div class="dash-box-card" id="dashMidLeftCard"></div>
+            <!-- Center: Submission Activity (Teacher) / Donut Overview (Student) -->
+            <div class="dash-box-card" id="dashMidCenterCard"></div>
+            <!-- Right: Upcoming Deadlines & Quick Actions (Dark Contrast Charcoal Panel) -->
+            <div class="dash-box-card dark-panel" id="dashMidRightCard"></div>
           </section>
 
-          <!-- Bottom Row: 2 Columns (50% / 50%) -->
-          <section class="dash-cards-grid dash-bottom-row">
-            <!-- Left: My Classes (Teacher) / Recently Submitted (Student) -->
-            <div class="dash-box-card" id="dashBottomLeftCard">
-              <!-- Dynamically populated -->
-            </div>
-            <!-- Right: Upcoming Deadlines (Teacher) / My Classes (Student) -->
-            <div class="dash-box-card" id="dashBottomRightCard">
-              <!-- Dynamically populated -->
-            </div>
+          <!-- Bottom Row: 3 Columns (Recent Submissions, Grading Queue, Timeline) -->
+          <section class="dash-cards-grid dash-bottom-row" id="dashBottomSection">
+            <!-- Left: Recent Submissions -->
+            <div class="dash-box-card" id="dashBottomLeftCard"></div>
+            <!-- Center: Grading Queue (Teacher) / Recently Submitted (Student) -->
+            <div class="dash-box-card" id="dashBottomCenterCard"></div>
+            <!-- Right: Semester Timeline (Teacher) / My Classes (Student) -->
+            <div class="dash-box-card" id="dashBottomRightCard"></div>
           </section>
 
-          <!-- Full Width Section (Quick Actions for Teacher / Keep Going for Student) -->
-          <section class="dash-fullwidth-wrap" id="dashFullWidthWrap">
-            <!-- Dynamically populated -->
-          </section>
+          <!-- Full Width Section (Auxiliary / Tests) -->
+          <section class="dash-fullwidth-wrap" id="dashFullWidthWrap" style="display: none;"></section>
         </div>
 <!-- END COMPONENT: pages/dashboard.html -->
+
+        <!-- BEGIN COMPONENT: pages/semesters.html -->
+<!-- ================================================================ -->
+<!-- SEMESTERS VIEW (Warm Neumorphic Redesign matching Reference)     -->
+<!-- ================================================================ -->
+<div id="semestersView" class="page-view semesters-view-content" style="display: none;">
+  <!-- Ambient Warm Glow Background Decoration -->
+  <div class="semesters-ambient-glow" aria-hidden="true"></div>
+
+  <!-- Page Header Row -->
+  <div class="semesters-header-row">
+    <div class="semesters-header-left">
+      <h1 class="semesters-page-title">Semesters</h1>
+      <p class="semesters-page-subtitle">Create and manage your academic semesters.</p>
+    </div>
+    <div class="semesters-header-actions">
+      <button class="sem-btn-create-top" id="btnOpenCreateSemester" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Create Semester</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 4 Summary KPI Cards Row -->
+  <section class="sem-kpi-grid" aria-label="Semester KPI Statistics">
+    <!-- Card 1: Total Semesters -->
+    <div class="sem-kpi-card" id="semKpiCardTotal">
+      <div class="sem-kpi-icon-wrap icon-amber">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" x2="16" y1="2" x2="6"/>
+          <line x1="8" x2="8" y1="2" x2="6"/>
+          <line x1="3" x2="21" y1="10" x2="10"/>
+        </svg>
+      </div>
+      <div class="sem-kpi-info">
+        <div class="sem-kpi-value" id="semKpiTotalCount">0</div>
+        <div class="sem-kpi-label">Total Semesters</div>
+      </div>
+      <button class="sem-kpi-arrow-btn" type="button" aria-label="View all semesters" onclick="filterSemestersByStatus('all')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+
+    <!-- Card 2: Active Semester -->
+    <div class="sem-kpi-card" id="semKpiCardActive">
+      <div class="sem-kpi-icon-wrap icon-green">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+      <div class="sem-kpi-info">
+        <div class="sem-kpi-value" id="semKpiActiveCount">0</div>
+        <div class="sem-kpi-label">Active Semester</div>
+      </div>
+      <button class="sem-kpi-arrow-btn" type="button" aria-label="Filter active semesters" onclick="filterSemestersByStatus('active')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+
+    <!-- Card 3: Upcoming -->
+    <div class="sem-kpi-card" id="semKpiCardUpcoming">
+      <div class="sem-kpi-icon-wrap icon-neutral">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div class="sem-kpi-info">
+        <div class="sem-kpi-value" id="semKpiUpcomingCount">0</div>
+        <div class="sem-kpi-label">Upcoming</div>
+      </div>
+      <button class="sem-kpi-arrow-btn" type="button" aria-label="Filter upcoming semesters" onclick="filterSemestersByStatus('upcoming')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+
+    <!-- Card 4: Completed -->
+    <div class="sem-kpi-card" id="semKpiCardCompleted">
+      <div class="sem-kpi-icon-wrap icon-coral">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="21 8 21 21 3 21 3 8"></polyline>
+          <rect width="22" height="5" x="1" y="3"></rect>
+          <line x1="10" y1="12" x2="14" y2="12"></line>
+        </svg>
+      </div>
+      <div class="sem-kpi-info">
+        <div class="sem-kpi-value" id="semKpiCompletedCount">0</div>
+        <div class="sem-kpi-label">Completed</div>
+      </div>
+      <button class="sem-kpi-arrow-btn" type="button" aria-label="Filter completed semesters" onclick="filterSemestersByStatus('completed')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Create New Semester Section Card -->
+  <div class="sem-section-card" id="createSemesterSection">
+    <div class="sem-section-header">
+      <div class="sem-section-header-left">
+        <div class="sem-header-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" x2="16" y1="2" x2="6"/>
+            <line x1="8" x2="8" y1="2" x2="6"/>
+            <line x1="3" x2="21" y1="10" x2="10"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="sem-section-title">Create New Semester</h2>
+          <p class="sem-section-subtitle">Add a new academic semester to organize your classes and assignments.</p>
+        </div>
+      </div>
+    </div>
+
+    <form id="createSemesterInlineForm" class="sem-create-form" onsubmit="return false;">
+      <div class="sem-form-grid">
+        <!-- Row 1, Col 1: Semester Name -->
+        <div class="sem-form-group">
+          <label for="newSemName" class="sem-form-label">Semester Name <span class="required-star">*</span></label>
+          <div class="sem-input-wrapper">
+            <svg class="sem-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M6 6h10"></path>
+              <path d="M6 10h10"></path>
+            </svg>
+            <input type="text" id="newSemName" class="sem-input" placeholder="e.g. Semester 7, Spring 2026" required maxlength="100">
+          </div>
+        </div>
+
+        <!-- Row 1, Col 2: Academic Year -->
+        <div class="sem-form-group">
+          <label for="newSemYear" class="sem-form-label">Academic Year <span class="required-star">*</span></label>
+          <div class="sem-input-wrapper">
+            <svg class="sem-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+            </svg>
+            <select id="newSemYear" class="sem-select" required>
+              <option value="2026 - 2027" selected>2026 - 2027</option>
+              <option value="2025 - 2026">2025 - 2026</option>
+              <option value="2024 - 2025">2024 - 2025</option>
+              <option value="2023 - 2024">2023 - 2024</option>
+            </select>
+            <svg class="sem-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+
+        <!-- Row 2, Col 1: Start Date -->
+        <div class="sem-form-group">
+          <label for="newSemStartDate" class="sem-form-label">Start Date <span class="required-star">*</span></label>
+          <div class="sem-input-wrapper">
+            <svg class="sem-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" x2="6"/>
+              <line x1="8" x2="8" y1="2" x2="6"/>
+              <line x1="3" x2="21" y1="10" x2="10"/>
+            </svg>
+            <input type="date" id="newSemStartDate" class="sem-input sem-date-input" required>
+          </div>
+        </div>
+
+        <!-- Row 2, Col 2: End Date -->
+        <div class="sem-form-group">
+          <label for="newSemEndDate" class="sem-form-label">End Date <span class="required-star">*</span></label>
+          <div class="sem-input-wrapper">
+            <svg class="sem-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" x2="6"/>
+              <line x1="8" x2="8" y1="2" x2="6"/>
+              <line x1="3" x2="21" y1="10" x2="10"/>
+            </svg>
+            <input type="date" id="newSemEndDate" class="sem-input sem-date-input" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="sem-form-actions-row">
+        <button type="button" class="sem-btn-cancel" id="btnCancelCreateSemester">Cancel</button>
+        <button type="submit" class="sem-btn-submit" id="btnSubmitCreateSemester">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Create Semester</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Existing Semesters Section Card -->
+  <div class="sem-section-card" id="existingSemestersSection">
+    <div class="sem-section-header sem-table-header-row">
+      <div class="sem-section-header-left">
+        <div class="sem-header-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" x2="16" y1="2" x2="6"/>
+            <line x1="8" x2="8" y1="2" x2="6"/>
+            <line x1="3" x2="21" y1="10" x2="10"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="sem-section-title">Existing Semesters</h2>
+          <p class="sem-section-subtitle">View and manage all academic semesters.</p>
+        </div>
+      </div>
+
+      <!-- Search & Status Filter Toolbar -->
+      <div class="sem-table-toolbar">
+        <div class="sem-search-box">
+          <svg class="sem-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="semestersSearchInput" placeholder="Search semesters..." aria-label="Search semesters">
+        </div>
+        <div class="sem-filter-wrapper">
+          <select id="semestersStatusFilter" aria-label="Filter semesters by status">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="completed">Completed</option>
+            <option value="archived">Archived</option>
+          </select>
+          <svg class="sem-filter-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semesters Table / Dynamic List Container -->
+    <div class="semesters-list-container" id="semestersListContainer">
+      <!-- Populated dynamically via loadSemestersPageView() -->
+    </div>
+  </div>
+</div>
+<!-- END COMPONENT: pages/semesters.html -->
 
         <!-- BEGIN COMPONENT: pages/assignments.html -->
 <!-- ================================================================ -->
         <!-- ASSIGNMENTS TABLE VIEW (Preserved Full CRUD & Submissions)       -->
         <!-- ================================================================ -->
         <div id="assignmentsView" class="page-view assignments-view-content" style="display: none;">
-          <!-- Page Title & Primary Action -->
-          <div class="page-header-row">
-            <div>
-              <h1 class="page-title" id="assignmentsPageTitle">Assignments</h1>
-              <p class="page-subtitle" id="assignmentsPageSubtitle">Create, manage and track all your assignments in one place.</p>
-            </div>
+          <!-- Page Title Block -->
+          <div class="assignments-header-block">
+            <h1 class="page-title" id="assignmentsPageTitle">Assignments</h1>
+            <p class="page-subtitle" id="assignmentsPageSubtitle">Create, manage and track all your assignments in one place.</p>
+          </div>
+
+          <!-- Dedicated Action Row (My Classes & + Create Assignment) -->
+          <div class="assignments-actions-row">
             <div class="header-actions-group">
               <button class="btn btn-secondary class-action-btn" id="openClassesModalBtn" title="Class Management">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -292,7 +576,7 @@
                   <path d="M6 6h10"></path>
                   <path d="M6 10h10"></path>
                 </svg>
-                <span id="classesBtnText">Classes</span>
+                <span id="classesBtnText">My Classes</span>
               </button>
               <button class="btn btn-primary create-btn" id="openCreateDrawerBtn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -479,12 +763,12 @@
         <!-- ================================================================ -->
         <div id="classesView" class="page-view classes-view-content" style="display: none;">
           <div class="page-header-row">
-            <div>
-              <h1 class="page-title" id="classesPageTitle">Classes</h1>
-              <p class="page-subtitle" id="classesPageSubtitle">Manage and explore your enrolled courses and classrooms.</p>
+            <div class="page-header-left">
+              <h1 class="page-title" id="classesPageTitle">Classes &amp; Subjects</h1>
+              <p class="page-subtitle" id="classesPageSubtitle">Manage your course subjects, share join codes with students, and track subject-level performance.</p>
             </div>
             <div class="header-actions-group" id="classesPageActions">
-              <button class="btn btn-primary" id="classesPageActionBtn">
+              <button class="btn btn-primary" id="classesPageActionBtn" type="button">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -573,6 +857,103 @@
           </section>
         </div>
 <!-- END COMPONENT: pages/submissions.html -->
+
+        <!-- BEGIN COMPONENT: pages/reports.html -->
+<!-- ================================================================ -->
+<!-- SEMESTER REPORT VIEW (Screen 5 Reference)                        -->
+<!-- ================================================================ -->
+<div id="reportsView" class="page-view reports-view-content" style="display: none;">
+  <!-- Breadcrumbs -->
+  <nav class="academic-breadcrumbs" aria-label="Breadcrumb">
+    <ol class="breadcrumb-list">
+      <li class="breadcrumb-item"><a href="#dashboard">Reports</a></li>
+      <li class="breadcrumb-separator">›</li>
+      <li class="breadcrumb-item active" id="reportBreadcrumbCurrent">Semester Report</li>
+    </ol>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="page-header-row">
+    <div class="page-header-left">
+      <h1 class="page-title" id="reportTitle">Semester 5 – Performance Report</h1>
+      <p class="page-subtitle" id="reportSubtitle">Overall performance across all subjects.</p>
+    </div>
+    <div class="page-header-actions">
+      <button class="btn btn-secondary" id="btnExportSemesterCsv" type="button" title="Download sanitized CSV summary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Export CSV</span>
+      </button>
+      <button class="btn btn-primary" id="btnExportSemesterPdf" type="button" title="Print / Export Report">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>+ Export PDF</span>
+      </button>
+      <button class="btn btn-outline" id="btnFinalizeSemesterReport" type="button">
+        <span>Finalize Results</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Status / Audit Banner -->
+  <div class="report-status-banner" id="reportStatusBanner" style="display: none;">
+    <!-- Filled dynamically: Official Finalized or Provisional -->
+  </div>
+
+  <!-- 4 Summary Metrics Cards -->
+  <section class="dash-metrics-row report-metrics-grid" id="reportMetricsRow" aria-label="Semester Summary Metrics">
+    <!-- Populated dynamically via renderSemesterReport() -->
+  </section>
+
+  <!-- Bottom Visualizer Section: 2 Columns (60% / 40%) -->
+  <div class="report-charts-grid">
+    <!-- Left: Subject-wise Performance Comparison Chart -->
+    <div class="report-card chart-card" id="reportSubjectChartCard">
+      <div class="report-card-header">
+        <h2 class="report-card-title">Subject-wise Performance</h2>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-swatch swatch-avg"></span> Class Average</span>
+          <span class="legend-item"><span class="legend-swatch swatch-high"></span> Highest Score</span>
+        </div>
+      </div>
+      <div class="chart-container" id="reportSubjectChartContainer">
+        <!-- SVG / CSS Bar Chart generated from real API data -->
+      </div>
+    </div>
+
+    <!-- Right: Student-wise Performance (Top 5) -->
+    <div class="report-card table-card" id="reportTopStudentsCard">
+      <div class="report-card-header">
+        <h2 class="report-card-title">Student-wise Performance (Top 5)</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="academic-table" id="reportTopStudentsTable">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>Student Name</th>
+              <th>Overall %</th>
+              <th>Subjects</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="reportTopStudentsTbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END COMPONENT: pages/reports.html -->
 
         <!-- BEGIN COMPONENT: pages/calendar.html -->
 <!-- ================================================================ -->
@@ -668,7 +1049,7 @@
                 <div class="avatar-circle" id="settingsAvatar" style="width: 56px; height: 56px; font-size: 1.25rem;">?</div>
                 <div class="settings-profile-info">
                   <h3 id="settingsFullName" style="font-size: 1.2rem; font-weight: 700;">Loading...</h3>
-                  <p id="settingsEmail" style="color: #64748b; font-size: 0.875rem;">user@example.com</p>
+                  <p id="settingsEmail" style="color: var(--text-secondary); font-size: 0.875rem;">user@example.com</p>
                   <span class="dash-role-pill teacher" id="settingsRoleBadge" style="margin-top: 0.35rem;">Role</span>
                 </div>
               </div>
@@ -679,7 +1060,7 @@
                 </div>
                 <div class="settings-detail-item">
                   <span class="settings-lbl">Account Status:</span>
-                  <span class="settings-val" style="color: #10b981; font-weight: 600;">Active</span>
+                  <span class="settings-val" style="color: var(--success); font-weight: 600;">Active</span>
                 </div>
               </div>
             </div>
@@ -703,8 +1084,8 @@
 
               <div class="settings-toggle-row">
                 <div>
-                  <span style="font-weight: 600; color: #1e293b; display: block; font-size: 0.9rem;">Deadline Reminders</span>
-                  <p style="color: #64748b; font-size: 0.8rem; margin-top: 0.15rem;">Show deadline countdown chips for assignments due soon.</p>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Deadline Reminders</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Show deadline countdown chips for assignments due soon.</p>
                 </div>
                 <input type="checkbox" id="settingsReminderToggle" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
               </div>
@@ -719,7 +1100,7 @@
               <div class="dash-card-header">
                 <h2 class="dash-card-title">Session & Security</h2>
               </div>
-              <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">Active session authenticated with secure HTTP cookies.</p>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Active session authenticated with secure HTTP cookies.</p>
               <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <button class="btn btn-danger" id="settingsLogoutBtn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -741,127 +1122,263 @@
   </div>
 
   <!-- BEGIN COMPONENT: components/assignment-drawer.html -->
-<!-- Create / Edit Assignment Right-Side Drawer Panel -->
-  <div class="drawer-overlay" id="drawerOverlay"></div>
-  <aside class="drawer-panel" id="assignmentDrawer" aria-labelledby="drawerTitle" role="dialog" aria-modal="true">
-    <div class="drawer-header">
-      <h2 class="drawer-title" id="drawerTitle">Create New Assignment</h2>
-      <button class="drawer-close-btn" id="drawerCloseBtn" aria-label="Close drawer">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+<!-- Create / Edit Assignment Modal Dialog -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<aside class="drawer-panel" id="assignmentDrawer" aria-labelledby="drawerTitle" role="dialog" aria-modal="true">
+  <div class="drawer-header">
+    <div class="drawer-header-content">
+      <h2 class="drawer-title" id="drawerTitle">Create Assignment</h2>
+      <div class="drawer-subtitle" id="drawerSubtitle" style="display: none;"></div>
+    </div>
+    <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Close dialog">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <form class="drawer-form" id="assignmentForm" novalidate>
+    <input type="hidden" id="assignmentId" value="">
+    <input type="hidden" id="formSemesterId" value="">
+    <input type="hidden" id="formStatus" value="active">
+
+    <!-- Row 1: Class and Semester side by side -->
+    <div class="form-row-2col">
+      <!-- Class -->
+      <div class="form-group" id="formClassGroup">
+        <label for="formClass" class="form-label">Class <span class="required">*</span></label>
+        <div class="select-wrapper select-full input-with-icon-wrapper">
+          <select id="formClass" class="form-input" required>
+            <option value="" disabled selected>Select class</option>
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          <span class="input-lock-icon" id="classLockIcon" style="display: none;" title="Class is locked based on page context">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
+        </div>
+        <div class="field-error" id="classError"></div>
+      </div>
+
+      <!-- Semester (Read-only derived context) -->
+      <div class="form-group" id="formSemesterGroup">
+        <label for="formSemesterDisplay" class="form-label">Semester</label>
+        <div class="input-with-icon-wrapper">
+          <input type="text" id="formSemesterDisplay" class="form-input form-input-readonly" readonly placeholder="Derived from class" value="">
+          <span class="input-lock-icon" id="semesterLockIcon" style="display: none;" title="Derived from class context">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
+        </div>
+      </div>
     </div>
 
-    <form class="drawer-form" id="assignmentForm" novalidate>
-      <input type="hidden" id="assignmentId" value="">
+    <!-- Row 2: Subject -->
+    <div class="form-group">
+      <label for="formSubject" class="form-label">Subject <span class="required">*</span></label>
+      <div class="select-wrapper select-full input-with-icon-wrapper">
+        <select id="formSubject" class="form-input" required>
+          <option value="" disabled selected>Select a class first</option>
+        </select>
+        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        <span class="input-lock-icon" id="subjectLockIcon" style="display: none;" title="Subject is locked based on page context">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </span>
+      </div>
+      <div id="subjectEmptyState" style="display: none; margin-top: 0.5rem; font-size: 0.85rem; color: var(--danger); align-items: center; justify-content: space-between;">
+        <span>No subjects added to this class yet.</span>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnDrawerAddSubject" style="margin-left: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem;">+ Add Subject</button>
+      </div>
+      <div class="field-error" id="subjectError"></div>
+    </div>
 
-      <!-- Title -->
+    <!-- Custom Subject Input (fallback if needed) -->
+    <div class="form-group" id="customSubjectGroup" style="display: none;">
+      <label for="formCustomSubject" class="form-label">Custom Subject Name</label>
+      <input type="text" id="formCustomSubject" class="form-input" placeholder="Enter subject name">
+    </div>
+
+    <!-- Row 3: Assignment Title -->
+    <div class="form-group">
+      <label for="formTitle" class="form-label">Assignment Title <span class="required">*</span></label>
+      <input type="text" id="formTitle" class="form-input" placeholder="Enter assignment title (e.g., Unit 1 — Lexical Analysis)" required maxlength="200">
+      <div class="field-error" id="titleError"></div>
+    </div>
+
+    <!-- Row 4: Unit / Assessment -->
+    <div class="form-group">
+      <label for="formUnit" class="form-label">Unit / Assessment</label>
+      <div class="select-wrapper select-full">
+        <select id="formUnit" class="form-input">
+          <option value="Unit 1" selected>Unit 1</option>
+          <option value="Unit 2">Unit 2</option>
+          <option value="Unit 3">Unit 3</option>
+          <option value="Unit 4">Unit 4</option>
+          <option value="Unit 5">Unit 5</option>
+          <option value="Assignment">Assignment</option>
+          <option value="Project">Project</option>
+          <option value="Quiz / Test">Quiz / Test</option>
+        </select>
+        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+    </div>
+
+    <!-- Row 5: Description / Instructions -->
+    <div class="form-group">
+      <label for="formDescription" class="form-label">Description / Instructions</label>
+      <textarea id="formDescription" class="form-textarea" rows="4" placeholder="Add detailed instructions, questions, or guidelines for students..." maxlength="5000"></textarea>
+      <div class="form-helper-text">Plain-text formatting with preserved line breaks. Instructions are required if no question PDF is attached.</div>
+      <div class="field-error" id="descriptionError"></div>
+    </div>
+
+    <!-- Row 6: Maximum Marks & Due Date & Time -->
+    <div class="form-row-2col">
+      <!-- Maximum Marks -->
       <div class="form-group">
-        <label for="formTitle" class="form-label">Title <span class="required">*</span></label>
-        <input type="text" id="formTitle" class="form-input" placeholder="Enter assignment title" required>
-        <div class="field-error" id="titleError"></div>
+        <label for="formMaxMarks" class="form-label">Maximum Marks <span class="required">*</span></label>
+        <input type="number" id="formMaxMarks" class="form-input" placeholder="Enter maximum marks (e.g., 20)" min="0.01" max="1000" step="0.01" required>
+        <div class="field-error" id="maxMarksError"></div>
       </div>
 
-      <!-- Subject -->
+      <!-- Due Date & Time -->
       <div class="form-group">
-        <label for="formSubject" class="form-label">Subject <span class="required">*</span></label>
-        <div class="select-wrapper select-full">
-          <select id="formSubject" class="form-input" required>
-            <option value="" disabled selected>Select subject</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Mathematics">Mathematics</option>
-            <option value="Science">Science</option>
-            <option value="Design">Design</option>
-            <option value="Other">Other</option>
-          </select>
-          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        <label for="formDueDate" class="form-label">Due Date & Time <span class="required">*</span> <span class="tz-label" id="dueDateTzLabel">(IST)</span></label>
+        <div class="input-with-icon-wrapper">
+          <input type="datetime-local" id="formDueDate" class="form-input" required>
         </div>
-        <div class="field-error" id="subjectError"></div>
-      </div>
-
-      <!-- Publish to Class -->
-      <div class="form-group" id="formClassGroup">
-        <label for="formClass" class="form-label">Publish to Class</label>
-        <div class="select-wrapper select-full">
-          <select id="formClass" class="form-input">
-            <option value="">General / Unassigned</option>
-          </select>
-          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-        </div>
-      </div>
-
-      <!-- Custom Subject Input (if Other selected) -->
-      <div class="form-group" id="customSubjectGroup" style="display: none;">
-        <label for="formCustomSubject" class="form-label">Custom Subject Name</label>
-        <input type="text" id="formCustomSubject" class="form-input" placeholder="Enter subject name">
-      </div>
-
-      <!-- Description -->
-      <div class="form-group">
-        <label for="formDescription" class="form-label">Description</label>
-        <textarea id="formDescription" class="form-textarea" rows="4" placeholder="Add a detailed description..."></textarea>
-      </div>
-
-      <!-- Question PDF File Upload -->
-      <div class="form-group">
-        <label for="formPdf" class="form-label">
-          Assignment Question PDF <span class="required" id="pdfRequiredStar">*</span>
-        </label>
-        <div class="file-dropzone" id="fileDropzone">
-          <input type="file" id="formPdf" class="file-input-hidden" accept="application/pdf,.pdf">
-          <div class="dropzone-content" id="dropzoneContent">
-            <svg class="dropzone-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-            <span class="dropzone-text" id="dropzoneText">Choose question PDF or drag & drop</span>
-            <span class="dropzone-hint">PDF document only (max 10MB)</span>
-          </div>
-        </div>
-        <div class="current-attachment-box" id="currentAttachmentBox" style="display: none;">
-          <div class="attachment-meta">
-            <span class="attachment-tag">PDF</span>
-            <span class="attachment-name" id="currentAttachmentName"></span>
-          </div>
-          <span class="attachment-note">Select a new PDF above to replace</span>
-        </div>
-        <div class="field-error" id="pdfError"></div>
-      </div>
-
-      <!-- Due Date -->
-      <div class="form-group">
-        <label for="formDueDate" class="form-label">Due Date <span class="required">*</span></label>
-        <input type="datetime-local" id="formDueDate" class="form-input" required>
         <div class="field-error" id="dueDateError"></div>
       </div>
+    </div>
 
-      <!-- Status -->
-      <div class="form-group">
-        <label for="formStatus" class="form-label">Status</label>
-        <div class="select-wrapper select-full">
-          <select id="formStatus" class="form-input">
-            <option value="active" selected>Active</option>
-            <option value="draft">Draft</option>
-            <option value="completed">Completed</option>
-          </select>
-          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+    <!-- Row 7: Question PDF File Upload -->
+    <div class="form-group">
+      <label for="formPdf" class="form-label">
+        Assignment Question PDF <span class="required" id="pdfRequiredStar" style="display: none;">*</span>
+      </label>
+      <div class="file-dropzone" id="fileDropzone" tabindex="0" role="button" aria-label="Upload question PDF">
+        <input type="file" id="formPdf" class="file-input-hidden" accept="application/pdf,.pdf">
+        <div class="dropzone-content" id="dropzoneContent">
+          <div class="dropzone-badge-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="12" x2="12" y2="18"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <div class="dropzone-text-group">
+            <span class="dropzone-main-text" id="dropzoneText">Choose question PDF or drag & drop</span>
+            <span class="dropzone-sub-text">PDF only (max 10MB)</span>
+          </div>
         </div>
       </div>
 
-      <!-- Form Action Buttons -->
-      <div class="drawer-actions">
-        <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">
-          <span class="btn-spinner" id="submitSpinner" style="display: none;"></span>
-          <span id="submitBtnText">Create Assignment</span>
+      <!-- Selected file preview card with remove action -->
+      <div class="selected-file-card" id="selectedFileCard" style="display: none;">
+        <div class="selected-file-info">
+          <span class="file-icon-pdf">PDF</span>
+          <div class="file-details">
+            <span class="selected-file-name" id="selectedFileName">filename.pdf</span>
+            <span class="selected-file-size" id="selectedFileSize">2.4 MB</span>
+          </div>
+        </div>
+        <button type="button" class="btn-remove-file" id="removeAttachmentBtn" aria-label="Remove selected PDF">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Remove
         </button>
       </div>
-    </form>
-  </aside>
+
+      <div class="current-attachment-box" id="currentAttachmentBox" style="display: none;">
+        <div class="attachment-meta">
+          <span class="attachment-tag">Current PDF</span>
+          <span class="attachment-name" id="currentAttachmentName"></span>
+        </div>
+        <span class="attachment-note">Select a new PDF above to replace</span>
+      </div>
+      <div class="field-error" id="pdfError"></div>
+    </div>
+
+    <!-- Row 8: Policies (2 Policy Cards Side by Side) -->
+    <div class="form-row-2col policy-cards-row">
+      <!-- Late Submission Policy Card -->
+      <div class="policy-card">
+        <div class="policy-card-header">
+          <span class="policy-card-title">Late Submission Policy</span>
+          <span class="policy-info-icon" title="Accept late submissions with late marking, or reject all submissions after deadline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          </span>
+        </div>
+        <div class="policy-options">
+          <label class="policy-radio-label">
+            <input type="radio" id="lateReject" name="latePolicy" value="reject" checked>
+            <span class="policy-radio-custom"></span>
+            <div class="policy-radio-text-group">
+              <span class="policy-radio-text">Do not accept late submissions</span>
+              <span class="policy-radio-hint">Submissions close strictly at deadline</span>
+            </div>
+          </label>
+          <label class="policy-radio-label">
+            <input type="radio" id="lateAccept" name="latePolicy" value="accept">
+            <span class="policy-radio-custom"></span>
+            <div class="policy-radio-text-group">
+              <span class="policy-radio-text">Accept late submissions and mark them late</span>
+              <span class="policy-radio-hint">Submissions after deadline are accepted and marked late</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Student Resubmission Card -->
+      <div class="policy-card">
+        <div class="policy-card-header">
+          <span class="policy-card-title">Student Resubmission</span>
+          <span class="policy-info-icon" title="Require explicit teacher authorization or allow replacement of ungraded work before deadline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          </span>
+        </div>
+        <div class="policy-options">
+          <label class="policy-radio-label">
+            <input type="radio" id="resubApproval" name="resubmissionPolicy" value="approval_only" checked>
+            <span class="policy-radio-custom"></span>
+            <div class="policy-radio-text-group">
+              <span class="policy-radio-text">Only allow resubmission with teacher approval</span>
+              <span class="policy-radio-hint">Requires teacher authorization from SpeedGrader</span>
+            </div>
+          </label>
+          <label class="policy-radio-label">
+            <input type="radio" id="resubUntilDue" name="resubmissionPolicy" value="until_due">
+            <span class="policy-radio-custom"></span>
+            <div class="policy-radio-text-group">
+              <span class="policy-radio-text">Allow resubmission until due date</span>
+              <span class="policy-radio-hint">Ungraded submissions can be replaced before deadline</span>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="drawer-actions">
+      <button type="button" class="btn btn-secondary" id="drawerCancelBtn">Cancel</button>
+      <button type="button" class="btn btn-draft" id="drawerDraftBtn">Save as Draft</button>
+      <button type="submit" class="btn btn-primary" id="drawerSubmitBtn">
+        <span class="btn-spinner" id="submitSpinner" style="display: none;"></span>
+        <span id="submitBtnText">Publish Assignment</span>
+      </button>
+    </div>
+  </form>
+</aside>
 <!-- END COMPONENT: components/assignment-drawer.html -->
 
   <!-- BEGIN COMPONENT: components/modals.html -->
@@ -938,11 +1455,11 @@
       <form id="signInForm" class="auth-form" novalidate>
         <div class="form-group">
           <label for="loginEmail" class="form-label">Email Address</label>
-          <input type="email" id="loginEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+          <input type="email" id="loginEmail" name="loginEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="username email" required>
         </div>
         <div class="form-group">
           <label for="loginPassword" class="form-label">Password</label>
-          <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
+          <input type="password" id="loginPassword" name="loginPassword" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
         </div>
         <button type="submit" class="btn btn-primary auth-submit-btn" id="loginSubmitBtn">
           <span class="btn-spinner" id="loginSpinner" style="display: none;"></span>
@@ -954,18 +1471,18 @@
       <form id="registerForm" class="auth-form" style="display: none;" novalidate>
         <div class="form-group">
           <label for="regFullName" class="form-label">Full Name</label>
-          <input type="text" id="regFullName" class="form-input" placeholder="e.g. Dr. Jane Smith" autocomplete="name" required>
+          <input type="text" id="regFullName" name="regFullName" class="form-input" placeholder="e.g. Dr. Jane Smith" autocomplete="off" required>
         </div>
         <div class="form-group">
           <label for="regEmail" class="form-label">Email Address</label>
-          <input type="email" id="regEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="email" required>
+          <input type="email" id="regEmail" name="regEmail" class="form-input" placeholder="teacher@college.edu" autocomplete="off" required>
         </div>
         <div class="form-group">
           <label for="regPassword" class="form-label">
             <span>Password</span>
             <span class="field-hint">(min 8 characters)</span>
           </label>
-          <input type="password" id="regPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password" required minlength="8">
+          <input type="password" id="regPassword" name="regPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password" required minlength="8">
         </div>
         
         <!-- Role Selector -->
@@ -1312,7 +1829,7 @@
         <div class="submissions-counter-banner">
           <div class="submissions-counter-info">
             <span>Submissions Received: <strong id="teacherSubmissionsCount">0</strong></span>
-            <span id="teacherSelectedCountBanner" style="display: none; margin-left: 0.75rem; color: var(--brand-primary, #4361ee); font-weight: 600;">
+            <span id="teacherSelectedCountBanner" style="display: none; margin-left: 0.75rem; color: var(--primary); font-weight: 600;">
               (<span id="teacherSelectedCount">0</span> selected)
             </span>
           </div>
@@ -1412,6 +1929,19 @@
           </button>
         </div>
         <div class="grading-header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="gradingSubmissionHistoryBtn" type="button" title="View Submission History &amp; Archived Attempts">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>History &amp; Attempts</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" id="gradingAuthorizeResubmissionBtn" type="button" title="Authorize Resubmission for Student">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+            <span>Authorize Resubmission</span>
+          </button>
           <a class="btn btn-secondary btn-sm" id="gradingDownloadBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1522,6 +2052,13 @@
             <div class="grading-release-container">
               <button class="btn btn-success" id="gradingReleaseSingleBtn" type="button" style="width: 100%;">
                 Release Grade to Student
+              </button>
+              <button class="btn btn-warning" id="gradingAuditCorrectBtn" type="button" style="width: 100%; margin-top: 0.5rem; display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem;">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Audit Correct
               </button>
               <p class="grading-release-hint">Released grades are visible immediately to the student.</p>
             </div>
@@ -1639,6 +2176,203 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 8. Correct Grade (Audit Trail) Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="auditCorrectModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="auditCorrectModalTitle">
+    <div class="modal-card workflow-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand" style="background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="auditCorrectModalTitle">Correct Grade (Audit Trail)</h3>
+            <p class="modal-subtitle" id="auditCorrectModalSubtitle">Adjust released score and log audit reason</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAuditCorrectModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="audit-current-grade-box">
+          <span class="meta-label">Current Grade:</span>
+          <span class="audit-grade-display"><strong id="auditCurrentGradeVal">—</strong> / <strong id="auditCurrentMaxMarks">100</strong></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="auditNewGradeInput" class="form-label">
+            Corrected Marks <span class="required">*</span>
+          </label>
+          <div class="grading-input-group">
+            <input type="number" step="any" min="0" id="auditNewGradeInput" class="form-input" placeholder="0.0" />
+            <span class="grading-max-label">/ <strong id="auditNewGradeMaxLabel">100</strong></span>
+          </div>
+          <span class="field-error" id="auditGradeError" style="display: none;"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="auditReasonInput" class="form-label">
+            Audit Reason / Justification <span class="required">*</span>
+          </label>
+          <textarea id="auditReasonInput" class="form-textarea" rows="3" placeholder="Explain the rationale for correcting this released grade (e.g. recalculated rubric item 2)..."></textarea>
+          <span class="field-error" id="auditReasonError" style="display: none;"></span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelAuditCorrectBtn" type="button">Cancel</button>
+        <button class="btn btn-primary" id="confirmAuditCorrectBtn" type="button">Save Correction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Submission History & Archived Attempts Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="submissionHistoryModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="submissionHistoryModalTitle">
+    <div class="modal-card workflow-modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="submissionHistoryModalTitle">Submission History &amp; Archived Attempts</h3>
+            <p class="modal-subtitle" id="historyStudentMeta">Student Name • Assignment</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeSubmissionHistoryModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="history-attempts-list" id="historyAttemptsList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="closeSubmissionHistoryBottomBtn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Authorize Resubmission Modal -->
+  <div class="modal-backdrop workflow-modal-backdrop" id="authorizeResubmissionModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="authorizeResubmissionModalTitle">
+    <div class="modal-card workflow-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-brand" style="background: rgba(99, 102, 241, 0.12); color: var(--primary);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="authorizeResubmissionModalTitle">Authorize Resubmission</h3>
+            <p class="modal-subtitle" id="authorizeResubmissionSubtitle">Grant another attempt for this student</p>
+          </div>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAuthorizeResubmissionModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-body-text" id="authorizeResubmissionMessage">
+          Authorizing a resubmission grants the student permission to upload a new attempt. Their existing submission and grade record will be safely archived.
+        </p>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="resubmissionNotesInput" class="form-label">
+            Guidance for Student (Optional)
+          </label>
+          <textarea id="resubmissionNotesInput" class="form-textarea" rows="3" placeholder="Provide instructions or requirements for the new attempt..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+        <button class="btn btn-secondary" id="cancelAuthorizeResubmissionBtn" type="button">Cancel</button>
+        <button class="btn btn-primary" id="confirmAuthorizeResubmissionBtn" type="button">Authorize Resubmission</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Edit Semester Modal -->
+  <div class="modal-backdrop" id="editSemesterModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="editSemesterModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="editSemesterModalTitle">Edit Semester</h3>
+        <button class="modal-close-icon-btn" id="closeEditSemesterModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <form id="editSemesterForm" onsubmit="return false;" style="margin-top: 1rem;">
+        <input type="hidden" id="editSemId" value="">
+        <div class="form-group">
+          <label for="editSemName" class="form-label">Semester Name <span class="required">*</span></label>
+          <input type="text" id="editSemName" class="form-input" required maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="editSemYear" class="form-label">Academic Year <span class="required">*</span></label>
+          <select id="editSemYear" class="form-input" required>
+            <option value="2025 - 2026">2025 - 2026</option>
+            <option value="2024 - 2025">2024 - 2025</option>
+            <option value="2023 - 2024">2023 - 2024</option>
+            <option value="2022 - 2023">2022 - 2023</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="editSemStartDate" class="form-label">Start Date <span class="required">*</span></label>
+            <input type="date" id="editSemStartDate" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editSemEndDate" class="form-label">End Date <span class="required">*</span></label>
+            <input type="date" id="editSemEndDate" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editSemStatus" class="form-label">Status</label>
+          <select id="editSemStatus" class="form-input">
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" id="cancelEditSemesterBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEditSemesterBtn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 12. Add Subject to Semester Modal -->
+  <div class="modal-backdrop" id="addSubjectModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="addSubjectModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="addSubjectModalTitle">Add Subject to Semester</h3>
+          <p class="modal-subtitle" id="addSubjectModalSubtitle">Create a new subject or link an existing class</p>
+        </div>
+        <button class="modal-close-icon-btn" id="closeAddSubjectModalBtn" aria-label="Close modal" type="button">✕</button>
+      </div>
+      <form id="addSubjectForm" onsubmit="return false;" style="margin-top: 1rem;">
+        <input type="hidden" id="addSubjectSemId" value="">
+        <div class="form-group">
+          <label for="addSubjectName" class="form-label">Subject Code / Name <span class="required">*</span></label>
+          <input type="text" id="addSubjectName" class="form-input" placeholder="e.g. DBMS or CS301" required maxlength="150">
+        </div>
+        <div class="form-group">
+          <label for="addSubjectDesc" class="form-label">Full Title / Description</label>
+          <input type="text" id="addSubjectDesc" class="form-input" placeholder="e.g. Database Management Systems" maxlength="500">
+        </div>
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" id="cancelAddSubjectBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitAddSubjectBtn">Add Subject</button>
+        </div>
+      </form>
     </div>
   </div>
 <!-- END COMPONENT: components/modals.html -->

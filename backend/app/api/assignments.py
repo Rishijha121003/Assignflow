@@ -23,13 +23,15 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 from starlette.datastructures import UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.auth import get_current_user, require_teacher, require_student
 from app.db.session import get_db
 from app.models.assignment import Assignment
-from app.models.classroom import Class, ClassEnrollment
+from app.models.classroom import Class, ClassEnrollment, Subject
+from app.models.semester import Semester
 from app.models.user import User
 from app.models.submission import Submission
 from app.schemas.assignment import (
@@ -144,16 +146,99 @@ def verify_teacher_class_ownership(class_id: Optional[int], teacher_id: int, db:
 def verify_teacher_assignment_ownership(assignment: Assignment, teacher_id: int) -> None:
     """
     Verifies that the teacher either created the assignment or is the teacher of its class.
+    Preserves legacy unassigned assignments (created_by_id is None and class_id is None).
     Raises HTTP 403 Forbidden if teacher does not own the assignment.
     """
     if assignment.created_by_id and assignment.created_by_id == teacher_id:
         return
     if assignment.classroom and assignment.classroom.teacher_id == teacher_id:
         return
+    if assignment.created_by_id is None and assignment.class_id is None:
+        return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Access denied: You do not own this assignment.",
     )
+
+
+def validate_class_subject_relationship(
+    db: Session,
+    target_class_id: Optional[int],
+    subject_str: Optional[str],
+    subject_id: Optional[int] = None,
+) -> tuple[str, Optional[int]]:
+    """
+    Validates that the given subject / subject_id is genuinely associated with target_class_id.
+    - If target_class_id is None, preserves the standalone assignment workflow (no class association required).
+    - If subject_id is provided, validates that the subject exists and its class_id matches target_class_id.
+    - If subject_str is provided, validates that it matches an associated subject of target_class_id.
+    - Unrelated generic default subjects (Computer Science, Mathematics, Science, Design, Other)
+      are rejected unless genuinely associated with target_class_id.
+    - Returns (resolved_subject_name, resolved_subject_id).
+    """
+    clean_subject = str(subject_str).strip() if subject_str else ""
+    DEFAULT_GENERIC_SUBJECTS = {"computer science", "mathematics", "science", "design", "other"}
+
+    if target_class_id is None:
+        # Standalone assignment workflow where no class is selected
+        if not clean_subject:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Subject is required and cannot be empty.",
+            )
+        return clean_subject, None
+
+    target_class = db.query(Class).filter(Class.id == target_class_id).first()
+    if not target_class:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {target_class_id} not found.",
+        )
+
+    # 1. If subject_id is provided, validate it belongs to target_class_id
+    if subject_id is not None:
+        sub = db.query(Subject).filter(Subject.id == subject_id).first()
+        if not sub:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Subject with ID {subject_id} not found.",
+            )
+        if sub.class_id != target_class_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Mismatched class and subject IDs: Subject {subject_id} belongs to class {sub.class_id}, not class {target_class_id}.",
+            )
+        return sub.name, sub.id
+
+    if not clean_subject:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Subject is required and cannot be empty.",
+        )
+
+    # 2. Check subjects associated with target_class_id
+    class_subjects = db.query(Subject).filter(Subject.class_id == target_class_id).all()
+    if class_subjects:
+        matching_sub = next(
+            (s for s in class_subjects if s.name.lower() == clean_subject.lower()),
+            None,
+        )
+        if matching_sub:
+            return matching_sub.name, matching_sub.id
+
+        # Subject name was not found in associated subjects
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Subject '{clean_subject}' is not associated with class {target_class_id}.",
+        )
+
+    # 3. Class currently has no subjects in assignflow.subjects
+    # Automatically create the subject association for this class
+    new_sub = Subject(name=clean_subject, class_id=target_class.id)
+    db.add(new_sub)
+    db.commit()
+    db.refresh(new_sub)
+    return new_sub.name, new_sub.id
 
 
 @router.post(
@@ -184,6 +269,8 @@ async def create_assignment(
         status_val = form.get("status") or "active"
         upload_file = form.get("file")
         class_id_raw = form.get("class_id")
+        semester_id_raw = form.get("semester_id")
+        assignment_type = form.get("assignment_type") or "Assignment"
         max_marks_raw = form.get("max_marks")
 
         # Field validation
@@ -211,20 +298,31 @@ async def create_assignment(
                 detail="Invalid ISO due_date format.",
             )
 
+        now = datetime.now(timezone.utc)
+        if due_date.tzinfo is None:
+            due_date = due_date.replace(tzinfo=timezone.utc)
+        if str(status_val).lower() == "active" and due_date <= now:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Due date must be in the future when publishing an assignment.",
+            )
+
         max_marks_val = 100.0
         if max_marks_raw is not None and str(max_marks_raw).strip():
             try:
                 max_marks_val = float(max_marks_raw)
-                if max_marks_val < 0:
+                if max_marks_val <= 0 or max_marks_val > 1000:
                     raise ValueError
+                max_marks_val = round(max_marks_val, 2)
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail="max_marks must be a non-negative number.",
+                    detail="Maximum marks must be a positive number up to 1000 with at most 2 decimal places.",
                 )
 
         # Parse & verify class ownership
         target_class_id = None
+        target_class = None
         if class_id_raw is not None and str(class_id_raw).strip() and str(class_id_raw).lower() != "null":
             try:
                 target_class_id = int(class_id_raw)
@@ -234,24 +332,108 @@ async def create_assignment(
                     detail="Invalid class_id format: must be an integer.",
                 )
             target_class_id = verify_teacher_class_ownership(target_class_id, teacher.id, db)
+            target_class = db.query(Class).filter(Class.id == target_class_id).first()
 
-        # PDF file validation
-        if not upload_file or not hasattr(upload_file, "filename") or not upload_file.filename:
+        target_semester_id = None
+        if semester_id_raw is not None and str(semester_id_raw).strip() and str(semester_id_raw).lower() != "null":
+            try:
+                target_semester_id = int(semester_id_raw)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Invalid semester_id format: must be an integer.",
+                )
+
+        # Enforce exact class-semester relationship
+        if target_class:
+            if target_class.semester_id is None:
+                if target_semester_id is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"Class {target_class.id} is an independent class and does not belong to any semester.",
+                    )
+                target_semester_id = None
+            else:
+                if target_semester_id is not None and target_semester_id != target_class.semester_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"Class {target_class.id} belongs to semester {target_class.semester_id}, not semester {target_semester_id}.",
+                    )
+                target_semester_id = target_class.semester_id
+
+        if target_semester_id is not None:
+            sem = db.query(Semester).filter(Semester.id == target_semester_id).first()
+            if not sem:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Semester with ID {target_semester_id} not found.",
+                )
+            if sem.teacher_id != teacher.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only publish assignments to semesters you own.",
+                )
+            if not target_class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Assignments created within a semester must be assigned to a specific subject/class (cannot be General / Unassigned).",
+                )
+
+        # Validate class-subject relationship
+        subject_id_raw = form.get("subject_id")
+        subject_id_val = None
+        if subject_id_raw is not None and str(subject_id_raw).strip() and str(subject_id_raw).lower() != "null":
+            try:
+                subject_id_val = int(subject_id_raw)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Invalid subject_id format: must be an integer.",
+                )
+
+        resolved_subject, resolved_subject_id = validate_class_subject_relationship(
+            db, target_class_id, subject, subject_id_val
+        )
+
+        # Instructions / Question PDF validation (required when publishing, optional for drafts)
+        clean_description = str(description).strip() if description and str(description).strip() else None
+        has_upload = upload_file and hasattr(upload_file, "filename") and bool(upload_file.filename)
+
+        if str(status_val).lower() != "draft" and not clean_description and not has_upload:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A question PDF file is required when creating an assignment.",
+                detail="At least one of Instructions or Question PDF is required when publishing.",
             )
 
-        saved_file_path, display_name, file_size = validate_and_save_pdf(upload_file)
+        saved_file_path = None
+        display_name = None
+        file_size = None
+        if has_upload:
+            saved_file_path, display_name, file_size = validate_and_save_pdf(upload_file)
+
+        # Policy parsing
+        late_policy_raw = form.get("late_policy") or form.get("allow_late")
+        allow_late_val = True
+        if late_policy_raw is not None:
+            if str(late_policy_raw).lower() in ("reject", "false", "0", "no"):
+                allow_late_val = False
+
+        resub_policy_raw = form.get("resubmission_policy") or "until_due"
+        resub_policy_val = "approval_only" if "approval" in str(resub_policy_raw).lower() else "until_due"
 
         db_assignment = Assignment(
             title=str(title).strip(),
-            subject=str(subject).strip(),
-            description=str(description).strip() if description else None,
+            subject=resolved_subject,
+            subject_id=resolved_subject_id,
+            description=clean_description,
             due_date=due_date,
             status=str(status_val),
             max_marks=max_marks_val,
             class_id=target_class_id,
+            semester_id=target_semester_id,
+            assignment_type=str(assignment_type),
+            allow_late=allow_late_val,
+            resubmission_policy=resub_policy_val,
             file_path=saved_file_path,
             file_name=display_name,
             file_size=file_size,
@@ -290,14 +472,88 @@ async def create_assignment(
             )
 
         target_class_id = verify_teacher_class_ownership(assignment_in.class_id, teacher.id, db)
+        target_class = db.query(Class).filter(Class.id == target_class_id).first() if target_class_id else None
+        target_semester_id = assignment_in.semester_id
+
+        # Enforce exact class-semester relationship
+        if target_class:
+            if target_class.semester_id is None:
+                if target_semester_id is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"Class {target_class.id} is an independent class and does not belong to any semester.",
+                    )
+                target_semester_id = None
+            else:
+                if target_semester_id is not None and target_semester_id != target_class.semester_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"Class {target_class.id} belongs to semester {target_class.semester_id}, not semester {target_semester_id}.",
+                    )
+                target_semester_id = target_class.semester_id
+
+        if target_semester_id is not None:
+            sem = db.query(Semester).filter(Semester.id == target_semester_id).first()
+            if not sem:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Semester with ID {target_semester_id} not found.",
+                )
+            if sem.teacher_id != teacher.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only publish assignments to semesters you own.",
+                )
+            if not target_class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Assignments created within a semester must be assigned to a specific subject/class (cannot be General / Unassigned).",
+                )
+
+        # Validate future due date if active
+        now = datetime.now(timezone.utc)
+        due_date = assignment_in.due_date
+        if due_date.tzinfo is None:
+            due_date = due_date.replace(tzinfo=timezone.utc)
+        if str(assignment_in.status).lower() == "active" and due_date <= now:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Due date must be in the future when publishing an assignment.",
+            )
+
+        # Validate max marks
+        if assignment_in.max_marks <= 0 or assignment_in.max_marks > 1000:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Maximum marks must be a positive number up to 1000 with at most 2 decimal places.",
+            )
+        rounded_max_marks = round(assignment_in.max_marks, 2)
+
+        # Clean description if provided
+        clean_description = (
+            str(assignment_in.description).strip()
+            if assignment_in.description and str(assignment_in.description).strip()
+            else None
+        )
+
+        # Validate class-subject relationship
+        resolved_subject, resolved_subject_id = validate_class_subject_relationship(
+            db, target_class_id, assignment_in.subject, assignment_in.subject_id
+        )
 
         db_assignment = Assignment(
-            title=assignment_in.title,
-            subject=assignment_in.subject,
-            description=assignment_in.description,
-            due_date=assignment_in.due_date,
+            title=assignment_in.title.strip(),
+            subject=resolved_subject,
+            subject_id=resolved_subject_id,
+            description=clean_description,
+            due_date=due_date,
             status=assignment_in.status,
+            max_marks=rounded_max_marks,
             class_id=target_class_id,
+            semester_id=target_semester_id,
+            assignment_type=assignment_in.assignment_type or "Assignment",
+            allow_late=assignment_in.allow_late,
+            resubmission_policy=assignment_in.resubmission_policy or "until_due",
             created_by_id=teacher.id,
         )
         db.add(db_assignment)
@@ -315,13 +571,14 @@ async def create_assignment(
 @router.get("", response_model=List[AssignmentResponse], summary="List assignments")
 def list_assignments(
     class_id: Optional[int] = None,
+    semester_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieves assignments based on user role and class enrollment:
-    - Teachers: view assignments they created (or unassigned legacy assignments), optionally filtered by class_id.
-    - Students: view assignments ONLY for classes they have joined.
+    - Teachers: view assignments they created (or unassigned legacy assignments), optionally filtered by class_id or semester_id.
+    - Students: view assignments ONLY for classes they have joined, optionally filtered by class_id or semester_id.
     """
     if current_user.role == "teacher":
         query = db.query(Assignment)
@@ -334,10 +591,22 @@ def list_assignments(
                 )
             query = query.filter(Assignment.class_id == class_id)
         else:
-            query = query.filter(
-                (Assignment.created_by_id == current_user.id)
-                | (Assignment.created_by_id.is_(None))
+            owned_classes = db.query(Class.id).filter(Class.teacher_id == current_user.id).all()
+            owned_class_ids = [c[0] for c in owned_classes]
+            ownership_filter = (Assignment.created_by_id == current_user.id) | (
+                (Assignment.created_by_id.is_(None)) & (Assignment.class_id.is_(None))
             )
+            if owned_class_ids:
+                ownership_filter = ownership_filter | Assignment.class_id.in_(owned_class_ids)
+            query = query.filter(ownership_filter)
+        if semester_id is not None:
+            sem = db.query(Semester).filter(Semester.id == semester_id).first()
+            if not sem or sem.teacher_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You do not own this semester.",
+                )
+            query = query.filter(Assignment.semester_id == semester_id)
         return query.order_by(Assignment.id.desc()).all()
 
     else:
@@ -351,25 +620,19 @@ def list_assignments(
         if not enrolled_class_ids:
             return []
 
+        query = db.query(Assignment).filter(Assignment.class_id.in_(enrolled_class_ids))
+        query = query.filter(Assignment.status != "draft")
         if class_id is not None:
             if class_id not in enrolled_class_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access denied: You are not enrolled in this class.",
                 )
-            return (
-                db.query(Assignment)
-                .filter(Assignment.class_id == class_id)
-                .order_by(Assignment.id.desc())
-                .all()
-            )
+            query = query.filter(Assignment.class_id == class_id)
+        if semester_id is not None:
+            query = query.filter(Assignment.semester_id == semester_id)
 
-        return (
-            db.query(Assignment)
-            .filter(Assignment.class_id.in_(enrolled_class_ids))
-            .order_by(Assignment.id.desc())
-            .all()
-        )
+        return query.order_by(Assignment.id.desc()).all()
 
 
 @router.get("/{id}", response_model=AssignmentResponse, summary="Get assignment by ID")
@@ -391,14 +654,14 @@ def get_assignment(
         )
 
     if current_user.role == "teacher":
-        if assignment.created_by_id and assignment.created_by_id != current_user.id:
-            if assignment.classroom and assignment.classroom.teacher_id != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You do not own this assignment.",
-                )
+        verify_teacher_assignment_ownership(assignment, current_user.id)
     else:
-        # Student access verification
+        # Student access verification: drafts are hidden from students
+        if assignment.status == "draft":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Draft assignments are not visible to students.",
+            )
         if not assignment.class_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -422,6 +685,7 @@ def get_assignment(
 
 
 @router.put("/{id}", response_model=AssignmentResponse, summary="Update an assignment")
+@router.patch("/{id}", response_model=AssignmentResponse, summary="Update an assignment")
 async def update_assignment(
     id: int,
     request: Request,
@@ -439,11 +703,7 @@ async def update_assignment(
             detail=f"Assignment with ID {id} not found",
         )
 
-    if assignment.created_by_id and assignment.created_by_id != teacher.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only edit your own assignments.",
-        )
+    verify_teacher_assignment_ownership(assignment, teacher.id)
 
     content_type = request.headers.get("content-type", "")
 
@@ -474,18 +734,127 @@ async def update_assignment(
         if status_val is not None:
             assignment.status = str(status_val)
 
+        sub_count = db.query(Submission).filter(Submission.assignment_id == id).count()
+
         if class_id_raw is not None:
             if not str(class_id_raw).strip() or str(class_id_raw).lower() == "null":
-                assignment.class_id = None
+                target_cid = None
             else:
                 try:
-                    target_class_id = int(class_id_raw)
+                    target_cid = int(class_id_raw)
                 except ValueError:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail="Invalid class_id format: must be an integer.",
                     )
-                assignment.class_id = verify_teacher_class_ownership(target_class_id, teacher.id, db)
+            if sub_count > 0 and target_cid != assignment.class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change the class of an assignment that already has student submissions.",
+                )
+            if target_cid is not None:
+                assignment.class_id = verify_teacher_class_ownership(target_cid, teacher.id, db)
+            else:
+                assignment.class_id = None
+
+        max_marks_raw = form.get("max_marks")
+        if max_marks_raw is not None and str(max_marks_raw).strip():
+            try:
+                m_val = float(max_marks_raw)
+                if m_val <= 0 or m_val > 1000:
+                    raise ValueError
+                assignment.max_marks = round(m_val, 2)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Maximum marks must be a positive number up to 1000 with at most 2 decimal places.",
+                )
+
+        assignment_type_val = form.get("assignment_type")
+        if assignment_type_val is not None and str(assignment_type_val).strip():
+            assignment.assignment_type = str(assignment_type_val).strip()
+
+        late_policy_raw = form.get("late_policy") or form.get("allow_late")
+        if late_policy_raw is not None:
+            assignment.allow_late = False if str(late_policy_raw).lower() in ("reject", "false", "0", "no") else True
+
+        resub_policy_raw = form.get("resubmission_policy")
+        if resub_policy_raw is not None:
+            assignment.resubmission_policy = "approval_only" if str(resub_policy_raw).lower() in ("approval_only", "approval") else "until_due"
+
+        semester_id_raw = form.get("semester_id")
+        if semester_id_raw is not None:
+            if not str(semester_id_raw).strip() or str(semester_id_raw).lower() == "null":
+                assignment.semester_id = None
+            else:
+                try:
+                    target_semester_id = int(semester_id_raw)
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail="Invalid semester_id format: must be an integer.",
+                    )
+                sem = db.query(Semester).filter(Semester.id == target_semester_id).first()
+                if not sem:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Semester with ID {target_semester_id} not found.",
+                    )
+                if sem.teacher_id != teacher.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="You can only publish assignments to semesters you own.",
+                    )
+                assignment.semester_id = target_semester_id
+        if assignment.class_id:
+            target_class = db.query(Class).filter(Class.id == assignment.class_id).first()
+            if target_class:
+                if target_class.semester_id is None:
+                    if assignment.semester_id is not None:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Class {target_class.id} is an independent class and does not belong to any semester.",
+                        )
+                    assignment.semester_id = None
+                else:
+                    if assignment.semester_id is not None and assignment.semester_id != target_class.semester_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Class {target_class.id} belongs to semester {target_class.semester_id}, not semester {assignment.semester_id}.",
+                        )
+                    assignment.semester_id = target_class.semester_id
+
+        if assignment.semester_id is not None:
+            if not assignment.class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Assignments created within a semester must be assigned to a specific subject/class (cannot be General / Unassigned).",
+                )
+
+        # Validate class-subject relationship
+        subject_id_raw = form.get("subject_id")
+        subject_id_val = None
+        if subject_id_raw is not None and str(subject_id_raw).strip() and str(subject_id_raw).lower() != "null":
+            try:
+                subject_id_val = int(subject_id_raw)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Invalid subject_id format: must be an integer.",
+                )
+        else:
+            subject_id_val = assignment.subject_id
+
+        resolved_subject, resolved_subject_id = validate_class_subject_relationship(
+            db, assignment.class_id, assignment.subject, subject_id_val
+        )
+        if sub_count > 0 and resolved_subject_id != assignment.subject_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change the subject of an assignment that already has student submissions.",
+            )
+        assignment.subject = resolved_subject
+        assignment.subject_id = resolved_subject_id
 
         # Optional replacement PDF file
         new_file_path = None
@@ -496,7 +865,17 @@ async def update_assignment(
 
             assignment.file_path = new_file_path
             assignment.file_name = new_file_name
-            assignment.file_size = new_file_size
+        # When publishing (non-draft), require at least one of instructions or question PDF
+        if str(assignment.status).lower() != "draft":
+            has_desc = bool(assignment.description and str(assignment.description).strip())
+            has_pdf = bool(new_file_path or assignment.file_path)
+            if not has_desc and not has_pdf:
+                if new_file_path:
+                    Path(new_file_path).unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="At least one of Instructions or Question PDF is required when publishing.",
+                )
 
         try:
             db.commit()
@@ -541,6 +920,91 @@ async def update_assignment(
             if target_class_id is not None:
                 verify_teacher_class_ownership(target_class_id, teacher.id, db)
 
+        if "semester_id" in update_data:
+            target_sem_id = update_data["semester_id"]
+            if target_sem_id is not None:
+                sem = db.query(Semester).filter(Semester.id == target_sem_id).first()
+                if not sem:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Semester with ID {target_sem_id} not found.",
+                    )
+                if sem.teacher_id != teacher.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="You can only publish assignments to semesters you own.",
+                    )
+
+        # Check final class_id and semester_id consistency
+        final_class_id = update_data.get("class_id", assignment.class_id)
+        final_sem_id = update_data.get("semester_id", assignment.semester_id)
+        if final_class_id:
+            cls = db.query(Class).filter(Class.id == final_class_id).first()
+            if cls:
+                if cls.semester_id is None:
+                    if final_sem_id is not None:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Class {cls.id} is an independent class and does not belong to any semester.",
+                        )
+                    final_sem_id = None
+                    update_data["semester_id"] = None
+                else:
+                    if final_sem_id is not None and final_sem_id != cls.semester_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Class {cls.id} belongs to semester {cls.semester_id}, not semester {final_sem_id}.",
+                        )
+                    final_sem_id = cls.semester_id
+                    update_data["semester_id"] = final_sem_id
+
+        if final_sem_id is not None:
+            if not final_class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Assignments created within a semester must be assigned to a specific subject/class (cannot be General / Unassigned).",
+                )
+
+        sub_count = db.query(Submission).filter(Submission.assignment_id == id).count()
+        if sub_count > 0:
+            if "class_id" in update_data and update_data["class_id"] != assignment.class_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change the class of an assignment that already has student submissions.",
+                )
+            if "subject_id" in update_data and update_data["subject_id"] != assignment.subject_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change the subject of an assignment that already has student submissions.",
+                )
+
+        # Validate class-subject relationship
+        final_subject = update_data.get("subject", assignment.subject)
+        final_subject_id = update_data.get("subject_id", assignment.subject_id)
+
+        resolved_subject, resolved_subject_id = validate_class_subject_relationship(
+            db, final_class_id, final_subject, final_subject_id
+        )
+        if sub_count > 0 and resolved_subject_id != assignment.subject_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change the subject of an assignment that already has student submissions.",
+            )
+
+        update_data["subject"] = resolved_subject
+        update_data["subject_id"] = resolved_subject_id
+
+        target_status = update_data.get("status", assignment.status)
+        if str(target_status).lower() != "draft":
+            target_desc = update_data.get("description", assignment.description)
+            has_desc = bool(target_desc and str(target_desc).strip())
+            has_pdf = bool(assignment.file_path)
+            if not has_desc and not has_pdf:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="At least one of Instructions or Question PDF is required when publishing.",
+                )
+
         for field, value in update_data.items():
             setattr(assignment, field, value)
 
@@ -566,11 +1030,15 @@ def delete_assignment(
             detail=f"Assignment with ID {id} not found",
         )
 
-    if assignment.created_by_id and assignment.created_by_id != teacher.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only delete your own assignments.",
-        )
+    verify_teacher_assignment_ownership(assignment, teacher.id)
+
+    # Clean up submission files from disk if any
+    for sub in (assignment.submissions or []):
+        if sub.file_path and Path(sub.file_path).exists():
+            try:
+                Path(sub.file_path).unlink(missing_ok=True)
+            except Exception:
+                pass
 
     if assignment.file_path and Path(assignment.file_path).exists():
         try:
@@ -789,6 +1257,12 @@ async def submit_assignment_work(
             detail=f"Assignment with ID {id} not found",
         )
 
+    if assignment.status == "draft":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot submit work to a draft assignment.",
+        )
+
     if not assignment.class_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -809,7 +1283,13 @@ async def submit_assignment_work(
             detail="Access denied: You are not enrolled in the class for this assignment.",
         )
 
-    # Check for duplicate submission
+    now = datetime.now(timezone.utc)
+    due_date = assignment.due_date
+    if due_date.tzinfo is None:
+        due_date = due_date.replace(tzinfo=timezone.utc)
+    is_late = now > due_date
+
+    # Check for duplicate submission / resubmission policy
     existing = (
         db.query(Submission)
         .filter(
@@ -819,10 +1299,22 @@ async def submit_assignment_work(
         .first()
     )
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You have already submitted work for this assignment. Duplicate submissions are not permitted.",
-        )
+        if assignment.resubmission_policy != "until_due":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You have already submitted work for this assignment. Duplicate submissions are not permitted without teacher authorization.",
+            )
+        # Policy is until_due:
+        if existing.status in ("graded", "released") or existing.grade is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This submission has already been graded or released. Resubmission requires explicit teacher authorization.",
+            )
+        if is_late:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Resubmission deadline has passed. Submissions after due date cannot replace prior work.",
+            )
 
     content_type = request.headers.get("content-type", "")
     if not (content_type.startswith("multipart/form-data") or content_type.startswith("application/x-www-form-urlencoded")):
@@ -843,11 +1335,41 @@ async def submit_assignment_work(
 
     saved_file_path, clean_display_name, file_size = validate_and_save_submission_file(upload_file)
 
-    now = datetime.now(timezone.utc)
-    due_date = assignment.due_date
-    if due_date.tzinfo is None:
-        due_date = due_date.replace(tzinfo=timezone.utc)
-    is_late = now > due_date
+    if is_late and not assignment.allow_late:
+        if saved_file_path:
+            Path(saved_file_path).unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Late submissions are not accepted for this assignment.",
+        )
+
+    if existing:
+        # Safely replace prior ungraded submission before deadline
+        old_file_path = existing.file_path
+        existing.file_path = saved_file_path
+        existing.file_name = clean_display_name
+        existing.file_size = file_size
+        existing.notes = str(notes).strip() if notes and str(notes).strip() else None
+        existing.submitted_at = now
+        existing.is_late = False
+
+        try:
+            db.commit()
+            db.refresh(existing)
+            if old_file_path and old_file_path != saved_file_path and Path(old_file_path).exists():
+                try:
+                    Path(old_file_path).unlink(missing_ok=True)
+                except Exception:
+                    pass
+            return serialize_submission(existing)
+        except Exception as exc:
+            db.rollback()
+            if saved_file_path:
+                Path(saved_file_path).unlink(missing_ok=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database error while saving resubmission: {str(exc)}",
+            )
 
     submission = Submission(
         assignment_id=assignment.id,

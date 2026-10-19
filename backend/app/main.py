@@ -13,6 +13,7 @@ from app.api.assignments import router as assignments_router
 from app.api.classes import router as classes_router
 from app.api.dashboard import router as dashboard_router
 from app.api.submissions import router as submissions_router
+from app.api.semesters import router as semesters_router
 
 # Path to the frontend directory
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Assignment Management Platform for College Teachers and Students",
-    version="0.1.0",
+    version="0.3.0",
     debug=settings.DEBUG,
     lifespan=lifespan,
 )
@@ -47,6 +48,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 err_dict["input"] = err_dict["input"].decode("utf-8")
             except UnicodeDecodeError:
                 err_dict["input"] = f"<binary data: {len(err_dict['input'])} bytes>"
+        if "ctx" in err_dict and isinstance(err_dict["ctx"], dict):
+            safe_ctx = {}
+            for k, v in err_dict["ctx"].items():
+                safe_ctx[k] = str(v) if isinstance(v, Exception) else v
+            err_dict["ctx"] = safe_ctx
         safe_errors.append(err_dict)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -83,6 +89,7 @@ app.include_router(assignments_router, prefix="/api")
 app.include_router(classes_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(submissions_router, prefix="/api")
+app.include_router(semesters_router, prefix="/api")
 
 # Serve frontend static assets (CSS, JS) if frontend directory exists
 if FRONTEND_DIR.exists():

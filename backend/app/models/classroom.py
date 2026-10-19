@@ -42,6 +42,13 @@ class Class(Base):
         index=True,
     )
 
+    semester_id = Column(
+        Integer,
+        ForeignKey("assignflow.semesters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
@@ -52,11 +59,13 @@ class Class(Base):
 
     # Relationships
     teacher = relationship("User", backref="taught_classes")
+    semester = relationship("Semester", back_populates="classes")
     assignments = relationship("Assignment", back_populates="classroom", cascade="all, delete-orphan")
     enrollments = relationship("ClassEnrollment", back_populates="classroom", cascade="all, delete-orphan")
+    subjects = relationship("Subject", back_populates="classroom", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
-        return f"<Class(id={self.id}, name='{self.name}', join_code='{self.join_code}', teacher_id={self.teacher_id})>"
+        return f"<Class(id={self.id}, name='{self.name}', join_code='{self.join_code}', teacher_id={self.teacher_id}, semester_id={self.semester_id})>"
 
 
 class ClassEnrollment(Base):
@@ -92,3 +101,38 @@ class ClassEnrollment(Base):
 
     def __repr__(self) -> str:
         return f"<ClassEnrollment(id={self.id}, class_id={self.class_id}, student_id={self.student_id})>"
+
+
+class Subject(Base):
+    """
+    SQLAlchemy model representing a subject created and associated with a specific Class.
+    Stored in PostgreSQL under the 'assignflow' schema.
+    """
+    __tablename__ = "subjects"
+    __table_args__ = (
+        UniqueConstraint("class_id", "name", name="uq_class_subject_name"),
+        {"schema": "assignflow"},
+    )
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    class_id = Column(
+        Integer,
+        ForeignKey("assignflow.classes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    classroom = relationship("Class", back_populates="subjects")
+
+    def __repr__(self) -> str:
+        return f"<Subject(id={self.id}, name='{self.name}', class_id={self.class_id})>"
+

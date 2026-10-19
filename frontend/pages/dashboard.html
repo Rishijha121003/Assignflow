@@ -7,8 +7,8 @@
             <div class="dash-hero-left">
               <span class="dash-greeting-label" id="dashGreeting">Good morning,</span>
               <div class="dash-name-role-row">
-                <h1 class="dash-greeting-name" id="dashUserName">Rishi Jha</h1>
-                <span class="dash-role-pill teacher" id="dashRolePill">
+                <h1 class="dash-greeting-name" id="dashUserName">Rishi</h1>
+                <span class="dash-role-pill teacher" id="dashRolePill" style="display: none;">
                   <svg class="role-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -16,7 +16,7 @@
                   <span id="dashRolePillText">Teacher</span>
                 </span>
               </div>
-              <p class="dash-hero-desc" id="dashSubtitle">Manage your classes, create assignments and track student progress.</p>
+              <p class="dash-hero-desc" id="dashSubtitle">Here's an overview of your semester.</p>
             </div>
             <div class="dash-hero-right">
               <button class="btn btn-primary dash-hero-cta" id="dashHeroCtaBtn">
@@ -24,7 +24,7 @@
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                <span id="dashHeroCtaText">Create Assignment</span>
+                <span id="dashHeroCtaText">+ Create Assignment</span>
               </button>
             </div>
           </div>
@@ -34,32 +34,26 @@
             <!-- Populated dynamically via renderDashboard() -->
           </section>
 
-          <!-- Middle Row: 2 Columns (60% / 40%) -->
-          <section class="dash-cards-grid dash-mid-row">
-            <!-- Left: Recent Submissions (Teacher) / Upcoming Assignments (Student) -->
-            <div class="dash-box-card" id="dashMidLeftCard">
-              <!-- Dynamically populated -->
-            </div>
-            <!-- Right: Submissions Overview (Teacher) / Submission Status (Student) -->
-            <div class="dash-box-card" id="dashMidRightCard">
-              <!-- Dynamically populated -->
-            </div>
+          <!-- Middle Row: 3 Columns (Subjects, Activity, Dark Panel) -->
+          <section class="dash-cards-grid dash-mid-row" id="dashMidSection">
+            <!-- Left: My Subjects (Teacher) / Upcoming Assignments (Student) -->
+            <div class="dash-box-card" id="dashMidLeftCard"></div>
+            <!-- Center: Submission Activity (Teacher) / Donut Overview (Student) -->
+            <div class="dash-box-card" id="dashMidCenterCard"></div>
+            <!-- Right: Upcoming Deadlines & Quick Actions (Dark Contrast Charcoal Panel) -->
+            <div class="dash-box-card dark-panel" id="dashMidRightCard"></div>
           </section>
 
-          <!-- Bottom Row: 2 Columns (50% / 50%) -->
-          <section class="dash-cards-grid dash-bottom-row">
-            <!-- Left: My Classes (Teacher) / Recently Submitted (Student) -->
-            <div class="dash-box-card" id="dashBottomLeftCard">
-              <!-- Dynamically populated -->
-            </div>
-            <!-- Right: Upcoming Deadlines (Teacher) / My Classes (Student) -->
-            <div class="dash-box-card" id="dashBottomRightCard">
-              <!-- Dynamically populated -->
-            </div>
+          <!-- Bottom Row: 3 Columns (Recent Submissions, Grading Queue, Timeline) -->
+          <section class="dash-cards-grid dash-bottom-row" id="dashBottomSection">
+            <!-- Left: Recent Submissions -->
+            <div class="dash-box-card" id="dashBottomLeftCard"></div>
+            <!-- Center: Grading Queue (Teacher) / Recently Submitted (Student) -->
+            <div class="dash-box-card" id="dashBottomCenterCard"></div>
+            <!-- Right: Semester Timeline (Teacher) / My Classes (Student) -->
+            <div class="dash-box-card" id="dashBottomRightCard"></div>
           </section>
 
-          <!-- Full Width Section (Quick Actions for Teacher / Keep Going for Student) -->
-          <section class="dash-fullwidth-wrap" id="dashFullWidthWrap">
-            <!-- Dynamically populated -->
-          </section>
+          <!-- Full Width Section (Auxiliary / Tests) -->
+          <section class="dash-fullwidth-wrap" id="dashFullWidthWrap" style="display: none;"></section>
         </div>
