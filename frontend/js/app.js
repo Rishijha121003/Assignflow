@@ -1309,7 +1309,7 @@ async function fetchAssignments() {
     const response = await fetch(API_ENDPOINTS.assignments, {
       method: "GET",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
+      headers: getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -2711,6 +2711,39 @@ function escapeHtml(str) {
 // ==========================================================================
 
 /**
+ * Authentication token storage helpers
+ * Safely retains session token across browser hard-refreshes (Ctrl + Shift + R)
+ */
+function getAuthToken() {
+  try {
+    return localStorage.getItem("assignflow_token");
+  } catch (e) {
+    return null;
+  }
+}
+
+function setAuthToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem("assignflow_token", token);
+    } else {
+      localStorage.removeItem("assignflow_token");
+    }
+  } catch (e) {
+    console.warn("Storage access warning:", e);
+  }
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+  const headers = { Accept: "application/json", ...extraHeaders };
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+/**
  * Checks existing session against GET /api/auth/me
  */
 async function checkCurrentUser() {
@@ -2718,7 +2751,7 @@ async function checkCurrentUser() {
     const res = await fetch(API_ENDPOINTS.authMe, {
       method: "GET",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
+      headers: getAuthHeaders(),
     });
 
     if (res.ok) {
@@ -2735,12 +2768,14 @@ async function checkCurrentUser() {
         navigateToView(initialRoute, false);
       }
     } else {
+      setAuthToken(null);
       state.currentUser = null;
       updateUserUI(null);
       openAuthModal("signin");
     }
   } catch (err) {
     console.error("Auth check failed:", err);
+    setAuthToken(null);
     state.currentUser = null;
     updateUserUI(null);
     openAuthModal("signin");
@@ -3994,7 +4029,7 @@ async function fetchSemesters() {
     const res = await fetch(API_ENDPOINTS.semesters, {
       method: "GET",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
+      headers: getAuthHeaders(),
     });
     if (res.ok) {
       state.semesters = await res.json();
@@ -4030,7 +4065,7 @@ async function fetchDashboard() {
         const semRes = await fetch(`${API_ENDPOINTS.semesters}/${state.activeSemesterId}/dashboard`, {
           method: "GET",
           credentials: "same-origin",
-          headers: { Accept: "application/json" },
+          headers: getAuthHeaders(),
         });
         if (semRes.ok) {
           const semDashData = await semRes.json();
@@ -4044,7 +4079,7 @@ async function fetchDashboard() {
     const res = await fetch(API_ENDPOINTS.dashboard, {
       method: "GET",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
+      headers: getAuthHeaders(),
     });
     if (res.ok) {
       const data = await res.json();
@@ -4112,7 +4147,19 @@ function generateSemesterTimelineMonths(startDateStr, endDateStr) {
  * Renders Semester Overview Dashboard matching Screen 1 Reference
  */
 function renderSemesterDashboard(dashData) {
-  if (!dashData || !dashData.selected_semester) return;
+  if (!dashData || !dashData.selected_semester) {
+    fetch(API_ENDPOINTS.dashboard, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: getAuthHeaders(),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) renderDashboard(data);
+      })
+      .catch(console.error);
+    return;
+  }
   const sem = dashData.selected_semester;
   state.activeSemester = sem;
   state.activeSemesterId = sem.id;
