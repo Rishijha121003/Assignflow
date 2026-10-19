@@ -854,6 +854,7 @@ def test_assignment_list_data_isolation_and_no_duplication(client, db_engine):
             status="active",
             class_id=t2_class_id,
             created_by_id=t2_id,
+            unit=2,
         )
         # Legacy unassigned assignment (created_by_id=None, class_id=None)
         legacy_as = Assignment(
