@@ -1360,3 +1360,701 @@ def test_post_revision_success_ui_state_and_row_update():
     assert '<span class="submission-pill status-ungraded">Pending Review</span>' in app_js
     assert "resubmitActionBtn = (resubAllowed && !isResubExpired)" in app_js
     assert '<span class="submission-pill status-resubmit-allowed"' in app_js
+
+
+def test_frontend_notification_endpoint_and_sidebar_calendar(client):
+    """
+    Verify that:
+    1. app.js contains API_ENDPOINTS.notifications pointing to /api/notifications.
+    2. app.js includes notification elements, mark-read handler, and preference fetch/save.
+    3. The sidebar navigation correctly labels Calendar with id="navTextCalendar" and routes to #calendar.
+    4. settings.html includes controls for in-app and email notification preferences.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    index_html = (repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+    sidebar_html = (repo_root / "frontend" / "components" / "sidebar.html").read_text(encoding="utf-8")
+    settings_html = (repo_root / "frontend" / "pages" / "settings.html").read_text(encoding="utf-8")
+
+    # 1. API Endpoint definition in app.js
+    assert "notifications: `${API_BASE}/api/notifications`" in app_js
+
+    # 2. Notification elements and methods in app.js
+    assert 'notificationBadge: document.getElementById("notificationBadge")' in app_js
+    assert 'notificationMenu: document.getElementById("notificationMenu")' in app_js
+    assert 'notificationList: document.getElementById("notificationList")' in app_js
+    assert 'markAllNotificationsReadBtn: document.getElementById("markAllNotificationsReadBtn")' in app_js
+    assert "fetchNotificationPreferences" in app_js
+    assert "fetchNotifications();" in app_js
+
+    # 3. Sidebar labels and icons
+    assert '<span id="navTextCalendar">Calendar</span>' in sidebar_html
+    assert '<span id="navTextCalendar">Calendar</span>' in index_html
+    assert 'id="navTextNotifications"' not in sidebar_html
+    assert 'id="navTextNotifications"' not in index_html
+
+    # 4. Settings preference toggles
+    assert 'id="prefInAppEnabled"' in settings_html
+    assert 'id="prefEmailEnabled"' in settings_html
+    assert 'id="prefEmailGradeReleased"' in settings_html
+    assert 'id="prefEmailDeadline"' in settings_html
+    assert 'id="prefEmailReevaluation"' in settings_html
+
+
+def test_analytics_navigation_accessibility():
+    """
+    Verify that Analytics / Results navigation is accessible across both desktop and mobile navigation:
+    - navbar.html contains an accessible Analytics nav link with id="topNavAnalytics" and data-nav="analytics".
+    - sidebar.html contains the responsive drawer Analytics link with id="navAnalytics" and data-nav="analytics".
+    - index.html contains both assembled links for synchronized highlight and navigation.
+    - app.js registers topNavAnalytics and updates labels according to role (Analytics for teacher, Results for student).
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    navbar_html = (repo_root / "frontend" / "components" / "navbar.html").read_text(encoding="utf-8")
+    sidebar_html = (repo_root / "frontend" / "components" / "sidebar.html").read_text(encoding="utf-8")
+    index_html = (repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. Desktop Navbar Link
+    assert 'href="#analytics"' in navbar_html
+    assert 'data-nav="analytics"' in navbar_html
+    assert 'id="topNavAnalytics"' in navbar_html
+    assert 'id="topNavTextAnalytics"' in navbar_html
+
+    # 2. Responsive Mobile Sidebar Link
+    assert 'href="#analytics"' in sidebar_html
+    assert 'data-nav="analytics"' in sidebar_html
+    assert 'id="navAnalytics"' in sidebar_html
+    assert 'id="navTextAnalytics"' in sidebar_html
+
+    # 3. Assembled index.html contains both links
+    assert 'id="topNavAnalytics"' in index_html
+    assert 'id="navAnalytics"' in index_html
+
+    # 4. app.js elements and role-based label updates
+    assert 'topNavAnalytics: document.getElementById("topNavAnalytics")' in app_js
+    assert 'topNavTextAnalytics: document.getElementById("topNavTextAnalytics")' in app_js
+    assert 'elements.topNavTextAnalytics.textContent = "Analytics"' in app_js
+    assert 'elements.topNavTextAnalytics.textContent = "Results"' in app_js
+
+
+def test_analytics_frontend_loader_and_api_integration():
+    """
+    Verify that loadAnalyticsPageView and analytics controllers:
+    - Connect to analytics endpoints (API_ENDPOINTS.analytics.overview, rankings, alerts, feedback)
+    - Do NOT call API_ENDPOINTS.dashboard
+    - Provide handlers for class and subject filters
+    - Provide loading, empty, and error state handlers
+    - Provide student feedback rendering and anonymized peer rankings for privacy
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. Loader does not fetch dashboard
+    start_idx = app_js.find("async function loadAnalyticsPageView()")
+    assert start_idx != -1
+    end_idx = app_js.find("async function populateAnalyticsSubjectSelect", start_idx)
+    loader_code = app_js[start_idx:end_idx]
+    assert "API_ENDPOINTS.dashboard" not in loader_code
+
+    # 2. Filter handlers and data refreshers are defined
+    assert "async function handleAnalyticsClassChange(e)" in app_js
+    assert "async function handleAnalyticsSubjectChange(e)" in app_js
+    assert "async function refreshAnalyticsData()" in app_js
+    assert "async function populateAnalyticsSubjectSelect(classId)" in app_js
+
+    # 3. Connection to analytics endpoints in refreshAnalyticsData
+    assert "API_ENDPOINTS.analytics.overview" in app_js
+    assert "API_ENDPOINTS.analytics.alerts" in app_js
+    assert "API_ENDPOINTS.analytics.feedback" in app_js
+    assert "API_ENDPOINTS.analytics.rankings" in app_js
+
+    # 4. Loading, empty, and error state functions
+    assert "function showAnalyticsLoadingState()" in app_js
+    assert "function renderAnalyticsEmptyState(message)" in app_js
+    assert "function showAnalyticsError(message)" in app_js
+
+    # 5. Student feedback and privacy preservation
+    assert "function renderStudentFeedback(items)" in app_js
+    assert "Student #" in app_js
+
+
+def test_student_class_cards_action_and_navigation():
+    """
+    Verify that in student class cards, the teacher-only Students button is removed
+    and replaced with a useful student action (btn-class-results) navigating to Results.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    style_css = (repo_root / "frontend" / "css" / "style.css").read_text(encoding="utf-8")
+
+    # 1. CSS contains .btn-class-results
+    assert ".btn-class-results" in style_css
+
+    # 2. app.js loadClassesPageView renders .btn-class-results for students and .btn-class-students for teachers
+    start_idx = app_js.find("function loadClassesPageView()")
+    assert start_idx != -1
+    end_idx = app_js.find("function copyJoinCode(", start_idx)
+    classes_code = app_js[start_idx:end_idx]
+
+    assert "btn-class-results" in classes_code
+    assert "navigateToView('analytics')" in classes_code
+    assert "btn-class-students" in classes_code
+
+
+def test_student_subject_detail_role_boundaries_and_breadcrumbs():
+    """
+    Verify that renderSubjectDetailView:
+    - Protects the Students tab from students and falls back to assignments
+    - Sets student breadcrumb to return to My Classes (#classes) instead of teacher-only Semesters (#semesters)
+    - Hides the '+ Create Assignment' button and teacher creation actions for students
+    - Hides the Students tab button from students
+    - Replaces teacher-only submissions counters with personal submission status and actionable buttons
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    start_idx = app_js.find("async function renderSubjectDetailView()")
+    assert start_idx != -1
+    end_idx = app_js.find("function exitSubjectDetail()", start_idx)
+    detail_code = app_js[start_idx:end_idx]
+
+    # Role detection
+    assert 'const isTeacher = state.currentUser?.role === "teacher";' in detail_code
+
+    # Students tab restriction for students
+    assert '!isTeacher && activeTab === "students"' in detail_code
+    assert 'activeTab = "assignments";' in detail_code
+
+    # Breadcrumb scoped for student
+    assert '<li class="breadcrumb-item"><a href="#classes" onclick="navigateToView(\'classes\'); return false;">My Classes</a></li>' in detail_code
+    assert '<li class="breadcrumb-item"><a href="#semesters"' in detail_code
+
+    # Teacher action button suppression
+    assert "${isTeacher ?" in detail_code
+    assert "+ Create Assignment" in detail_code
+
+    # Student submission buttons
+    assert "openSubmitWorkModal" in detail_code
+    assert "openViewSubmissionModal" in detail_code
+
+
+def test_curriculum_units_structure_modal_wiring_and_isolation():
+    """
+    Verify that the Curriculum Units & Structure modal:
+    - Has openStructureModalBtn bound in elements
+    - Wires openStructureModal click handler
+    - Wires closeStructureModal on close buttons and backdrop click
+    - Wires Escape key to closeStructureModal
+    - Calls GET /api/assignments/structure/units
+    - Renders the hierarchical Class -> Subject -> Unit structure
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    modals_html = (repo_root / "frontend" / "components" / "modals.html").read_text(encoding="utf-8")
+    assignments_html = (repo_root / "frontend" / "pages" / "assignments.html").read_text(encoding="utf-8")
+
+    # DOM elements exist
+    assert 'id="openStructureModalBtn"' in assignments_html
+    assert 'id="structureModalBackdrop"' in modals_html
+    assert 'id="structureTreeContainer"' in modals_html
+    assert 'id="closeStructureModalBtn"' in modals_html
+
+    # Elements bound in app.js
+    assert 'openStructureModalBtn: document.getElementById("openStructureModalBtn")' in app_js
+    assert 'structureModalBackdrop: document.getElementById("structureModalBackdrop")' in app_js
+
+    # Listeners attached
+    assert 'elements.openStructureModalBtn.addEventListener("click", () => openStructureModal());' in app_js
+    assert 'elements.closeStructureModalBtn.addEventListener("click", closeStructureModal);' in app_js
+
+    # Escape key handler
+    assert "closeStructureModal();" in app_js
+
+    # Controller implementation
+    assert "async function openStructureModal()" in app_js
+    assert "function closeStructureModal()" in app_js
+    assert "function renderStructureTree(classList)" in app_js
+    assert "${API_ENDPOINTS.assignments}/structure/units" in app_js
+
+
+def test_student_resubmission_deadline_ui_enforcement():
+    """
+    Verify that student resubmission deadlines are enforced in UI:
+    - openSubmitWorkModal detects expired deadlines and disables btnSubmitWork
+    - handleSubmitWorkForm blocks submission if the resubmission window is closed
+    - openViewSubmissionModal hides/disables the resubmit action when deadline has passed
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # In openSubmitWorkModal
+    submit_start = app_js.find("async function openSubmitWorkModal(")
+    assert submit_start != -1
+    submit_end = app_js.find("function closeSubmitWorkModal()", submit_start)
+    submit_code = app_js[submit_start:submit_end]
+
+    assert "deadlineDate.getTime() < Date.now()" in submit_code
+    assert "isExpired = true" in submit_code
+    assert "elements.btnSubmitWork.disabled = true;" in submit_code
+    assert "The resubmission deadline for this assignment has expired" in submit_code
+
+    # In handleSubmitWorkForm
+    form_start = app_js.find("async function handleSubmitWorkForm(")
+    assert form_start != -1
+    form_end = app_js.find("async function openViewSubmissionModal(", form_start)
+    form_code = app_js[form_start:form_end]
+
+    assert "new Date(state.currentSubmittingExistingSubmission.resubmission_deadline).getTime() < Date.now()" in form_code
+    assert "elements.btnSubmitWork.disabled = true;" in form_code
+
+    # In openViewSubmissionModal
+    view_start = app_js.find("async function openViewSubmissionModal(")
+    assert view_start != -1
+    view_end = app_js.find("function closeViewSubmissionModal()", view_start)
+    view_code = app_js[view_start:view_end]
+
+    assert "resubDeadlineDate.getTime() < Date.now()" in view_code
+    assert "isResubExpired" in view_code
+    assert "elements.btnModalResubmitWork.style.display = \"none\";" in view_code
+
+
+def test_frontend_workflow_endpoint_templates_target_mounted_routes():
+    """
+    Verify that frontend/js/app.js API_ENDPOINTS.workflow templates:
+    - Target the actual mounted FastAPI routes directly (/api/submissions/..., /api/assignments/...)
+    - Do NOT erroneously prefix paths with /api/workflow/
+    - Point grade corrections to /api/submissions/{id}/corrections
+    - Point submission history to /api/submissions/{id}/history
+    - Point re-evaluation requests to /api/submissions/{id}/request-reevaluation
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    start_idx = app_js.find("workflow: {")
+    assert start_idx != -1
+    end_idx = app_js.find("},", start_idx)
+    wf_block = app_js[start_idx : end_idx + 2]
+
+    # Ensure no incorrect /workflow/ prefix exists in templates
+    assert "${API_BASE}/api/workflow" not in wf_block
+    assert "/api/workflow/" not in wf_block
+
+    # Verify mounted endpoint templates
+    assert "extensions: (id) => `${API_BASE}/api/assignments/${id}/extensions`" in wf_block
+    assert "allowResubmission: (id) => `${API_BASE}/api/submissions/${id}/allow-resubmission`" in wf_block
+    assert "gradeCorrections: (id) => `${API_BASE}/api/submissions/${id}/corrections`" in wf_block
+    assert "correctGrade: (id) => `${API_BASE}/api/submissions/${id}/correct-grade`" in wf_block
+    assert "submissionHistory: (id) => `${API_BASE}/api/submissions/${id}/history`" in wf_block
+    assert "requestReevaluation: (id) => `${API_BASE}/api/submissions/${id}/request-reevaluation`" in wf_block
+    assert "reevaluations: (id) => `${API_BASE}/api/assignments/${id}/reevaluations`" in wf_block
+    assert "reevaluationDecision: (id) => `${API_BASE}/api/reevaluations/${id}/decision`" in wf_block
+
+
+def test_student_reevaluation_action_ui_and_modal_wiring():
+    """
+    Verify student re-evaluation UI elements and workflows:
+    - Modals and index.html include request re-evaluation buttons and action containers
+    - app.js elements object maps re-evaluation buttons
+    - openViewSubmissionModal displays re-evaluation action for students when grade is released
+    - openViewSubmissionModal hides re-evaluation action when unreleased or when user is teacher
+    - filterAndRenderSubmissions provides re-evaluation button for released student submissions
+    - handleSubmitReevaluationRequest enforces 5+ character reason validation
+    - openSubmissionHistoryModal fetches from API_ENDPOINTS.workflow.submissionHistory(sub.id)
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    modals_html = (repo_root / "frontend" / "components" / "modals.html").read_text(encoding="utf-8")
+    index_html = (repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # DOM elements exist in both modals.html and assembled index.html
+    for html in (modals_html, index_html):
+        assert 'id="viewSubReevalActionBox"' in html
+        assert 'id="btnResultsCardReeval"' in html
+        assert 'id="btnModalRequestReeval"' in html
+        assert 'id="reevaluationModalBackdrop"' in html
+        assert 'id="submitReevaluationRequestBtn"' in html
+        assert 'id="cancelStudentReevalBtn"' in html
+
+    # Elements bound in app.js
+    assert 'btnModalRequestReeval: document.getElementById("btnModalRequestReeval")' in app_js
+    assert 'btnResultsCardReeval: document.getElementById("btnResultsCardReeval")' in app_js
+    assert 'viewSubReevalActionBox: document.getElementById("viewSubReevalActionBox")' in app_js
+    assert 'submitReevaluationRequestBtn: document.getElementById("submitReevaluationRequestBtn")' in app_js
+    assert 'cancelStudentReevalBtn: document.getElementById("cancelStudentReevalBtn")' in app_js
+
+    # openViewSubmissionModal displays re-evaluation only for released grades and non-teachers
+    view_sub_idx = app_js.find("async function openViewSubmissionModal(")
+    assert view_sub_idx != -1
+    view_sub_end = app_js.find("function closeViewSubmissionModal()", view_sub_idx)
+    view_sub_code = app_js[view_sub_idx:view_sub_end]
+
+    assert 'const isReleased = submission.status === "released" && submission.grade !== null && submission.grade !== undefined;' in view_sub_code
+    assert 'if (elements.btnModalRequestReeval) elements.btnModalRequestReeval.style.display = "inline-flex";' in view_sub_code
+    assert 'if (elements.viewSubReevalActionBox) elements.viewSubReevalActionBox.style.display = "flex";' in view_sub_code
+    assert 'if (elements.btnModalRequestReeval) elements.btnModalRequestReeval.style.display = "none";' in view_sub_code
+    assert 'if (elements.viewSubReevalActionBox) elements.viewSubReevalActionBox.style.display = "none";' in view_sub_code
+
+    # filterAndRenderSubmissions adds re-evaluation action for released submissions
+    filter_idx = app_js.find("function filterAndRenderSubmissions()")
+    assert filter_idx != -1
+    filter_end = app_js.find("function viewSubmissionFromRow(", filter_idx)
+    filter_code = app_js[filter_idx:filter_end]
+    assert "submissions-reeval-btn" in filter_code
+
+    # Validation in handleSubmitReevaluationRequest
+    reeval_submit_idx = app_js.find("async function handleSubmitReevaluationRequest()")
+    assert reeval_submit_idx != -1
+    reeval_submit_end = app_js.find("async function handleSubmitReevaluationDecision()", reeval_submit_idx)
+    reeval_submit_code = app_js[reeval_submit_idx:reeval_submit_end]
+    assert "reasonVal.length < 5" in reeval_submit_code
+    assert "API_ENDPOINTS.workflow.requestReevaluation" in reeval_submit_code
+
+    # openSubmissionHistoryModal uses workflow submissionHistory endpoint
+    history_idx = app_js.find("async function openSubmissionHistoryModal(")
+    assert history_idx != -1
+    history_end = app_js.find("function closeSubmissionHistoryModal()", history_idx)
+    history_code = app_js[history_idx:history_end]
+    assert "API_ENDPOINTS.workflow.submissionHistory(sub.id)" in history_code
+
+
+def test_student_route_access_and_parameterized_hash_routing():
+    """
+    Regression Test:
+    Verify that canUserAccessRoute and navigateToView correctly:
+    - Allow student access to parameterized subpaths like classes/12 and subjects/12
+    - Block unauthorized teacher routes for students (e.g. semesters/12, reports)
+    - Map route aliases (subjects -> classes, students -> submissions)
+    - Parse classes/:id in navigateToView and set state.activeSubjectId
+    - Reset state.activeSubjectId to null when navigating directly to #classes
+    - Update hash on viewSubjectDetail and exitSubjectDetail
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. canUserAccessRoute implementation
+    can_access_start = app_js.find("function canUserAccessRoute(user, route)")
+    assert can_access_start != -1
+    can_access_end = app_js.find("function clearUserState()", can_access_start)
+    can_access_code = app_js[can_access_start:can_access_end]
+
+    assert 'const baseSegment = normalized.split("/")[0];' in can_access_code
+    assert 'const canonicalRoute = baseSegment === "subjects" ? "classes" : (baseSegment === "students" ? "submissions" : baseSegment);' in can_access_code
+    assert 'return allowedRoutes.includes(canonicalRoute);' in can_access_code
+
+    # 2. navigateToView parameterized route handling
+    nav_start = app_js.find("function navigateToView(viewName, updateHash = true)")
+    assert nav_start != -1
+    nav_end = app_js.find("async function loadClassesPageView()", nav_start)
+    nav_code = app_js[nav_start:nav_end]
+
+    assert 'const subjectParamMatch = targetView.match(/^(?:classes|subjects)\\/(\\d+)/i);' in nav_code
+    assert 'targetSubjectId = parseInt(subjectParamMatch[1], 10);' in nav_code
+    assert 'targetView = "classes";' in nav_code
+    assert 'state.activeSubjectId = targetSubjectId;' in nav_code
+    assert 'state.activeSubjectId = null;' in nav_code
+
+    # 3. viewSubjectDetail and exitSubjectDetail URL synchronization
+    view_subj_start = app_js.find("async function viewSubjectDetail(subjectId, activeTab = \"assignments\", updateHash = true)")
+    assert view_subj_start != -1
+    view_subj_end = app_js.find("async function renderSubjectDetailView()", view_subj_start)
+    view_subj_code = app_js[view_subj_start:view_subj_end]
+    assert "navigateToView(`classes/${subjectId}`, updateHash);" in view_subj_code
+
+    exit_subj_start = app_js.find("function exitSubjectDetail()")
+    assert exit_subj_start != -1
+    exit_subj_end = app_js.find("function openCreateAssignmentForSubject(", exit_subj_start)
+    exit_subj_code = app_js[exit_subj_start:exit_subj_end]
+    assert 'navigateToView("classes", true);' in exit_subj_code
+
+
+def test_student_join_code_privacy_and_empty_state_guidance():
+    """
+    Regression Test:
+    Verify that student privacy boundaries and usability guidance are preserved:
+    - Join codes on class cards are visible only to teachers (isTeacher && cls.join_code)
+    - Students see an 'Enrolled' status pill on class cards instead of join code badges
+    - Course Overview displays 'Student Join Code' to teachers, but Instructor name and Enrolled status to students
+    - Student empty state in assignments table provides actionable guidance to join a class
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. Class cards join code privacy
+    assert "${(isTeacher && cls.join_code) ?" in app_js
+    assert 'class="class-join-code-badge class-enrolled-badge"' in app_js
+    assert "Enrolled</span>" in app_js
+
+    # 2. Course Overview join code privacy
+    overview_start = app_js.find('if (activeTab === "overview") {')
+    assert overview_start != -1
+    overview_end = app_js.find('if (activeTab === "analytics") {', overview_start)
+    overview_code = app_js[overview_start:overview_end]
+
+    assert "${isTeacher ?" in overview_code
+    assert "Student Join Code" in overview_code
+    assert "Instructor</span>" in overview_code
+    assert "Course Instructor" in overview_code
+    assert 'span class="status-pill status-active"' in overview_code
+
+    # 3. Student empty state text in renderTable
+    table_start = app_js.find("function renderTable(assignments) {")
+    assert table_start != -1
+    table_end = app_js.find("elements.emptyState.style.display = \"none\";", table_start)
+    table_code = app_js[table_start:table_end]
+
+    assert "Join a class using your instructor's join code to access upcoming coursework." in table_code
+
+
+def test_nova_assignment_status_tracker_contract():
+    """
+    NOVA Feature 1 Verification:
+    - getEffectiveStatus respects student submission status: submitted work past deadline is never overdue
+    - syncStatusFilterOptions dynamically populates student vs teacher status dropdown options
+    - applyFiltersAndRender supports not_submitted, submitted, graded, resubmit
+    - renderTable renders authoritative teacher progress chip (submission_count / total_students)
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # 1. getEffectiveStatus calculation
+    assert "function getEffectiveStatus(assignment, studentSubmission)" in app_js
+    assert "return \"resubmit\";" in app_js
+    assert "return \"graded\";" in app_js
+    assert "return \"submitted\";" in app_js
+    assert "return \"not_submitted\";" in app_js
+
+    # 2. Dynamic status filter options
+    assert "function syncStatusFilterOptions()" in app_js
+    assert "<option value=\"not_submitted\">Not Submitted</option>" in app_js
+    assert "<option value=\"submitted\">Submitted</option>" in app_js
+    assert "<option value=\"graded\">Graded</option>" in app_js
+    assert "<option value=\"resubmit\">Needs Resubmission</option>" in app_js
+
+    # 3. Teacher progress bar
+    assert "teacherProgressBadge = `" in app_js
+    assert "assignment.submission_count !== undefined ? assignment.submission_count : 0" in app_js
+    assert "assignment.total_students !== undefined ? assignment.total_students : 0" in app_js
+    assert "progress-bar-mini" in app_js
+
+
+def test_nova_assignment_calendar_contract():
+    """
+    NOVA Feature 2 Verification:
+    - Month navigation controls: prev, next, today, all dates
+    - Correct year transitions and month-year display
+    - Interactive monthly grid with date selection
+    - Agenda filtered by selected date with Today/All Dates reset
+    - Agenda item click opens correct assignment/submission workflow directly
+    - Preserves student draft assignment privacy
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    calendar_html = (repo_root / "frontend" / "pages" / "calendar.html").read_text(encoding="utf-8")
+
+    # 1. Template controls
+    assert 'id="calendarPrevMonthBtn"' in calendar_html
+    assert 'id="calendarNextMonthBtn"' in calendar_html
+    assert 'id="calendarTodayBtn"' in calendar_html
+    assert 'id="calendarAllDatesBtn"' in calendar_html
+    assert 'id="calendarMonthYearDisplay"' in calendar_html
+    assert 'id="calendarMiniMonthContainer"' in calendar_html
+
+    # 2. JS Calendar Engine
+    assert "wireCalendarControls()" in app_js
+    assert "calendarNavMonth = 11; \n        calendarNavYear--;" in app_js or "calendarNavYear--;" in app_js
+    assert "calendarNavMonth = 0; \n        calendarNavYear++;" in app_js or "calendarNavYear++;" in app_js
+    assert "renderCalendarMonthGrid(allDueAssignments);" in app_js
+    assert "selected-date" in app_js
+
+    # 3. Direct workflow opening (not generic navigate)
+    assert "openViewSubmissionModal(asgn, mySub);" in app_js
+    assert "openSubmitWorkModal(asgn);" in app_js
+    assert "openTeacherSubmissionsModal(asgn);" in app_js
+
+    # 4. Privacy: drafts excluded for students
+    assert "allDueAssignments.filter((a) => a.status !== \"draft\" && a.class_id);" in app_js
+
+
+def test_nova_teacher_work_queue_contract():
+    """
+    NOVA Feature 3 Verification:
+    - Needs Grading, Draft Grades, Pending Re-evaluations, and Released filters
+    - Work queue tabs with live counts
+    - Dashboard Grading Queue card renders real authorized pending work
+    - SpeedGrader maintains continuous queue context (state.currentGradingSubmissions = list)
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    submissions_html = (repo_root / "frontend" / "pages" / "submissions.html").read_text(encoding="utf-8")
+
+    # 1. Filter dropdown and tabs in template
+    assert 'value="needs_grading"' in submissions_html
+    assert 'value="draft_grades"' in submissions_html
+    assert 'value="pending_reevaluation"' in submissions_html
+    assert 'id="submissionsQueueTabs"' in submissions_html
+
+    # 2. Filter logic in JS
+    assert 'statusFilter === "needs_grading"' in app_js
+    assert 'statusFilter === "draft_grades"' in app_js
+    assert 'statusFilter === "pending_reevaluation"' in app_js
+    assert "updateTeacherQueueTabs()" in app_js
+
+    # 3. Continuous queue context for SpeedGrader
+    assert "state.currentGradingSubmissions = list;" in app_js
+    assert "state.currentGradingIndex = idx;" in app_js
+
+    # 4. Dashboard grading queue uses real data
+    assert "const realQueue = dashData.grading_queue || [];" in app_js
+    assert "Grading Queue ${realQueue.length ? `(${realQueue.length})` : \"\"}" in app_js
+
+
+def test_nova_feedback_and_resubmission_contract():
+    """
+    NOVA Feature 4 Verification:
+    - Authorize resubmission calls POST /api/submissions/{id}/allow-resubmission with optional deadline
+    - Re-evaluation reason banner displayed in SpeedGrader with decision trigger
+    - Deep-link query parameters safely parsed and routed in navigateToView
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    modals_html = (repo_root / "frontend" / "components" / "modals.html").read_text(encoding="utf-8")
+
+    # 1. Authorize resubmission modal deadline input and API call
+    assert 'id="resubmissionDeadlineInput"' in modals_html
+    assert "resubmission_deadline: resubmissionDeadline" in app_js
+    assert "fetch(`${API_BASE}/api/submissions/${sub.id}/allow-resubmission`" in app_js
+
+    # 2. SpeedGrader re-evaluation banner
+    assert 'id="gradingReevaluationBanner"' in modals_html
+    assert 'id="gradingReevaluationReasonText"' in modals_html
+    assert 'id="gradingResolveReevalBtn"' in modals_html
+    assert "elements.gradingReevaluationBanner.style.display = \"block\";" in app_js
+    assert "openTeacherReevaluationModal({" in app_js
+
+    # 3. Safe deep-link navigation in navigateToView
+    assert 'const searchParams = new URLSearchParams(queryString);' in app_js
+    assert 'searchParams.has("resubmit")' in app_js
+    assert 'searchParams.has("view_result")' in app_js
+    assert 'searchParams.has("sub")' in app_js
+    assert 'searchParams.has("date")' in app_js
+
+
+def test_frontend_fetch_classes_and_refresh_state_contract():
+    """
+    Regression Test:
+    Verify that frontend fetchClasses and refresh initialization correctly manage state:
+    1. fetchClasses declares 'const epoch = state.authEpoch;' so that epoch check does not throw ReferenceError.
+    2. All async functions using 'epoch !== state.authEpoch' declare epoch in their function scope.
+    3. checkCurrentUser on reload awaits fetchClasses() and updates state.classes.
+    4. loadClassesPageView populates KPI counts from state.classes and renders enrolled classes.
+    """
+    import subprocess
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    app_js_path = repo_root / "frontend" / "js" / "app.js"
+    app_js = app_js_path.read_text(encoding="utf-8")
+
+    # 1. fetchClasses has local epoch declaration
+    fc_idx = app_js.find("async function fetchClasses() {")
+    assert fc_idx != -1
+    fc_body = app_js[fc_idx:fc_idx + 800]
+    assert "const epoch = state.authEpoch;" in fc_body
+    assert "if (epoch !== state.authEpoch) return;" in fc_body
+
+    # 2. Node.js check verifying no undeclared epoch checks exist in any function
+    node_check_script = """
+    const fs = require('fs');
+    const code = fs.readFileSync('frontend/js/app.js', 'utf8');
+    const lines = code.split('\\n');
+    let missing = [];
+    lines.forEach((line, idx) => {
+      if (line.includes('epoch !== state.authEpoch') || line.includes('epoch === state.authEpoch')) {
+        let found = false;
+        for (let i = idx; i >= 0; i--) {
+          if (lines[i].includes('const epoch') || lines[i].includes('let epoch') || lines[i].includes('var epoch')) {
+            found = true;
+            break;
+          }
+          if (/function\\s+([a-zA-Z0-9_$]+)/.test(lines[i])) break;
+        }
+        if (!found) missing.push(idx + 1);
+      }
+    });
+    if (missing.length > 0) {
+      console.error('Missing epoch declarations on lines:', missing);
+      process.exit(1);
+    }
+    """
+    res = subprocess.run(["node", "-e", node_check_script], cwd=str(repo_root), capture_output=True, text=True)
+    assert res.returncode == 0, f"Undeclared epoch found in app.js: {res.stderr}"
+
+    # 3. Reload initialization in checkCurrentUser
+    assert "await Promise.all([fetchClasses(), fetchSemesters()]);" in app_js
+
+    # 4. Classes page rendering relies on state.classes
+    assert "const classes = state.classes || [];" in app_js
+    assert "totalClasses = classes.length;" in app_js
+    assert "renderStudentClassesList(data);" in app_js
+
+
+def test_frontend_classes_page_layout_contract(client):
+    """
+    Regression Test:
+    Verify classes page layout requirements:
+    1. index.html contains only one primary action button in #classesView (classesPageActionBtn).
+    2. loadClassesPageView in app.js does not render a duplicate classes-toolbar-create-btn.
+    3. Header action button title and aria-label are dynamically updated for teachers/students.
+    4. style.css defines auto-fill responsive grid for .classes-cards-grid, toolbar alignment,
+       and equal column split for class card bottom actions.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent.parent
+
+    # 1. Inspect assembled index.html classesView
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.text
+    cv_start = html.find('id="classesView"')
+    assert cv_start != -1
+    cv_end = html.find('<!-- END COMPONENT: pages/classes.html -->', cv_start)
+    assert cv_end != -1
+    classes_view_html = html[cv_start:cv_end]
+
+    # Verify only one button in static classes view
+    assert 'id="classesPageActionBtn"' in classes_view_html
+    assert 'classes-toolbar-create-btn' not in classes_view_html
+    # Count buttons in header-actions-group
+    btn_matches = re.findall(r'<button\b', classes_view_html)
+    assert len(btn_matches) == 1, f"Expected exactly 1 button in classes view markup, found {len(btn_matches)}"
+
+    # 2. Inspect app.js
+    app_js = (repo_root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    assert "classes-toolbar-create-btn" not in app_js, "Found duplicate toolbar button in app.js"
+    assert 'elements.classesPageActionBtn.title = isTeacher ? "Create Class" : "Join Class";' in app_js
+    assert 'elements.classesPageActionBtn.setAttribute("aria-label", isTeacher ? "Create Class" : "Join Class");' in app_js
+
+    # 3. Inspect style.css
+    css_res = client.get("/css/style.css")
+    assert css_res.status_code == 200
+    css = css_res.text
+    assert ".classes-view-content" in css
+    assert "max-width: 1360px;" in css
+    assert ".classes-toolbar-right" in css
+    assert "repeat(auto-fill, minmax(340px, 1fr))" in css
+    assert "repeat(2, 1fr)" in css

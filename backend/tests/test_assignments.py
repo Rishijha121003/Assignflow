@@ -1041,3 +1041,69 @@ def test_teacher_cannot_filter_by_unowned_semester(client, teacher_user, db_engi
             session.commit()
 
 
+def test_student_cannot_download_draft_assignment_pdf(client, teacher_headers, student_headers):
+    """
+    Phase 1 Regression Test:
+    Enrolled students are forbidden from downloading question-sheet PDFs of draft assignments.
+    Teachers can download their own draft PDFs.
+    When the assignment is published ('active'), enrolled students can download it.
+    """
+    # 1. Create a class and enroll student
+    cls_res = client.post(
+        "/api/classes",
+        json={"name": "Draft PDF Security Class", "description": "Testing access control"},
+        headers=teacher_headers,
+    )
+    assert cls_res.status_code == 201
+    cls_data = cls_res.json()
+    cls_id = cls_data["id"]
+    join_code = cls_data["join_code"]
+
+    join_res = client.post("/api/classes/join", json={"join_code": join_code}, headers=student_headers)
+    assert join_res.status_code == 200
+
+    # 2. Teacher creates a DRAFT assignment with an attached question PDF
+    future_date = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+    pdf_content = b"%PDF-1.4\nConfidential Exam Questions\n%%EOF"
+
+    create_res = client.post(
+        "/api/assignments",
+        data={
+            "title": "Confidential Draft Exam",
+            "subject": "Cybersecurity",
+            "due_date": future_date,
+            "status": "draft",
+            "class_id": str(cls_id),
+        },
+        files={"file": ("Secret_Exam.pdf", pdf_content, "application/pdf")},
+        headers=teacher_headers,
+    )
+    assert create_res.status_code == 201
+    asgn_id = create_res.json()["id"]
+
+    try:
+        # 3. Enrolled student attempts to download draft question PDF -> must be 403 Forbidden
+        st_dl = client.get(f"/api/assignments/{asgn_id}/download", headers=student_headers)
+        assert st_dl.status_code == 403
+        assert "Draft assignments are not visible to students" in st_dl.json()["detail"]
+
+        # 4. Teacher owner can download the draft question PDF -> 200 OK
+        t_dl = client.get(f"/api/assignments/{asgn_id}/download", headers=teacher_headers)
+        assert t_dl.status_code == 200
+        assert t_dl.content == pdf_content
+
+        # 5. Teacher publishes assignment ('active')
+        pub_res = client.put(
+            f"/api/assignments/{asgn_id}",
+            json={"status": "active"},
+            headers=teacher_headers,
+        )
+        assert pub_res.status_code == 200
+
+        # 6. Now enrolled student can download question PDF -> 200 OK
+        st_pub_dl = client.get(f"/api/assignments/{asgn_id}/download", headers=student_headers)
+        assert st_pub_dl.status_code == 200
+        assert st_pub_dl.content == pdf_content
+    finally:
+        client.delete(f"/api/assignments/{asgn_id}", headers=teacher_headers)
+        client.delete(f"/api/classes/{cls_id}", headers=teacher_headers)

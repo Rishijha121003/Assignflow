@@ -2,38 +2,61 @@
         <!-- CALENDAR VIEW (Deadlines Timeline & Schedule)                    -->
         <!-- ================================================================ -->
         <div id="calendarView" class="page-view calendar-view-content" style="display: none;">
-          <div class="page-header-row">
+          <!-- Calendar Header Row -->
+          <div class="page-header-row calendar-header-row">
             <div>
-              <h1 class="page-title">Calendar & Deadlines</h1>
-              <p class="page-subtitle">Track upcoming deadlines, schedule, and assignment timelines.</p>
+              <h1 class="page-title">Calendar &amp; Deadlines</h1>
+              <p class="page-subtitle">Track coursework timelines, milestones, and upcoming submission deadlines.</p>
             </div>
-            <div class="header-actions-group">
-              <button class="btn btn-secondary" id="calendarViewAssignmentsBtn">
-                <span>Go to Assignments</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <div class="calendar-header-actions">
+              <div class="calendar-nav-bar" role="toolbar" aria-label="Calendar navigation">
+                <button class="btn btn-secondary btn-sm" id="calendarPrevMonthBtn" type="button" aria-label="Previous Month" title="Previous Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span class="calendar-month-year-display" id="calendarMonthYearDisplay">October 2026</span>
+                <button class="btn btn-secondary btn-sm" id="calendarNextMonthBtn" type="button" aria-label="Next Month" title="Next Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+                <button class="btn btn-outline btn-sm" id="calendarTodayBtn" type="button">Today</button>
+                <button class="btn btn-outline btn-sm active" id="calendarAllDatesBtn" type="button">All Deadlines</button>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="calendarViewAssignmentsBtn" type="button">
+                <span>Assignments Table</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
 
+          <!-- Calendar Layout Grid -->
           <div class="calendar-layout-grid">
-            <!-- Left: Deadlines Agenda Timeline List -->
-            <div class="card calendar-agenda-card">
-              <div class="dash-card-header">
-                <h2 class="dash-card-title">Deadlines Agenda</h2>
-                <span class="user-role" id="calendarCurrentMonthLabel">Upcoming</span>
+            <!-- Left: Interactive Month Schedule Grid -->
+            <div class="card calendar-month-card">
+              <div class="dash-card-header calendar-card-header">
+                <div>
+                  <h2 class="dash-card-title" id="calendarGridTitle">Monthly Schedule</h2>
+                  <p class="dash-card-subtitle">Click any date to inspect scheduled deadlines and deliverables.</p>
+                </div>
+                <div class="calendar-legend">
+                  <span class="legend-item"><span class="legend-dot dot-deadline"></span> Deadline</span>
+                  <span class="legend-item"><span class="legend-dot dot-today"></span> Today</span>
+                </div>
               </div>
-              <div class="calendar-timeline-list" id="calendarDeadlinesList">
-                <!-- Rendered dynamically -->
+              <div class="calendar-grid-container" id="calendarMiniMonthContainer">
+                <!-- Interactive table rendered dynamically via JS -->
               </div>
             </div>
 
-            <!-- Right: Mini calendar / Schedule overview -->
-            <div class="card calendar-mini-month-card">
-              <div class="dash-card-header">
-                <h2 class="dash-card-title">Schedule Overview</h2>
+            <!-- Right: Filtered Deadlines Agenda -->
+            <div class="card calendar-agenda-card">
+              <div class="dash-card-header calendar-card-header">
+                <div>
+                  <h2 class="dash-card-title" id="calendarAgendaTitle">Deadlines Agenda</h2>
+                  <p class="dash-card-subtitle" id="calendarAgendaSubtitle">Sorted chronologically by due date</p>
+                </div>
+                <span class="user-role" id="calendarCurrentMonthLabel">All Deadlines</span>
               </div>
-              <div id="calendarMiniMonthContainer">
-                <!-- Rendered dynamically -->
+              <div class="calendar-timeline-list" id="calendarDeadlinesList">
+                <!-- Rendered dynamically via JS -->
               </div>
             </div>
           </div>

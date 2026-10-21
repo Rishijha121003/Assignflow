@@ -567,6 +567,11 @@ def get_semester_dashboard(
             .order_by(Semester.start_date.desc())
             .all()
         )
+        if sem.id not in [s.id for s in available_sems]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You are not enrolled in any class in this semester.",
+            )
 
     # Serialize selected semester
     selected_semester = serialize_semester(sem, db)
@@ -618,9 +623,14 @@ def get_semester_dashboard(
 
     recent_submissions_data = []
     if assignment_ids:
-        recent_subs = (
+        recent_subs_query = (
             db.query(Submission)
             .filter(Submission.assignment_id.in_(assignment_ids))
+        )
+        if current_user.role == "student":
+            recent_subs_query = recent_subs_query.filter(Submission.student_id == current_user.id)
+        recent_subs = (
+            recent_subs_query
             .order_by(Submission.submitted_at.desc())
             .limit(5)
             .all()
@@ -628,7 +638,12 @@ def get_semester_dashboard(
         for s in recent_subs:
             # Respect grade release rules for students
             is_released = s.status == "released"
-            student_label = s.student.full_name if s.student else "Student"
+            if current_user.role == "student":
+                student_label = current_user.full_name
+                student_email = current_user.email
+            else:
+                student_label = s.student.full_name if s.student else "Student"
+                student_email = s.student.email if s.student else ""
             sub_title = s.assignment.title if s.assignment else "Assignment"
             class_name = s.assignment.class_name if (s.assignment and s.assignment.class_name) else "Subject"
 
@@ -643,7 +658,7 @@ def get_semester_dashboard(
             recent_submissions_data.append({
                 "id": s.id,
                 "student_name": student_label,
-                "student_email": s.student.email if s.student else "",
+                "student_email": student_email,
                 "assignment_title": sub_title,
                 "class_name": class_name,
                 "status": status_badge,
@@ -655,13 +670,18 @@ def get_semester_dashboard(
     now = datetime.now(timezone.utc)
     upcoming_deadlines_data = []
     if assignment_ids:
-        upcoming_as = (
+        upcoming_query = (
             db.query(Assignment)
             .filter(
                 Assignment.id.in_(assignment_ids),
                 Assignment.status == "active",
                 Assignment.due_date >= now,
             )
+        )
+        if current_user.role == "student":
+            upcoming_query = upcoming_query.filter(Assignment.class_id.in_(enrolled_class_ids))
+        upcoming_as = (
+            upcoming_query
             .order_by(Assignment.due_date.asc())
             .limit(5)
             .all()
@@ -716,6 +736,25 @@ def list_semester_subjects(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Semester with ID {id} not found.",
         )
+
+    if current_user.role == "teacher":
+        if sem.teacher_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not own this semester.",
+            )
+    else:
+        enrolled_in_sem = (
+            db.query(ClassEnrollment)
+            .join(Class, ClassEnrollment.class_id == Class.id)
+            .filter(Class.semester_id == id, ClassEnrollment.student_id == current_user.id)
+            .first()
+        )
+        if not enrolled_in_sem:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You are not enrolled in any class in this semester.",
+            )
 
     classes = db.query(Class).filter(Class.semester_id == id).order_by(Class.id.asc()).all()
     # Serialize classes using the existing serialize_class pattern
@@ -836,8 +875,23 @@ def get_subject_performance(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found in this semester.")
 
     is_teacher = current_user.role == "teacher"
-    if is_teacher and cls.teacher_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: You do not own this subject.")
+    if is_teacher:
+        if cls.teacher_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: You do not own this subject.")
+    else:
+        is_enrolled = (
+            db.query(ClassEnrollment)
+            .filter(
+                ClassEnrollment.class_id == subject_id,
+                ClassEnrollment.student_id == current_user.id,
+            )
+            .first()
+        )
+        if not is_enrolled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You are not enrolled in this subject.",
+            )
 
     # All assignments for this subject
     assignments = db.query(Assignment).filter(Assignment.class_id == subject_id).all()
@@ -924,6 +978,11 @@ def get_subject_performance(
     students_perf.sort(key=lambda s: (s.average_score is not None, s.average_score or 0.0), reverse=True)
     for idx, item in enumerate(students_perf):
         item.rank = idx + 1
+        if not is_teacher and item.id != current_user.id:
+            item.student_name = f"Student #{idx + 1}"
+            item.student_email = ""
+            item.status = "Enrolled"
+            item.id = 0
 
     return SubjectPerformanceResponse(
         subject_id=cls.id,
@@ -944,7 +1003,7 @@ def get_subject_performance(
 )
 def get_semester_report(
     id: int,
-    current_user: User = Depends(get_current_user),
+    teacher: User = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
     """
@@ -958,7 +1017,7 @@ def get_semester_report(
     if not sem:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Semester not found.")
 
-    if current_user.role == "teacher" and sem.teacher_id != current_user.id:
+    if sem.teacher_id != teacher.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: You do not own this semester.")
 
     serialized_sem = serialize_semester(sem, db)
@@ -1011,7 +1070,7 @@ def get_semester_report(
 
             student_sub_scores = []
             for s in s_subs:
-                if current_user.role == "teacher":
+                if teacher.role == "teacher":
                     if s.grade is not None:
                         max_m = max_marks_map.get(s.assignment_id, 100.0)
                         pct = (float(s.grade) / max_m) * 100.0
@@ -1099,14 +1158,14 @@ def get_semester_report(
 )
 def export_semester_csv(
     id: int,
-    current_user: User = Depends(get_current_user),
+    teacher: User = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
     """
     Downloads full semester performance report in CSV format.
     Includes formula injection protections for spreadsheet security.
     """
-    report_data = get_semester_report(id=id, current_user=current_user, db=db)
+    report_data = get_semester_report(id=id, teacher=teacher, db=db)
 
     output = io.StringIO()
     writer = csv.writer(output)

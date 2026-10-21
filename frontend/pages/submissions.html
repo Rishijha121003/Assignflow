@@ -30,12 +30,25 @@
                 <div class="select-wrapper">
                   <select id="submissionsStatusFilter" aria-label="Filter submissions by status">
                     <option value="all">All Submissions</option>
+                    <option value="needs_grading">Needs Grading</option>
+                    <option value="draft_grades">Draft Grades (Unreleased)</option>
+                    <option value="pending_reevaluation">Pending Re-evaluations</option>
+                    <option value="released">Released</option>
                     <option value="ontime">On-Time</option>
                     <option value="late">Late</option>
                   </select>
                   <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
               </div>
+            </div>
+
+            <!-- Teacher Work Queue Tabs -->
+            <div class="submissions-queue-tabs" id="submissionsQueueTabs" style="display: none;">
+              <button class="queue-tab active" data-queue="all" type="button">All (<span id="countQueueAll">0</span>)</button>
+              <button class="queue-tab" data-queue="needs_grading" type="button">Needs Grading (<span id="countQueueNeedsGrading">0</span>)</button>
+              <button class="queue-tab" data-queue="draft_grades" type="button">Draft Grades (<span id="countQueueDraftGrades">0</span>)</button>
+              <button class="queue-tab" data-queue="pending_reevaluation" type="button">Pending Re-evaluations (<span id="countQueueReeval">0</span>)</button>
+              <button class="queue-tab" data-queue="released" type="button">Released (<span id="countQueueReleased">0</span>)</button>
             </div>
 
             <div class="table-responsive">

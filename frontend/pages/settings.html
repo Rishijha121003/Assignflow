@@ -38,7 +38,7 @@
             <!-- Card 2: Interface & Notification Preferences -->
             <div class="card settings-box-card">
               <div class="dash-card-header">
-                <h2 class="dash-card-title">Application Preferences</h2>
+                <h2 class="dash-card-title">Application &amp; Notification Preferences</h2>
               </div>
               <div class="settings-form-group" style="margin-bottom: 1.25rem;">
                 <label for="settingsDefaultSort" class="form-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Default Assignment Sorting</label>
@@ -60,6 +60,46 @@
                 <input type="checkbox" id="settingsReminderToggle" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
               </div>
 
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">In-App Notifications</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Show notifications in the top bar dropdown and counter badge.</p>
+                </div>
+                <input type="checkbox" id="prefInAppEnabled" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Email Notifications</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Master toggle for receiving notification emails.</p>
+                </div>
+                <input type="checkbox" id="prefEmailEnabled" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Grade Release Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email when your assignment grade is officially released.</p>
+                </div>
+                <input type="checkbox" id="prefEmailGradeReleased" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Deadline Alert Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email for deadline extensions and approaching deadlines.</p>
+                </div>
+                <input type="checkbox" id="prefEmailDeadline" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Re-evaluation Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email for re-evaluation requests and teacher decisions.</p>
+                </div>
+                <input type="checkbox" id="prefEmailReevaluation" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
               <div style="margin-top: 1.25rem;">
                 <button class="btn btn-primary" id="settingsSavePreferencesBtn">Save Preferences</button>
               </div>
@@ -77,6 +117,24 @@
                   <span>Sign Out</span>
                 </button>
                 <button class="btn btn-secondary" id="settingsClearCacheBtn">Clear Local Cache</button>
+              </div>
+            </div>
+
+            <!-- Card 4: Legal & Compliance -->
+            <div class="card settings-box-card">
+              <div class="dash-card-header">
+                <h2 class="dash-card-title">Legal &amp; Compliance</h2>
+              </div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Review the policies governing academic submissions, privacy walls, and data protection.</p>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a href="#privacy" class="btn btn-secondary" data-nav="privacy" style="text-decoration: none;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Privacy Policy</span>
+                </a>
+                <a href="#terms" class="btn btn-secondary" data-nav="terms" style="text-decoration: none;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span>Terms &amp; Conditions</span>
+                </a>
               </div>
             </div>
           </div>

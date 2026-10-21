@@ -1,0 +1,129 @@
+<!-- ================================================================ -->
+<!-- PRIVACY POLICY VIEW                                              -->
+<!-- ================================================================ -->
+<div id="privacyView" class="page-view legal-view-content" style="display: none;">
+  <div class="page-header-row legal-header-row">
+    <div>
+      <div class="legal-badge">
+        <span class="legal-badge-dot"></span>
+        <span>Data Protection &amp; Privacy Statement</span>
+      </div>
+      <h1 class="page-title">Privacy Policy</h1>
+      <p class="page-subtitle">How AssignFlow collects, stores, and protects academic data and user records.</p>
+    </div>
+    <div class="legal-header-actions">
+      <a href="#dashboard" class="btn btn-secondary back-to-dash-btn" data-nav="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="legal-notice-banner">
+    <div class="legal-notice-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="legal-notice-text">
+      <strong>Institutional Notice:</strong> This privacy statement reflects the exact operational capabilities and technical implementation of the AssignFlow software. Specific institutional ownership, governing legal entities, and support contacts must be reviewed and customized prior to institutional deployment (marked below with <code>[REVERT/CONFIRM]</code> tags).
+    </div>
+  </div>
+
+  <div class="legal-card-container">
+    <!-- Section 1 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">1. Purpose and Scope</h2>
+      <p>AssignFlow is an academic workflow and assignment management platform designed to facilitate coursework distribution, file submissions, instructor grading, and academic analytics between instructors (teachers) and enrolled students.</p>
+      <p>This Privacy Policy describes the specific personal and academic data processed by the application, how that data is stored, and the strict access boundaries enforced by software business logic.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Operating Organization:</strong> <span class="owner-field">[REVERT/CONFIRM: Educational Institution or Organization Legal Name]</span></p>
+        <p><strong>Effective Date:</strong> <span class="owner-field">[REVERT/CONFIRM: Launch Date / Academic Term Start]</span></p>
+      </div>
+    </article>
+
+    <!-- Section 2 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">2. Information We Collect</h2>
+      <p>AssignFlow collects and processes only the data strictly necessary for academic assignment administration:</p>
+      <ul class="legal-list">
+        <li><strong>Account Credentials:</strong> Full name, institutional email address, and an encrypted password hash (salted using bcrypt; plaintext passwords are never stored or logged).</li>
+        <li><strong>Role Designation:</strong> User account classification as either a <em>Teacher</em> (course creator and evaluator) or a <em>Student</em> (course participant).</li>
+        <li><strong>Course &amp; Enrollment Records:</strong> Class names, course join codes, academic semester association, subject codes, and class enrollment rosters.</li>
+        <li><strong>Assignment Materials:</strong> Assignment titles, descriptions, due dates, late submission penalty policies, grace periods, and syllabus/assignment PDF attachments uploaded by teachers.</li>
+        <li><strong>Student Submissions &amp; Files:</strong> Uploaded coursework files (in supported formats including PDF, DOCX, DOC, TXT, and ZIP up to 10MB), submission timestamps, and attempt counts.</li>
+        <li><strong>Evaluation Records:</strong> Instructor feedback notes, awarded scores, grade revision histories, student re-evaluation requests, and deadline extensions.</li>
+      </ul>
+    </article>
+
+    <!-- Section 3 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">3. Privacy Wall and Access Controls</h2>
+      <p>AssignFlow enforces strict data isolation and privacy boundaries in application code and database queries:</p>
+      <div class="legal-feature-grid">
+        <div class="legal-feature-card">
+          <h3>Student Submission Isolation</h3>
+          <p>Students can view and download only their own uploaded submissions. Cross-student file inspection or download is strictly forbidden and rejected by server authorization guards.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Draft Grade Privacy Wall</h3>
+          <p>Instructor grading remarks and provisional scores remain completely invisible to students until the instructor explicitly publishes them through the "Release Grades" action.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Anonymous Peer Rankings</h3>
+          <p>Class leaderboard and comparative analytics anonymize student identities, displaying peer rankings without exposing personal student names or individual scores to classmates.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Course Ownership Guard</h3>
+          <p>Instructors can only access assignments, submissions, and rosters for classes they created or have been explicitly granted ownership of.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Section 4 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">4. Data Storage, Security, and File Retention</h2>
+      <ul class="legal-list">
+        <li><strong>Database Storage:</strong> All structured relational records (users, classes, assignments, submissions, and audit logs) are stored in PostgreSQL within an isolated database schema (<code>assignflow</code>).</li>
+        <li><strong>File Upload Security:</strong> Uploaded assignment documents and student submissions are validated by file size (maximum 10MB) and magic-byte inspection (%PDF- verification for PDF documents). Uploaded files are stored on isolated server storage using cryptographically random UUID identifiers to eliminate directory traversal risks.</li>
+        <li><strong>Session Authentication:</strong> Authentication is handled using JSON Web Tokens (JWT) stored in HTTP-only, SameSite-restricted cookies and Bearer headers. In production environments, cookies are strictly marked with the <code>Secure</code> flag over HTTPS.</li>
+        <li><strong>Temporary Export Cleanup:</strong> Bulk export archives (such as ZIP files of student submissions) are generated in temporary storage and automatically unlinked from the server filesystem immediately following file transmission.</li>
+        <li><strong>Data Retention:</strong> Course records, submissions, and grade audit histories are retained for the duration of the active academic period or as mandated by the institution's data retention policy.</li>
+      </ul>
+    </article>
+
+    <!-- Section 5 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">5. Data Sharing and Third Parties</h2>
+      <p>AssignFlow does not sell, rent, monetize, or share student or instructor personal data with third-party advertisers, data brokers, or external analytics networks.</p>
+      <p>Data processing is confined strictly to the operating institution's designated hosting environment. If optional automated email notifications are activated by the operator, outbound notification emails (e.g. deadline reminders or grade release alerts) are routed via the institution's configured SMTP provider.</p>
+    </article>
+
+    <!-- Section 6 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">6. User Rights and Data Deletion Requests</h2>
+      <p>Users have the right to access, inspect, and request corrections to their academic profile information. Because academic evaluation records may be subject to institutional recordkeeping requirements, data deletion and account termination requests are handled in coordination with the institutional administrator:</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p>To request data inspection, account closure, or removal of submitted files, contact the designated system administrator:</p>
+        <p><strong>Administrator Contact:</strong> <span class="owner-field">[REVERT/CONFIRM: Designated Privacy Officer / Admin Email, e.g. privacy@assignflow.edu]</span></p>
+      </div>
+    </article>
+
+    <!-- Section 7 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">7. Contact and Administrative Governance</h2>
+      <p>Questions regarding the technical operation or privacy practices of this AssignFlow installation should be directed to the technical administrator or department head responsible for the course management system.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Department / Office:</strong> <span class="owner-field">[REVERT/CONFIRM: Department of Academic Computing / IT Services]</span></p>
+        <p><strong>Address:</strong> <span class="owner-field">[REVERT/CONFIRM: Campus / Postal Address]</span></p>
+      </div>
+    </article>
+  </div>
+</div>

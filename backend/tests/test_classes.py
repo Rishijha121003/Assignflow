@@ -460,3 +460,101 @@ def test_legacy_unassigned_assignments_remain_hidden_from_students(client, teach
         assert s_dl.status_code == 403
     finally:
         client.delete(f"/api/assignments/{asgn_id}", headers=teacher_headers)
+
+
+def test_student_enrollment_persists_across_subsequent_requests_and_dashboard(
+    client, teacher_headers, student_headers, student_user
+):
+    """
+    Regression Test:
+    Proves that after a student joins a class with a valid join code:
+    1. Enrollment is created, committed, and persists in the database.
+    2. Subsequent authenticated GET /api/classes calls return the enrolled class.
+    3. Subsequent authenticated GET /api/dashboard calls return the joined class in my_classes and metrics.
+    4. Subsequent authenticated GET /api/classes/{id} returns the class details.
+    5. Duplicate join attempts are rejected with HTTP 400.
+    6. Invalid join codes return HTTP 404 and empty join codes return HTTP 422.
+    7. Teacher role cannot join classes (HTTP 403).
+    8. Teacher sees student in the class roster (GET /api/classes/{id}/students).
+    """
+    # 1. Teacher creates class
+    cls_res = client.post(
+        "/api/classes",
+        json={"name": "Cloud Computing Architecture", "description": "Microservices and Distributed Data"},
+        headers=teacher_headers,
+    )
+    assert cls_res.status_code == 201
+    cls_data = cls_res.json()
+    class_id = cls_data["id"]
+    join_code = cls_data["join_code"]
+
+    try:
+        # 2. Teacher creates an assignment in this class
+        future_date = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+        assign_res = client.post(
+            "/api/assignments",
+            json={
+                "title": "Raft Consensus Lab",
+                "subject": "Distributed Systems",
+                "description": "Implement leader election and log replication.",
+                "class_id": class_id,
+                "due_date": future_date,
+                "max_marks": 100,
+                "status": "active",
+            },
+            headers=teacher_headers,
+        )
+        assert assign_res.status_code == 201
+
+        # 3. Validation: Empty and invalid join codes
+        empty_res = client.post("/api/classes/join", json={"join_code": "   "}, headers=student_headers)
+        assert empty_res.status_code in (422, 400)
+
+        invalid_res = client.post("/api/classes/join", json={"join_code": "WRONG99"}, headers=student_headers)
+        assert invalid_res.status_code == 404
+
+        # 4. Teacher cannot join class as student
+        teacher_join_res = client.post("/api/classes/join", json={"join_code": join_code}, headers=teacher_headers)
+        assert teacher_join_res.status_code == 403
+
+        # 5. Student joins class
+        join_res = client.post("/api/classes/join", json={"join_code": join_code}, headers=student_headers)
+        assert join_res.status_code == 200
+        assert join_res.json()["id"] == class_id
+
+        # 6. Duplicate join attempt returns 400
+        dup_res = client.post("/api/classes/join", json={"join_code": join_code}, headers=student_headers)
+        assert dup_res.status_code == 400
+        assert "already enrolled" in dup_res.json()["detail"].lower()
+
+        # 7. Subsequent request 1: Student lists classes (persists after join)
+        list_res = client.get("/api/classes", headers=student_headers)
+        assert list_res.status_code == 200
+        student_classes = list_res.json()
+        enrolled_class = next((c for c in student_classes if c["id"] == class_id), None)
+        assert enrolled_class is not None, "Joined class missing from subsequent GET /api/classes request"
+        assert enrolled_class["name"] == "Cloud Computing Architecture"
+        assert enrolled_class["student_count"] >= 1
+        assert enrolled_class["assignment_count"] >= 1
+
+        # 8. Subsequent request 2: Student dashboard (persists after refresh)
+        dash_res = client.get("/api/dashboard", headers=student_headers)
+        assert dash_res.status_code == 200
+        dash_data = dash_res.json()
+        assert dash_data["role"] == "student"
+        assert any(c["id"] == class_id for c in dash_data.get("my_classes", [])), "Joined class missing from student dashboard"
+        assert dash_data["metrics"]["total_assignments"] >= 1
+        assert any(a["title"] == "Raft Consensus Lab" for a in dash_data.get("upcoming_assignments", []))
+
+        # 9. Subsequent request 3: Student fetches class detail directly
+        detail_res = client.get(f"/api/classes/{class_id}", headers=student_headers)
+        assert detail_res.status_code == 200
+        assert detail_res.json()["name"] == "Cloud Computing Architecture"
+
+        # 10. Teacher verifies student in roster
+        roster_res = client.get(f"/api/classes/{class_id}/students", headers=teacher_headers)
+        assert roster_res.status_code == 200
+        roster = roster_res.json()
+        assert any(s["email"] == student_user["email"] for s in roster)
+    finally:
+        client.delete(f"/api/classes/{class_id}", headers=teacher_headers)

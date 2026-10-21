@@ -762,6 +762,7 @@ def get_assessment_structure(
                 return []
             query = db.query(Assignment).filter(Assignment.class_id.in_(enrolled_class_ids))
 
+        query = query.filter(Assignment.status != "draft")
         assignments = query.order_by(Assignment.subject.asc(), Assignment.unit.asc()).all()
 
     # Build hierarchical tree: class_name -> subject -> list of units
@@ -1298,6 +1299,11 @@ def download_assignment_pdf(
 
     # Scoped authorization
     if current_user.role == "student":
+        if assignment.status == "draft":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Draft assignments are not visible to students.",
+            )
         if not assignment.class_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

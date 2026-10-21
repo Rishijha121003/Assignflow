@@ -73,6 +73,10 @@ def list_user_submissions(
         show_grade = is_teacher or is_released
         assignment_max_marks = float(assignment.max_marks) if (assignment and assignment.max_marks is not None) else 100.0
 
+        reeval_req = None
+        if is_teacher and s.reevaluation_requests:
+            reeval_req = next((r for r in reversed(s.reevaluation_requests) if r.status == "pending"), None)
+
         results.append(
             {
                 "id": s.id,
@@ -98,6 +102,8 @@ def list_user_submissions(
                 "resubmission_deadline": s.resubmission_deadline.isoformat() if s.resubmission_deadline else None,
                 "resubmission_note": s.resubmission_note,
                 "attempt_number": s.attempt_number or 1,
+                "reevaluation_reason": reeval_req.reason if reeval_req else None,
+                "reevaluation_id": reeval_req.id if reeval_req else None,
                 "download_url": f"/api/assignments/{s.assignment_id}/submissions/{s.id}/download",
                 "preview_url": f"/api/assignments/{s.assignment_id}/submissions/{s.id}/preview",
             }

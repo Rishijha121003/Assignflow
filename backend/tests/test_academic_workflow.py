@@ -412,6 +412,76 @@ def test_in_app_notifications_and_preferences(client, workflow_setup):
     assert resp.status_code == 200
 
 
+def test_notification_user_isolation_and_security(client, db_engine, workflow_setup):
+    """
+    Verify authenticated users can load notifications and update their own preferences,
+    and that one user's preferences or notifications cannot be accessed or modified by another.
+    """
+    teacher_headers = workflow_setup["teacher_headers"]
+    student_headers = workflow_setup["student_headers"]
+    student_id = workflow_setup["student_id"]
+
+    # 1. Unauthenticated requests are rejected
+    assert client.get("/api/notifications").status_code == 401
+    assert client.get("/api/notifications/preferences").status_code == 401
+    assert client.put("/api/notifications/preferences", json={"in_app_enabled": False}).status_code == 401
+    assert client.put("/api/notifications/read-all").status_code == 401
+    assert client.put("/api/notifications/1/read").status_code == 401
+
+    # 2. Preference isolation: Student updates preferences; Teacher preferences remain default
+    resp = client.put(
+        "/api/notifications/preferences",
+        json={
+            "in_app_enabled": False,
+            "email_enabled": True,
+            "email_on_grade_released": False,
+            "email_on_deadline": False,
+            "email_on_reevaluation": False,
+        },
+        headers=student_headers,
+    )
+    assert resp.status_code == 200
+    student_prefs = resp.json()
+    assert student_prefs["in_app_enabled"] is False
+    assert student_prefs["email_enabled"] is True
+    assert student_prefs["email_on_grade_released"] is False
+
+    teacher_prefs = client.get("/api/notifications/preferences", headers=teacher_headers).json()
+    assert teacher_prefs["in_app_enabled"] is True
+    assert teacher_prefs["email_on_grade_released"] is True
+
+    # 3. Notification visibility isolation
+    with Session(db_engine) as session:
+        notif = Notification(
+            user_id=student_id,
+            title="Private Student Alert",
+            message="Your assignment submission was received.",
+            type="submission_received",
+            is_read=False,
+        )
+        session.add(notif)
+        session.commit()
+        session.refresh(notif)
+        notif_id = notif.id
+
+    # Student sees their notification
+    student_notifs = client.get("/api/notifications", headers=student_headers).json()
+    assert any(n["id"] == notif_id for n in student_notifs)
+
+    # Teacher does NOT see student's notification
+    teacher_notifs = client.get("/api/notifications", headers=teacher_headers).json()
+    assert not any(n["id"] == notif_id for n in teacher_notifs)
+
+    # Teacher cannot mark student's notification as read (returns 404)
+    cross_read_resp = client.put(f"/api/notifications/{notif_id}/read", headers=teacher_headers)
+    assert cross_read_resp.status_code == 404
+
+    # Student can mark their own notification as read
+    own_read_resp = client.put(f"/api/notifications/{notif_id}/read", headers=student_headers)
+    assert own_read_resp.status_code == 200
+    assert own_read_resp.json()["is_read"] is True
+
+
 def test_resubmission_permission_persistence_and_expiry(client, db_engine, workflow_setup):
     """
     Regression test for resubmission permission persistence, visibility, deadline expiry,
@@ -591,3 +661,241 @@ def test_resubmission_permission_persistence_and_expiry(client, db_engine, workf
     )
     assert resp.status_code == 400
     assert "Duplicate submissions are not permitted" in resp.json()["detail"]
+
+
+def test_submission_history_endpoint_and_authorization(client, db_engine, workflow_setup):
+    """
+    Regression Test:
+    Verifies that the submission history endpoint matches the mounted FastAPI route
+    /api/submissions/{id}/history and strictly enforces authorization boundaries:
+    - 200 OK for submission owner
+    - 403 Forbidden for unauthorized peer students
+    - 404 Not Found for nonexistent submission ID
+    - 200 OK for owning teacher
+    - 403 Forbidden for non-owning teacher
+    """
+    teacher_headers = workflow_setup["teacher_headers"]
+    student_headers = workflow_setup["student_headers"]
+    class_id = workflow_setup["class_id"]
+
+    # Create assignment and submission
+    with Session(db_engine) as session:
+        asgn = Assignment(
+            title="History Route Test",
+            subject="Operating Systems",
+            due_date=datetime.now(timezone.utc) + timedelta(days=3),
+            class_id=class_id,
+            created_by_id=workflow_setup["teacher_id"],
+            unit=1,
+            max_marks=100.0,
+        )
+        session.add(asgn)
+        session.commit()
+        session.refresh(asgn)
+        asgn_id = asgn.id
+
+        # Create peer student
+        peer_email = f"peer_{uuid.uuid4().hex[:8]}@example.com"
+        peer_student = User(
+            email=peer_email,
+            full_name="Peer Student",
+            hashed_password=hash_password("Pass123!"),
+            role="student",
+            is_active=True,
+        )
+        # Create unrelated teacher
+        other_teacher_email = f"other_t_{uuid.uuid4().hex[:8]}@example.com"
+        other_teacher = User(
+            email=other_teacher_email,
+            full_name="Other Teacher",
+            hashed_password=hash_password("Pass123!"),
+            role="teacher",
+            is_active=True,
+        )
+        session.add_all([peer_student, other_teacher])
+        session.commit()
+        session.refresh(peer_student)
+        session.refresh(other_teacher)
+
+        peer_token = create_access_token({"sub": str(peer_student.id), "role": "student", "email": peer_email})
+        peer_headers = {"Authorization": f"Bearer {peer_token}"}
+
+        other_t_token = create_access_token({"sub": str(other_teacher.id), "role": "teacher", "email": other_teacher_email})
+        other_t_headers = {"Authorization": f"Bearer {other_t_token}"}
+
+    # Submit file
+    res = client.post(
+        f"/api/assignments/{asgn_id}/submissions",
+        files={"file": ("history_test.pdf", b"%PDF-1.4 history content", "application/pdf")},
+        headers=student_headers,
+    )
+    assert res.status_code == 201
+    sub_id = res.json()["id"]
+
+    # 1. Authorize resubmission and submit second attempt to populate history
+    client.post(
+        f"/api/submissions/{sub_id}/allow-resubmission",
+        json={"resubmission_note": "Try again"},
+        headers=teacher_headers,
+    )
+    res2 = client.post(
+        f"/api/assignments/{asgn_id}/submissions",
+        files={"file": ("history_v2.pdf", b"%PDF-1.4 attempt 2", "application/pdf")},
+        headers=student_headers,
+    )
+    assert res2.status_code in (200, 201)
+
+    # 2. Owner student calls actual mounted route: /api/submissions/{id}/history -> 200 OK
+    hist_owner = client.get(f"/api/submissions/{sub_id}/history", headers=student_headers)
+    assert hist_owner.status_code == 200
+    owner_history = hist_owner.json()
+    assert len(owner_history) >= 1
+    assert owner_history[0]["attempt_number"] == 1
+    assert owner_history[0]["file_name"] == "history_test.pdf"
+
+    # 3. Peer student calls /api/submissions/{id}/history -> 403 Forbidden
+    hist_peer = client.get(f"/api/submissions/{sub_id}/history", headers=peer_headers)
+    assert hist_peer.status_code == 403
+
+    # 4. Nonexistent submission -> 404 Not Found
+    hist_404 = client.get("/api/submissions/999999/history", headers=student_headers)
+    assert hist_404.status_code == 404
+
+    # 5. Owning teacher calls /api/submissions/{id}/history -> 200 OK
+    hist_teacher = client.get(f"/api/submissions/{sub_id}/history", headers=teacher_headers)
+    assert hist_teacher.status_code == 200
+
+    # 6. Unrelated teacher calls /api/submissions/{id}/history -> 403 Forbidden
+    hist_other_t = client.get(f"/api/submissions/{sub_id}/history", headers=other_t_headers)
+    assert hist_other_t.status_code == 403
+
+
+def test_reevaluation_action_eligibility_and_boundaries(client, db_engine, workflow_setup):
+    """
+    Regression Test:
+    Verifies that the re-evaluation request endpoint /api/submissions/{id}/request-reevaluation
+    strictly enforces business eligibility and authorization rules:
+    - 400 Bad Request if grades are unreleased
+    - 403 Forbidden if called by teacher role (require_student)
+    - 404 Not Found if called on another student's submission
+    - 422 Unprocessable Content if reason is too short (< 5 chars)
+    - 200 OK for valid student request on released grade
+    - 400 Bad Request for duplicate request when already pending
+    """
+    teacher_headers = workflow_setup["teacher_headers"]
+    student_headers = workflow_setup["student_headers"]
+    class_id = workflow_setup["class_id"]
+
+    with Session(db_engine) as session:
+        asgn = Assignment(
+            title="Reevaluation Boundary Test",
+            subject="Algorithms",
+            due_date=datetime.now(timezone.utc) + timedelta(days=3),
+            class_id=class_id,
+            created_by_id=workflow_setup["teacher_id"],
+            unit=2,
+            max_marks=100.0,
+        )
+        session.add(asgn)
+        session.commit()
+        session.refresh(asgn)
+        asgn_id = asgn.id
+
+        # Second student
+        peer_email = f"peer2_{uuid.uuid4().hex[:8]}@example.com"
+        peer2 = User(
+            email=peer_email,
+            full_name="Peer Student 2",
+            hashed_password=hash_password("Pass123!"),
+            role="student",
+            is_active=True,
+        )
+        session.add(peer2)
+        session.commit()
+        session.refresh(peer2)
+        peer2_token = create_access_token({"sub": str(peer2.id), "role": "student", "email": peer_email})
+        peer2_headers = {"Authorization": f"Bearer {peer2_token}"}
+
+    # Submit file
+    res = client.post(
+        f"/api/assignments/{asgn_id}/submissions",
+        files={"file": ("algo.pdf", b"%PDF-1.4 algo solution", "application/pdf")},
+        headers=student_headers,
+    )
+    assert res.status_code == 201
+    sub_id = res.json()["id"]
+
+    # 1. Unreleased submission (status='submitted') -> 400 Bad Request
+    unreleased_res = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Please re-evaluate my question 1"},
+        headers=student_headers,
+    )
+    assert unreleased_res.status_code == 400
+    assert "after grades are released" in unreleased_res.json()["detail"]
+
+    # Teacher grades without releasing (status='graded')
+    grade_res = client.put(
+        f"/api/assignments/{asgn_id}/submissions/{sub_id}/grade",
+        json={"grade": 70.0, "feedback": "Good attempt"},
+        headers=teacher_headers,
+    )
+    assert grade_res.status_code == 200
+
+    # Draft graded but still unreleased -> 400 Bad Request
+    graded_unreleased = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Please re-evaluate my question 1"},
+        headers=student_headers,
+    )
+    assert graded_unreleased.status_code == 400
+    assert "after grades are released" in graded_unreleased.json()["detail"]
+
+    # 2. Teacher role calls student endpoint -> 403 Forbidden
+    teacher_call = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Teacher cannot request reevaluation"},
+        headers=teacher_headers,
+    )
+    assert teacher_call.status_code == 403
+
+    # Teacher officially releases grade -> status='released'
+    rel_res = client.post(f"/api/assignments/{asgn_id}/submissions/{sub_id}/release", headers=teacher_headers)
+    assert rel_res.status_code == 200
+
+    # 3. Peer student attempts to request re-evaluation on someone else's submission -> 404 Not Found
+    peer_call = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Peer trying to reevaluate someone else's work"},
+        headers=peer2_headers,
+    )
+    assert peer_call.status_code == 404
+
+    # 4. Reason too short (< 5 chars) -> 422 Unprocessable Content
+    short_res = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Bad"},
+        headers=student_headers,
+    )
+    assert short_res.status_code == 422
+
+    # 5. Valid student request on released grade -> 200 OK
+    valid_res = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Question 3 proof steps on page 2 were marked incorrectly."},
+        headers=student_headers,
+    )
+    assert valid_res.status_code == 200
+    data = valid_res.json()
+    assert data["status"] == "pending"
+    assert data["submission_id"] == sub_id
+    assert "Question 3 proof steps" in data["reason"]
+
+    # 6. Duplicate request while active is pending -> 400 Bad Request
+    dup_res = client.post(
+        f"/api/submissions/{sub_id}/request-reevaluation",
+        json={"reason": "Another duplicate request while first is pending"},
+        headers=student_headers,
+    )
+    assert dup_res.status_code == 400
+    assert "already pending review" in dup_res.json()["detail"]

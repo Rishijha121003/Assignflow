@@ -1,7 +1,7 @@
 <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="brand">
+        <div class="brand" onclick="navigateToView('dashboard')" style="cursor: pointer;" title="AssignFlow Dashboard">
           <div class="brand-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
@@ -20,7 +20,7 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Primary Navigation">
         <ul class="nav-list">
           <li class="nav-item">
             <a href="#dashboard" class="nav-link active" data-nav="dashboard" id="navDashboard">
@@ -31,7 +31,7 @@
               <span id="navTextDashboard">Dashboard</span>
             </a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" data-role="teacher">
             <a href="#semesters" class="nav-link" data-nav="semesters" id="navSemesters">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
@@ -50,7 +50,7 @@
                 <path d="M6 6h10"></path>
                 <path d="M6 10h10"></path>
               </svg>
-              <span id="navTextClasses">Subjects</span>
+              <span id="navTextClasses">Classes</span>
             </a>
           </li>
           <li class="nav-item">
@@ -72,10 +72,10 @@
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
-              <span id="navTextSubmissions">Students</span>
+              <span id="navTextSubmissions">Submissions</span>
             </a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" data-role="teacher">
             <a href="#reports" class="nav-link" data-nav="reports" id="navReports">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -85,18 +85,24 @@
               <span id="navTextReports">Reports</span>
             </a>
           </li>
-          <li class="nav-item" style="display: none;">
+          <li class="nav-item">
             <a href="#analytics" class="nav-link" data-nav="analytics" id="navAnalytics">
+              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"></path>
+                <path d="m19 9-5 5-4-4-3 3"></path>
+              </svg>
               <span id="navTextAnalytics">Analytics</span>
             </a>
           </li>
           <li class="nav-item">
             <a href="#calendar" class="nav-link" data-nav="calendar" id="navCalendar">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                <line x1="16" x2="16" y1="2" y2="6"></line>
+                <line x1="8" x2="8" y1="2" y2="6"></line>
+                <line x1="3" x2="21" y1="10" y2="10"></line>
               </svg>
-              <span id="navTextNotifications">Notifications</span>
+              <span id="navTextCalendar">Calendar</span>
             </a>
           </li>
           <li class="nav-item">

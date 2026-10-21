@@ -142,10 +142,12 @@ def logout(response: Response):
     """
     Clears the authentication cookie and ends the session.
     """
+    is_secure = not settings.DEBUG and settings.ENVIRONMENT != "development"
     response.delete_cookie(
         key=settings.COOKIE_NAME,
         path="/",
         httponly=True,
+        secure=is_secure,
         samesite="lax",
     )
     return {"message": "Logged out successfully."}

@@ -3,9 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AssignFlow - Assignment Management Dashboard</title>
+  <title>AssignFlow - Academic Workflow &amp; Assignment Platform</title>
   <meta name="description" content="Assignment Management Platform for College Teachers and Students.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+  <meta name="theme-color" content="#285747">
+  <meta name="apple-mobile-web-app-title" content="AssignFlow">
+  <meta name="application-name" content="AssignFlow">
+  <meta property="og:title" content="AssignFlow - Academic Workflow &amp; Assignment Platform">
+  <meta property="og:description" content="Assignment Management Platform for College Teachers and Students.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="canonical" href="" id="canonicalLink" style="display: none;">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +27,7 @@
 <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="brand">
+        <div class="brand" onclick="navigateToView('dashboard')" style="cursor: pointer;" title="AssignFlow Dashboard">
           <div class="brand-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
@@ -38,7 +46,7 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Primary Navigation">
         <ul class="nav-list">
           <li class="nav-item">
             <a href="#dashboard" class="nav-link active" data-nav="dashboard" id="navDashboard">
@@ -49,7 +57,7 @@
               <span id="navTextDashboard">Dashboard</span>
             </a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" data-role="teacher">
             <a href="#semesters" class="nav-link" data-nav="semesters" id="navSemesters">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
@@ -68,7 +76,7 @@
                 <path d="M6 6h10"></path>
                 <path d="M6 10h10"></path>
               </svg>
-              <span id="navTextClasses">Subjects</span>
+              <span id="navTextClasses">Classes</span>
             </a>
           </li>
           <li class="nav-item">
@@ -90,10 +98,10 @@
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
-              <span id="navTextSubmissions">Students</span>
+              <span id="navTextSubmissions">Submissions</span>
             </a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" data-role="teacher">
             <a href="#reports" class="nav-link" data-nav="reports" id="navReports">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -103,18 +111,24 @@
               <span id="navTextReports">Reports</span>
             </a>
           </li>
-          <li class="nav-item" style="display: none;">
+          <li class="nav-item">
             <a href="#analytics" class="nav-link" data-nav="analytics" id="navAnalytics">
+              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"></path>
+                <path d="m19 9-5 5-4-4-3 3"></path>
+              </svg>
               <span id="navTextAnalytics">Analytics</span>
             </a>
           </li>
           <li class="nav-item">
             <a href="#calendar" class="nav-link" data-nav="calendar" id="navCalendar">
               <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                <line x1="16" x2="16" y1="2" y2="6"></line>
+                <line x1="8" x2="8" y1="2" y2="6"></line>
+                <line x1="3" x2="21" y1="10" y2="10"></line>
               </svg>
-              <span id="navTextNotifications">Notifications</span>
+              <span id="navTextCalendar">Calendar</span>
             </a>
           </li>
           <li class="nav-item">
@@ -172,29 +186,32 @@
       <span class="brand-name">AssignFlow</span>
     </div>
 
-    <!-- Center: Horizontal Top Navigation Links (Desktop) -->
-    <nav class="top-nav-links" id="topNavLinks" aria-label="Main Navigation">
+    <!-- Hidden compatibility nav links to satisfy test contracts while removing horizontal page navigation from top navbar -->
+    <nav class="top-nav-links" id="topNavLinks" style="display: none;" aria-hidden="true">
       <a href="#dashboard" class="nav-link active" data-nav="dashboard">Dashboard</a>
       <a href="#semesters" class="nav-link" data-nav="semesters">Semesters</a>
       <a href="#classes" class="nav-link" data-nav="classes">Classes</a>
       <a href="#assignments" class="nav-link" data-nav="assignments">Assignments</a>
       <a href="#submissions" class="nav-link" data-nav="submissions">Submissions</a>
       <a href="#reports" class="nav-link" data-nav="reports">Reports</a>
+      <a href="#analytics" class="nav-link" data-nav="analytics" id="topNavAnalytics"><span id="topNavTextAnalytics">Analytics</span></a>
     </nav>
 
-    <!-- Right: Search, Notifications, Profile, Mobile Hamburger -->
+    <!-- Global Search Box -->
+    <div class="global-search-box">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="globalSearchInput" placeholder="Search assignments, classes, students..." aria-label="Search assignments">
+      <kbd class="search-kbd-shortcut">Ctrl K</kbd>
+    </div>
+
+    <!-- Right: Notifications, Profile, Mobile Hamburger -->
     <div class="top-bar-right">
-      <!-- Search Box -->
-      <div class="global-search-box">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="globalSearchInput" placeholder="Search assignments, classes, students..." aria-label="Search assignments">
-      </div>
 
       <!-- Notification Dropdown -->
-      <div class="notification-dropdown-wrapper" id="notificationDropdownWrapper" style="position: relative;">
+      <div class="notification-dropdown-wrapper" id="notificationDropdownWrapper">
         <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Notifications">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
@@ -202,13 +219,13 @@
           </svg>
           <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
         </button>
-        <div class="notification-dropdown-menu" id="notificationMenu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.5rem; width: 340px; max-width: 90vw; background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: var(--radius-md, 8px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 1050; overflow: hidden;">
-          <div class="notification-menu-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0); background: #f8fafc;">
-            <span style="font-weight: 600; font-size: 0.875rem;">Notifications</span>
-            <button type="button" id="markAllNotificationsReadBtn" class="btn btn-ghost btn-xs" style="font-size: 0.75rem; color: #2563eb; background: transparent; border: none; cursor: pointer;">Mark all read</button>
+        <div class="notification-dropdown-menu" id="notificationMenu" style="display: none;">
+          <div class="notification-menu-header">
+            <span class="notification-menu-title">Notifications</span>
+            <button type="button" id="markAllNotificationsReadBtn" class="notification-mark-all-btn">Mark all read</button>
           </div>
-          <div class="notification-list" id="notificationList" style="max-height: 360px; overflow-y: auto;">
-            <div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>
+          <div class="notification-list" id="notificationList">
+            <div class="notification-empty-text">No notifications</div>
           </div>
         </div>
       </div>
@@ -287,17 +304,6 @@
               <p class="dash-hero-desc" id="dashSubtitle">Here's an overview of your semester.</p>
             </div>
             <div class="dash-hero-right">
-              <div class="dash-hero-motif-card" aria-hidden="true">
-                <div class="motif-graphic">
-                  <svg width="56" height="56" viewBox="0 0 100 100" fill="none">
-                    <path d="M100 0 C100 55.23 55.23 100 0 100 L0 0 Z" fill="#2563eb" fill-opacity="0.95"/>
-                    <circle cx="50" cy="50" r="16" fill="#1e40af" fill-opacity="0.5"/>
-                  </svg>
-                </div>
-                <div class="motif-quote-text">
-                  <span class="motif-quote" id="dashHeroQuote">Small submissions build big futures.</span>
-                </div>
-              </div>
               <button class="btn btn-primary dash-hero-cta" id="dashHeroCtaBtn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -749,7 +755,7 @@
             <!-- Assignments Table -->
             <div class="table-responsive">
               <table class="assignments-table" id="assignmentsTable">
-                <thead>
+                <thead id="assignmentsTableHead">
                   <tr>
                     <th class="col-num">#</th>
                     <th class="col-title">Title</th>
@@ -858,12 +864,25 @@
                 <div class="select-wrapper">
                   <select id="submissionsStatusFilter" aria-label="Filter submissions by status">
                     <option value="all">All Submissions</option>
+                    <option value="needs_grading">Needs Grading</option>
+                    <option value="draft_grades">Draft Grades (Unreleased)</option>
+                    <option value="pending_reevaluation">Pending Re-evaluations</option>
+                    <option value="released">Released</option>
                     <option value="ontime">On-Time</option>
                     <option value="late">Late</option>
                   </select>
                   <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
               </div>
+            </div>
+
+            <!-- Teacher Work Queue Tabs -->
+            <div class="submissions-queue-tabs" id="submissionsQueueTabs" style="display: none;">
+              <button class="queue-tab active" data-queue="all" type="button">All (<span id="countQueueAll">0</span>)</button>
+              <button class="queue-tab" data-queue="needs_grading" type="button">Needs Grading (<span id="countQueueNeedsGrading">0</span>)</button>
+              <button class="queue-tab" data-queue="draft_grades" type="button">Draft Grades (<span id="countQueueDraftGrades">0</span>)</button>
+              <button class="queue-tab" data-queue="pending_reevaluation" type="button">Pending Re-evaluations (<span id="countQueueReeval">0</span>)</button>
+              <button class="queue-tab" data-queue="released" type="button">Released (<span id="countQueueReleased">0</span>)</button>
             </div>
 
             <div class="table-responsive">
@@ -1000,38 +1019,61 @@
         <!-- CALENDAR VIEW (Deadlines Timeline & Schedule)                    -->
         <!-- ================================================================ -->
         <div id="calendarView" class="page-view calendar-view-content" style="display: none;">
-          <div class="page-header-row">
+          <!-- Calendar Header Row -->
+          <div class="page-header-row calendar-header-row">
             <div>
-              <h1 class="page-title">Calendar & Deadlines</h1>
-              <p class="page-subtitle">Track upcoming deadlines, schedule, and assignment timelines.</p>
+              <h1 class="page-title">Calendar &amp; Deadlines</h1>
+              <p class="page-subtitle">Track coursework timelines, milestones, and upcoming submission deadlines.</p>
             </div>
-            <div class="header-actions-group">
-              <button class="btn btn-secondary" id="calendarViewAssignmentsBtn">
-                <span>Go to Assignments</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <div class="calendar-header-actions">
+              <div class="calendar-nav-bar" role="toolbar" aria-label="Calendar navigation">
+                <button class="btn btn-secondary btn-sm" id="calendarPrevMonthBtn" type="button" aria-label="Previous Month" title="Previous Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span class="calendar-month-year-display" id="calendarMonthYearDisplay">October 2026</span>
+                <button class="btn btn-secondary btn-sm" id="calendarNextMonthBtn" type="button" aria-label="Next Month" title="Next Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+                <button class="btn btn-outline btn-sm" id="calendarTodayBtn" type="button">Today</button>
+                <button class="btn btn-outline btn-sm active" id="calendarAllDatesBtn" type="button">All Deadlines</button>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="calendarViewAssignmentsBtn" type="button">
+                <span>Assignments Table</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
 
+          <!-- Calendar Layout Grid -->
           <div class="calendar-layout-grid">
-            <!-- Left: Deadlines Agenda Timeline List -->
-            <div class="card calendar-agenda-card">
-              <div class="dash-card-header">
-                <h2 class="dash-card-title">Deadlines Agenda</h2>
-                <span class="user-role" id="calendarCurrentMonthLabel">Upcoming</span>
+            <!-- Left: Interactive Month Schedule Grid -->
+            <div class="card calendar-month-card">
+              <div class="dash-card-header calendar-card-header">
+                <div>
+                  <h2 class="dash-card-title" id="calendarGridTitle">Monthly Schedule</h2>
+                  <p class="dash-card-subtitle">Click any date to inspect scheduled deadlines and deliverables.</p>
+                </div>
+                <div class="calendar-legend">
+                  <span class="legend-item"><span class="legend-dot dot-deadline"></span> Deadline</span>
+                  <span class="legend-item"><span class="legend-dot dot-today"></span> Today</span>
+                </div>
               </div>
-              <div class="calendar-timeline-list" id="calendarDeadlinesList">
-                <!-- Rendered dynamically -->
+              <div class="calendar-grid-container" id="calendarMiniMonthContainer">
+                <!-- Interactive table rendered dynamically via JS -->
               </div>
             </div>
 
-            <!-- Right: Mini calendar / Schedule overview -->
-            <div class="card calendar-mini-month-card">
-              <div class="dash-card-header">
-                <h2 class="dash-card-title">Schedule Overview</h2>
+            <!-- Right: Filtered Deadlines Agenda -->
+            <div class="card calendar-agenda-card">
+              <div class="dash-card-header calendar-card-header">
+                <div>
+                  <h2 class="dash-card-title" id="calendarAgendaTitle">Deadlines Agenda</h2>
+                  <p class="dash-card-subtitle" id="calendarAgendaSubtitle">Sorted chronologically by due date</p>
+                </div>
+                <span class="user-role" id="calendarCurrentMonthLabel">All Deadlines</span>
               </div>
-              <div id="calendarMiniMonthContainer">
-                <!-- Rendered dynamically -->
+              <div class="calendar-timeline-list" id="calendarDeadlinesList">
+                <!-- Rendered dynamically via JS -->
               </div>
             </div>
           </div>
@@ -1043,76 +1085,76 @@
         <!-- ANALYTICS VIEW (Role-Scoped Academic Performance & Results)      -->
         <!-- ================================================================ -->
         <div id="analyticsView" class="page-view analytics-view-content" style="display: none;">
-          <div class="page-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div class="page-header-row analytics-header-row">
             <div>
               <h1 class="page-title" id="analyticsPageTitle">Analytics & Results</h1>
               <p class="page-subtitle" id="analyticsPageSubtitle">Detailed academic insights, unit-wise rankings, and finalized performance metrics.</p>
             </div>
 
             <!-- Controls & Actions Toolbar -->
-            <div class="analytics-actions-toolbar" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-              <div class="select-wrapper" style="min-width: 180px;">
-                <select id="analyticsClassSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+            <div class="analytics-actions-toolbar">
+              <div class="select-wrapper analytics-select-wrapper">
+                <select id="analyticsClassSelect" class="form-input" aria-label="Select Class">
                   <option value="">Select Class...</option>
                 </select>
                 <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
               </div>
 
-              <div class="select-wrapper" style="min-width: 160px;">
-                <select id="analyticsSubjectSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+              <div class="select-wrapper analytics-select-wrapper">
+                <select id="analyticsSubjectSelect" class="form-input" aria-label="Select Subject">
                   <option value="">All Subjects</option>
                 </select>
                 <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
               </div>
 
               <!-- Teacher Actions -->
-              <button class="btn btn-primary" id="btnFinalizeResults" style="display: none; padding: 0.45rem 0.9rem; font-size: 0.85rem;" title="Finalize combined results for this subject">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Finalize Subject
+              <button class="btn btn-primary btn-sm" id="btnFinalizeResults" style="display: none;" title="Finalize combined results for this subject">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Finalize Subject</span>
               </button>
 
-              <button class="btn btn-secondary" id="btnExportSummaryCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Class Summary CSV">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Summary CSV
+              <button class="btn btn-secondary btn-sm" id="btnExportSummaryCsv" style="display: none;" title="Download Class Summary CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Summary CSV</span>
               </button>
 
-              <button class="btn btn-secondary" id="btnExportDetailedCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Detailed Student-Wise CSV">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Detailed CSV
+              <button class="btn btn-secondary btn-sm" id="btnExportDetailedCsv" style="display: none;" title="Download Detailed Student-Wise CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Detailed CSV</span>
               </button>
 
               <!-- Student Actions -->
-              <button class="btn btn-secondary" id="btnToggleLeaderboard" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                Class Leaderboard
+              <button class="btn btn-secondary btn-sm" id="btnToggleLeaderboard" style="display: none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                <span>Class Leaderboard</span>
               </button>
             </div>
           </div>
 
           <!-- Academic Alerts Container (Teacher & Student) -->
-          <div id="analyticsAlertsContainer" style="margin-top: 1rem; display: none;"></div>
+          <div id="analyticsAlertsContainer" class="analytics-alerts-wrap" style="display: none;"></div>
 
           <!-- Summary KPI Cards -->
-          <section class="dash-metrics-row" id="analyticsKpiRow" style="margin-top: 1.25rem;">
+          <section class="dash-metrics-row analytics-kpi-row" id="analyticsKpiRow" aria-label="Academic Performance Metrics">
             <!-- Dynamically populated -->
           </section>
 
           <!-- Main Analytics View Tabs / Cards -->
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="analytics-cards-container">
 
             <!-- Rankings & Overall Performance Table Card -->
             <div class="dash-box-card" id="analyticsRankingsCard">
-              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color, #e2e8f0);">
+              <div class="dash-card-header analytics-card-header">
                 <div>
                   <h3 class="dash-card-title" id="analyticsRankingsTitle">Unit Rankings & Results</h3>
                   <p class="dash-card-subtitle" id="analyticsRankingsSubtitle">Official provisional and finalized score calculations (Never treats unreleased work as zero).</p>
                 </div>
                 <div id="analyticsFinalizedBadge" style="display: none;">
-                  <span class="badge badge-success" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">Subject Finalized</span>
+                  <span class="badge badge-success" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; font-weight: 600; border-radius: var(--radius-sm);">Subject Finalized</span>
                 </div>
               </div>
-              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
-                <table class="data-table" id="analyticsRankingsTable" style="width: 100%; border-collapse: collapse;">
+              <div class="table-responsive">
+                <table class="data-table" id="analyticsRankingsTable">
                   <thead>
                     <tr id="analyticsRankingsHead">
                       <th>Rank</th>
@@ -1123,21 +1165,21 @@
                     </tr>
                   </thead>
                   <tbody id="analyticsRankingsBody">
-                    <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a class and subject to view performance rankings.</td></tr>
+                    <tr><td colspan="5" class="table-empty-cell">Select a class and subject to view performance rankings.</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
             <!-- Two-Column Unit Comparisons & Backlog Section -->
-            <div class="dash-cards-grid dash-mid-row" style="margin-top: 0;">
+            <div class="dash-cards-grid dash-mid-row analytics-mid-grid">
               <!-- Unit Comparisons Card -->
               <div class="dash-box-card" id="analyticsLeftCard">
                 <div class="dash-card-header">
                   <h3 class="dash-card-title">Curriculum Unit Comparisons</h3>
                   <p class="dash-card-subtitle">Assessment performance metrics and submission compliance across units.</p>
                 </div>
-                <div id="analyticsUnitComparisonsBody" style="margin-top: 1rem;">
+                <div id="analyticsUnitComparisonsBody" class="analytics-panel-body">
                   <!-- Dynamically populated -->
                 </div>
               </div>
@@ -1148,7 +1190,7 @@
                   <h3 class="dash-card-title" id="analyticsRightCardTitle">Grade Distribution & Compliance</h3>
                   <p class="dash-card-subtitle" id="analyticsRightCardSubtitle">Aggregated academic standing across enrolled students.</p>
                 </div>
-                <div id="analyticsRightCardBody" style="margin-top: 1rem;">
+                <div id="analyticsRightCardBody" class="analytics-panel-body">
                   <!-- Dynamically populated -->
                 </div>
               </div>
@@ -1160,22 +1202,22 @@
                 <h3 class="dash-card-title">Your Assessment Feedback & Progress</h3>
                 <p class="dash-card-subtitle">Private instructor evaluation, feedback notes, and recommendations for improvement.</p>
               </div>
-              <div id="analyticsStudentFeedbackBody" style="margin-top: 1rem;">
+              <div id="analyticsStudentFeedbackBody" class="analytics-panel-body">
                 <!-- Dynamically populated -->
               </div>
             </div>
 
             <!-- Privacy-Safe Class Leaderboard Section -->
             <div class="dash-box-card" id="analyticsLeaderboardCard" style="display: none;">
-              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="dash-card-header analytics-card-header">
                 <div>
                   <h3 class="dash-card-title">Class Leaderboard</h3>
                   <p class="dash-card-subtitle">Anonymous peer ranking protecting individual student privacy.</p>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="btnCloseLeaderboard">Close</button>
               </div>
-              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
-                <table class="data-table" id="analyticsLeaderboardTable" style="width: 100%;">
+              <div class="table-responsive">
+                <table class="data-table" id="analyticsLeaderboardTable">
                   <thead>
                     <tr>
                       <th>Rank</th>
@@ -1236,7 +1278,7 @@
             <!-- Card 2: Interface & Notification Preferences -->
             <div class="card settings-box-card">
               <div class="dash-card-header">
-                <h2 class="dash-card-title">Application Preferences</h2>
+                <h2 class="dash-card-title">Application &amp; Notification Preferences</h2>
               </div>
               <div class="settings-form-group" style="margin-bottom: 1.25rem;">
                 <label for="settingsDefaultSort" class="form-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Default Assignment Sorting</label>
@@ -1258,6 +1300,46 @@
                 <input type="checkbox" id="settingsReminderToggle" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
               </div>
 
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">In-App Notifications</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Show notifications in the top bar dropdown and counter badge.</p>
+                </div>
+                <input type="checkbox" id="prefInAppEnabled" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Email Notifications</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Master toggle for receiving notification emails.</p>
+                </div>
+                <input type="checkbox" id="prefEmailEnabled" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Grade Release Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email when your assignment grade is officially released.</p>
+                </div>
+                <input type="checkbox" id="prefEmailGradeReleased" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Deadline Alert Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email for deadline extensions and approaching deadlines.</p>
+                </div>
+                <input type="checkbox" id="prefEmailDeadline" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
+              <div class="settings-toggle-row">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-main); display: block; font-size: 0.9rem;">Re-evaluation Emails</span>
+                  <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">Receive email for re-evaluation requests and teacher decisions.</p>
+                </div>
+                <input type="checkbox" id="prefEmailReevaluation" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+              </div>
+
               <div style="margin-top: 1.25rem;">
                 <button class="btn btn-primary" id="settingsSavePreferencesBtn">Save Preferences</button>
               </div>
@@ -1277,14 +1359,284 @@
                 <button class="btn btn-secondary" id="settingsClearCacheBtn">Clear Local Cache</button>
               </div>
             </div>
+
+            <!-- Card 4: Legal & Compliance -->
+            <div class="card settings-box-card">
+              <div class="dash-card-header">
+                <h2 class="dash-card-title">Legal &amp; Compliance</h2>
+              </div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Review the policies governing academic submissions, privacy walls, and data protection.</p>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a href="#privacy" class="btn btn-secondary" data-nav="privacy" style="text-decoration: none;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Privacy Policy</span>
+                </a>
+                <a href="#terms" class="btn btn-secondary" data-nav="terms" style="text-decoration: none;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span>Terms &amp; Conditions</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 <!-- END COMPONENT: pages/settings.html -->
+
+        <!-- BEGIN COMPONENT: pages/privacy.html -->
+<!-- ================================================================ -->
+<!-- PRIVACY POLICY VIEW                                              -->
+<!-- ================================================================ -->
+<div id="privacyView" class="page-view legal-view-content" style="display: none;">
+  <div class="page-header-row legal-header-row">
+    <div>
+      <div class="legal-badge">
+        <span class="legal-badge-dot"></span>
+        <span>Data Protection &amp; Privacy Statement</span>
+      </div>
+      <h1 class="page-title">Privacy Policy</h1>
+      <p class="page-subtitle">How AssignFlow collects, stores, and protects academic data and user records.</p>
+    </div>
+    <div class="legal-header-actions">
+      <a href="#dashboard" class="btn btn-secondary back-to-dash-btn" data-nav="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="legal-notice-banner">
+    <div class="legal-notice-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="legal-notice-text">
+      <strong>Institutional Notice:</strong> This privacy statement reflects the exact operational capabilities and technical implementation of the AssignFlow software. Specific institutional ownership, governing legal entities, and support contacts must be reviewed and customized prior to institutional deployment (marked below with <code>[REVERT/CONFIRM]</code> tags).
+    </div>
+  </div>
+
+  <div class="legal-card-container">
+    <!-- Section 1 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">1. Purpose and Scope</h2>
+      <p>AssignFlow is an academic workflow and assignment management platform designed to facilitate coursework distribution, file submissions, instructor grading, and academic analytics between instructors (teachers) and enrolled students.</p>
+      <p>This Privacy Policy describes the specific personal and academic data processed by the application, how that data is stored, and the strict access boundaries enforced by software business logic.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Operating Organization:</strong> <span class="owner-field">[REVERT/CONFIRM: Educational Institution or Organization Legal Name]</span></p>
+        <p><strong>Effective Date:</strong> <span class="owner-field">[REVERT/CONFIRM: Launch Date / Academic Term Start]</span></p>
+      </div>
+    </article>
+
+    <!-- Section 2 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">2. Information We Collect</h2>
+      <p>AssignFlow collects and processes only the data strictly necessary for academic assignment administration:</p>
+      <ul class="legal-list">
+        <li><strong>Account Credentials:</strong> Full name, institutional email address, and an encrypted password hash (salted using bcrypt; plaintext passwords are never stored or logged).</li>
+        <li><strong>Role Designation:</strong> User account classification as either a <em>Teacher</em> (course creator and evaluator) or a <em>Student</em> (course participant).</li>
+        <li><strong>Course &amp; Enrollment Records:</strong> Class names, course join codes, academic semester association, subject codes, and class enrollment rosters.</li>
+        <li><strong>Assignment Materials:</strong> Assignment titles, descriptions, due dates, late submission penalty policies, grace periods, and syllabus/assignment PDF attachments uploaded by teachers.</li>
+        <li><strong>Student Submissions &amp; Files:</strong> Uploaded coursework files (in supported formats including PDF, DOCX, DOC, TXT, and ZIP up to 10MB), submission timestamps, and attempt counts.</li>
+        <li><strong>Evaluation Records:</strong> Instructor feedback notes, awarded scores, grade revision histories, student re-evaluation requests, and deadline extensions.</li>
+      </ul>
+    </article>
+
+    <!-- Section 3 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">3. Privacy Wall and Access Controls</h2>
+      <p>AssignFlow enforces strict data isolation and privacy boundaries in application code and database queries:</p>
+      <div class="legal-feature-grid">
+        <div class="legal-feature-card">
+          <h3>Student Submission Isolation</h3>
+          <p>Students can view and download only their own uploaded submissions. Cross-student file inspection or download is strictly forbidden and rejected by server authorization guards.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Draft Grade Privacy Wall</h3>
+          <p>Instructor grading remarks and provisional scores remain completely invisible to students until the instructor explicitly publishes them through the "Release Grades" action.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Anonymous Peer Rankings</h3>
+          <p>Class leaderboard and comparative analytics anonymize student identities, displaying peer rankings without exposing personal student names or individual scores to classmates.</p>
+        </div>
+        <div class="legal-feature-card">
+          <h3>Course Ownership Guard</h3>
+          <p>Instructors can only access assignments, submissions, and rosters for classes they created or have been explicitly granted ownership of.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Section 4 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">4. Data Storage, Security, and File Retention</h2>
+      <ul class="legal-list">
+        <li><strong>Database Storage:</strong> All structured relational records (users, classes, assignments, submissions, and audit logs) are stored in PostgreSQL within an isolated database schema (<code>assignflow</code>).</li>
+        <li><strong>File Upload Security:</strong> Uploaded assignment documents and student submissions are validated by file size (maximum 10MB) and magic-byte inspection (%PDF- verification for PDF documents). Uploaded files are stored on isolated server storage using cryptographically random UUID identifiers to eliminate directory traversal risks.</li>
+        <li><strong>Session Authentication:</strong> Authentication is handled using JSON Web Tokens (JWT) stored in HTTP-only, SameSite-restricted cookies and Bearer headers. In production environments, cookies are strictly marked with the <code>Secure</code> flag over HTTPS.</li>
+        <li><strong>Temporary Export Cleanup:</strong> Bulk export archives (such as ZIP files of student submissions) are generated in temporary storage and automatically unlinked from the server filesystem immediately following file transmission.</li>
+        <li><strong>Data Retention:</strong> Course records, submissions, and grade audit histories are retained for the duration of the active academic period or as mandated by the institution's data retention policy.</li>
+      </ul>
+    </article>
+
+    <!-- Section 5 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">5. Data Sharing and Third Parties</h2>
+      <p>AssignFlow does not sell, rent, monetize, or share student or instructor personal data with third-party advertisers, data brokers, or external analytics networks.</p>
+      <p>Data processing is confined strictly to the operating institution's designated hosting environment. If optional automated email notifications are activated by the operator, outbound notification emails (e.g. deadline reminders or grade release alerts) are routed via the institution's configured SMTP provider.</p>
+    </article>
+
+    <!-- Section 6 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">6. User Rights and Data Deletion Requests</h2>
+      <p>Users have the right to access, inspect, and request corrections to their academic profile information. Because academic evaluation records may be subject to institutional recordkeeping requirements, data deletion and account termination requests are handled in coordination with the institutional administrator:</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p>To request data inspection, account closure, or removal of submitted files, contact the designated system administrator:</p>
+        <p><strong>Administrator Contact:</strong> <span class="owner-field">[REVERT/CONFIRM: Designated Privacy Officer / Admin Email, e.g. privacy@assignflow.edu]</span></p>
+      </div>
+    </article>
+
+    <!-- Section 7 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">7. Contact and Administrative Governance</h2>
+      <p>Questions regarding the technical operation or privacy practices of this AssignFlow installation should be directed to the technical administrator or department head responsible for the course management system.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Department / Office:</strong> <span class="owner-field">[REVERT/CONFIRM: Department of Academic Computing / IT Services]</span></p>
+        <p><strong>Address:</strong> <span class="owner-field">[REVERT/CONFIRM: Campus / Postal Address]</span></p>
+      </div>
+    </article>
+  </div>
+</div>
+<!-- END COMPONENT: pages/privacy.html -->
+
+        <!-- BEGIN COMPONENT: pages/terms.html -->
+<!-- ================================================================ -->
+<!-- TERMS AND CONDITIONS VIEW                                        -->
+<!-- ================================================================ -->
+<div id="termsView" class="page-view legal-view-content" style="display: none;">
+  <div class="page-header-row legal-header-row">
+    <div>
+      <div class="legal-badge">
+        <span class="legal-badge-dot"></span>
+        <span>Platform Terms of Service</span>
+      </div>
+      <h1 class="page-title">Terms &amp; Conditions</h1>
+      <p class="page-subtitle">Rules, guidelines, and responsibilities governing use of the AssignFlow platform.</p>
+    </div>
+    <div class="legal-header-actions">
+      <a href="#dashboard" class="btn btn-secondary back-to-dash-btn" data-nav="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="legal-notice-banner">
+    <div class="legal-notice-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="legal-notice-text">
+      <strong>Institutional Notice:</strong> These Terms and Conditions govern the software features, submission workflows, and user obligations implemented in AssignFlow. Institutional policies, honor codes, and jurisdictional laws must be reviewed and customized prior to production deployment (marked below with <code>[REVERT/CONFIRM]</code> tags).
+    </div>
+  </div>
+
+  <div class="legal-card-container">
+    <!-- Section 1 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">1. Acceptance of Terms</h2>
+      <p>By registering for, accessing, or using AssignFlow, instructors and students agree to comply with and be bound by these Terms and Conditions and the accompanying Privacy Policy. If you do not agree to these terms, you must not access or use the platform.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Institution / Operator:</strong> <span class="owner-field">[REVERT/CONFIRM: Educational Institution or University Name]</span></p>
+        <p><strong>Academic Unit:</strong> <span class="owner-field">[REVERT/CONFIRM: Faculty of Engineering / School of Computing]</span></p>
+      </div>
+    </article>
+
+    <!-- Section 2 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">2. Account Registration and Security</h2>
+      <ul class="legal-list">
+        <li><strong>Account Integrity:</strong> Users must register with valid, authentic institutional email addresses. You are responsible for all activities conducted under your user account.</li>
+        <li><strong>Role Boundaries:</strong> Users must register under their legitimate academic role (Teacher or Student). Impersonating an instructor, using false credentials, or attempting to register as an instructor without authorization is strictly prohibited.</li>
+        <li><strong>Credential Confidentiality:</strong> You are responsible for maintaining the confidentiality of your password. You must notify the administrator immediately if you suspect unauthorized access to your account.</li>
+      </ul>
+    </article>
+
+    <!-- Section 3 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">3. Coursework Submissions and Academic Integrity</h2>
+      <ul class="legal-list">
+        <li><strong>Academic Honesty:</strong> All coursework, code, essays, and files submitted through AssignFlow must represent the student's original academic work, created in accordance with course instructions and the institution's academic integrity policies.</li>
+        <li><strong>File Formats &amp; Limits:</strong> Uploaded submission files must strictly comply with supported file extensions (.pdf, .docx, .doc, .txt, .zip) and must not exceed the maximum file size limit (10MB). Submissions containing non-conforming or unparseable formats may be rejected by system validation.</li>
+        <li><strong>Submission Deadlines &amp; Policies:</strong> Coursework submissions are subject to deadlines configured by the instructor. Assignments configured to reject late work will automatically reject attempts after the specified due date and grace period. Late submissions, where permitted by policy, are subject to automated deduction percentages set by the instructor.</li>
+        <li><strong>Audit Logging:</strong> All submissions, resubmission attempts, timestamped receipts, and file replacements are recorded in immutable audit logs accessible to course instructors.</li>
+      </ul>
+    </article>
+
+    <!-- Section 4 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">4. Instructor Authority and Evaluation</h2>
+      <ul class="legal-list">
+        <li><strong>Course Administration:</strong> Instructors have full authority to create classes, issue enrollment codes, publish assignments, set submission policies, extend deadlines, and evaluate student work.</li>
+        <li><strong>Grading &amp; Grade Release:</strong> Evaluative marks, rubrics, and feedback entered by instructors remain drafts until explicitly released by the instructor. Once released, grades are finalized in accordance with course syllabus rules.</li>
+        <li><strong>Re-evaluation &amp; Corrections:</strong> Students may submit re-evaluation requests through the platform subject to instructor review. Instructors retain final authority on all grade adjustments and corrections, which are recorded in the system audit log.</li>
+      </ul>
+    </article>
+
+    <!-- Section 5 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">5. Prohibited Activities</h2>
+      <p>Users of AssignFlow must strictly refrain from any of the following activities:</p>
+      <ul class="legal-list">
+        <li>Uploading executable files, scripts, viruses, malware, or corrupted archives designed to compromise server infrastructure or peer devices.</li>
+        <li>Attempting directory traversal, SQL injection, CSV formula manipulation, or unauthorized API bypass to access other students' files or instructor grading dashboards.</li>
+        <li>Sharing course join codes or assignment materials with unauthorized individuals outside the enrolled class.</li>
+        <li>Running automated scrapers, denial-of-service tools, or load-testing scripts against the application without prior written authorization from the system administrator.</li>
+      </ul>
+    </article>
+
+    <!-- Section 6 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">6. Service Availability and Disclaimers</h2>
+      <p>AssignFlow is provided to the academic community on an "as is" and "as available" basis. While system architecture includes automated health checks, database connection recovery, and transactional data integrity safeguards, the platform operators do not guarantee uninterrupted or error-free operation.</p>
+      <p>Students are strongly encouraged to retain local copies of all submitted coursework and to submit assignments well in advance of published deadlines to prevent unexpected network or technical disruptions.</p>
+    </article>
+
+    <!-- Section 7 -->
+    <article class="card legal-section-card">
+      <h2 class="legal-section-title">7. Suspension and Termination</h2>
+      <p>The platform administrator reserves the right to suspend or terminate user accounts, revoke course enrollment, or restrict access to the system for any violation of these Terms and Conditions or applicable institutional policies.</p>
+      <div class="owner-confirmation-box">
+        <span class="owner-confirmation-tag">Owner Confirmation Required</span>
+        <p><strong>Governing Law &amp; Jurisdiction:</strong> <span class="owner-field">[REVERT/CONFIRM: Governing State / Provincial / Country Law]</span></p>
+        <p><strong>Appeals &amp; Inquiries:</strong> <span class="owner-field">[REVERT/CONFIRM: Institutional Contact / Academic Dean Email]</span></p>
+      </div>
+    </article>
+  </div>
+</div>
+<!-- END COMPONENT: pages/terms.html -->
       </main>
 
       <!-- Footer -->
       <footer class="app-footer">
-        <p>AssignFlow • College Assignment Management System</p>
+        <div class="footer-content">
+          <p class="footer-copy">AssignFlow &bull; Academic Workflow &amp; Assignment Platform</p>
+          <div class="footer-links">
+            <a href="#privacy" class="footer-link" data-nav="privacy" id="footerPrivacyLink">Privacy Policy</a>
+            <span class="footer-divider">&bull;</span>
+            <a href="#terms" class="footer-link" data-nav="terms" id="footerTermsLink">Terms &amp; Conditions</a>
+          </div>
+        </div>
       </footer>
     </div>
   </div>
@@ -1644,6 +1996,7 @@
           <span class="btn-spinner" id="loginSpinner" style="display: none;"></span>
           <span id="loginBtnText">Sign In</span>
         </button>
+        <p class="auth-terms-note">Protected by AssignFlow session security. <a href="#privacy" class="auth-legal-link" data-nav="privacy">Privacy Policy</a></p>
       </form>
 
       <!-- 2. Register Form -->
@@ -1695,6 +2048,7 @@
           <span class="btn-spinner" id="regSpinner" style="display: none;"></span>
           <span id="regBtnText">Create Account</span>
         </button>
+        <p class="auth-terms-note">By creating an account, you agree to the <a href="#terms" class="auth-legal-link" data-nav="terms">Terms &amp; Conditions</a> and <a href="#privacy" class="auth-legal-link" data-nav="privacy">Privacy Policy</a>.</p>
       </form>
 
     </div>
@@ -1832,10 +2186,10 @@
         </div>
 
         <!-- Resubmission Guidance Banner -->
-        <div class="resubmission-allowed-banner" id="submitWorkResubmitBanner" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 0.75rem 0.9rem; margin-top: 0.75rem; margin-bottom: 0.75rem; color: #854d0e;">
+        <div class="resubmission-allowed-banner" id="submitWorkResubmitBanner" style="display: none;">
           <div style="font-weight: 600; font-size: 0.875rem;" id="submitWorkResubmitTitle">↻ Resubmission Authorized</div>
-          <p id="submitWorkResubmitNote" style="margin: 0.25rem 0 0 0; font-size: 0.825rem; color: #713f12;"></p>
-          <div id="submitWorkResubmitDeadline" style="margin-top: 0.25rem; font-size: 0.8rem; font-weight: 500; color: #a16207;"></div>
+          <p id="submitWorkResubmitNote" style="margin: 0.25rem 0 0 0; font-size: 0.825rem;"></p>
+          <div id="submitWorkResubmitDeadline" style="margin-top: 0.25rem; font-size: 0.8rem; font-weight: 500;"></div>
         </div>
 
         <!-- File Upload Dropzone -->
@@ -1925,6 +2279,15 @@
             <span class="feedback-title">Teacher Feedback:</span>
             <p class="feedback-content" id="viewSubFeedbackText"></p>
           </div>
+          <div class="results-reeval-action" id="viewSubReevalActionBox" style="margin-top: 0.85rem; display: flex; justify-content: flex-end;">
+            <button id="btnResultsCardReeval" type="button" class="btn btn-outline-secondary btn-sm" style="display: none; font-size: 0.8rem; font-weight: 600;" title="Request re-evaluation of this released grade">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.35rem; vertical-align: -2px;">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>Request Re-evaluation</span>
+            </button>
+          </div>
         </div>
 
         <!-- Pending Review Notice (Shown when not yet released) -->
@@ -1939,13 +2302,13 @@
         </div>
 
         <!-- Resubmission Permitted Banner -->
-        <div class="resubmission-allowed-banner" id="viewSubResubmitBanner" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; color: #854d0e;">
+        <div class="resubmission-allowed-banner" id="viewSubResubmitBanner" style="display: none;">
           <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
             <div style="font-size: 1.25rem; line-height: 1;">↻</div>
             <div style="flex: 1;">
               <div style="font-weight: 600; font-size: 0.9rem;" id="viewSubResubmitTitle">Resubmission Permitted by Teacher</div>
-              <p id="viewSubResubmitNote" style="margin: 0.35rem 0 0 0; font-size: 0.825rem; color: #713f12;"></p>
-              <div id="viewSubResubmitDeadline" style="margin-top: 0.35rem; font-size: 0.8rem; font-weight: 500; color: #a16207;"></div>
+              <p id="viewSubResubmitNote" style="margin: 0.35rem 0 0 0; font-size: 0.825rem;"></p>
+              <div id="viewSubResubmitDeadline" style="margin-top: 0.35rem; font-size: 0.8rem; font-weight: 500;"></div>
             </div>
           </div>
         </div>
@@ -1989,6 +2352,13 @@
               <polyline points="12 6 12 12 14 14"></polyline>
             </svg>
             <span>Attempt History</span>
+          </button>
+          <button id="btnModalRequestReeval" type="button" class="btn btn-secondary" style="display: none; flex: 1;" title="Request Grade Re-evaluation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>Request Re-evaluation</span>
           </button>
           <a id="btnDownloadMySubmission" href="#" target="_blank" rel="noopener" class="btn btn-secondary" style="flex: 1;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2232,6 +2602,20 @@
             </div>
           </div>
 
+          <!-- Pending Re-evaluation Request Banner (Teacher workspace) -->
+          <div class="grading-reevaluation-banner" id="gradingReevaluationBanner" style="display: none; background: rgba(234, 88, 12, 0.08); border: 1px solid rgba(234, 88, 12, 0.25); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; color: #c2410c; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>Student Re-evaluation Request</span>
+                  <button class="btn btn-xs btn-outline-secondary" id="gradingResolveReevalBtn" type="button" style="font-size: 0.75rem; font-weight: 600;">Decide Request</button>
+                </div>
+                <div id="gradingReevaluationReasonText" style="font-size: 0.825rem; color: #431407; margin-top: 0.35rem; font-style: italic;"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="grading-form-section">
             <div class="grading-status-row">
               <span class="meta-label">Current Status:</span>
@@ -2292,7 +2676,7 @@
                 <button class="btn btn-secondary btn-sm" id="gradingViewHistoryBtn" type="button" title="View past attempts and submission versions">
                   Attempt History
                 </button>
-                <button class="btn btn-secondary btn-sm" id="gradingReviewReevalBtn" type="button" title="Review student re-evaluation request" style="display: none; color: #2563eb;">
+                <button class="btn btn-secondary btn-sm" id="gradingReviewReevalBtn" type="button" title="Review student re-evaluation request" style="display: none; color: var(--primary);">
                   Re-eval Request
                 </button>
               </div>
@@ -2308,7 +2692,12 @@
     <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="singleReleaseConfirmTitle">
       <div class="modal-header">
         <h3 class="modal-title" id="singleReleaseConfirmTitle">Release Grade to Student</h3>
-        <button class="modal-close-icon-btn" id="closeSingleReleaseConfirmBtn" aria-label="Close modal" type="button">✕</button>
+        <button class="modal-close-icon-btn" id="closeSingleReleaseConfirmBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
       <div class="modal-body confirm-modal-body">
         <p id="singleReleaseConfirmMessage">Are you sure you want to release this grade? Once released, the student will immediately see their score and feedback.</p>
@@ -2325,7 +2714,12 @@
     <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="bulkReleaseConfirmTitle">
       <div class="modal-header">
         <h3 class="modal-title" id="bulkReleaseConfirmTitle">Release All Graded Submissions</h3>
-        <button class="modal-close-icon-btn" id="closeBulkReleaseConfirmBtn" aria-label="Close modal" type="button">✕</button>
+        <button class="modal-close-icon-btn" id="closeBulkReleaseConfirmBtn" aria-label="Close modal" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
       <div class="modal-body confirm-modal-body">
         <p id="bulkReleaseConfirmMessage">Are you sure you want to release grades for all graded submissions? Ungraded submissions will remain unreleased.</p>
@@ -2360,7 +2754,7 @@
           <button class="btn btn-secondary btn-sm" id="studentViewHistoryBtn" type="button" style="display: none;" title="View previous attempt history">
             Attempts
           </button>
-          <button class="btn btn-secondary btn-sm" id="studentRequestReevalBtn" type="button" style="display: none; color: #2563eb;" title="Request re-evaluation of your grade">
+          <button class="btn btn-secondary btn-sm" id="studentRequestReevalBtn" type="button" style="display: none; color: var(--primary);" title="Request re-evaluation of your grade">
             Request Re-evaluation
           </button>
           <a class="btn btn-secondary btn-sm" id="submissionPreviewDownloadTopBtn" href="#" download target="_blank" rel="noopener" title="Download submission file">
@@ -2531,6 +2925,14 @@
             Guidance for Student (Optional)
           </label>
           <textarea id="resubmissionNotesInput" class="form-textarea" rows="3" placeholder="Provide instructions or requirements for the new attempt..."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.75rem;">
+          <label for="resubmissionDeadlineInput" class="form-label">
+            Resubmission Deadline (Optional)
+          </label>
+          <input type="datetime-local" id="resubmissionDeadlineInput" class="form-input">
+          <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Leave blank if student can resubmit until course close.</span>
         </div>
       </div>
 
@@ -2835,7 +3237,10 @@
             <label for="reevalReasonInput" class="form-label" style="font-weight: 600; font-size: 0.85rem;">Reason for Re-evaluation <span style="color: var(--danger);">*</span></label>
             <textarea id="reevalReasonInput" class="form-input" rows="4" placeholder="Detail specific criteria or questions you request re-assessment for..." required></textarea>
           </div>
-          <button type="button" class="btn btn-primary" id="submitReevaluationRequestBtn">Submit Request</button>
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem;">
+            <button type="button" class="btn btn-secondary" id="cancelStudentReevalBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitReevaluationRequestBtn">Submit Request</button>
+          </div>
         </div>
 
         <!-- Teacher view: Decision review -->

@@ -147,6 +147,27 @@ def get_dashboard_data(
                 }
             )
 
+        # Real pending grading queue (ungraded submissions and pending re-evaluations)
+        pending_queue_subs = [
+            s for s in submissions if s.status in ("submitted", "reevaluation_requested")
+        ][:6]
+        grading_queue_data = [
+            {
+                "id": s.id,
+                "assignment_id": s.assignment_id,
+                "assignment_title": s.assignment.title if s.assignment else "Assignment",
+                "class_name": s.assignment.class_name if s.assignment else "General",
+                "student_name": s.student.full_name if s.student else "Student",
+                "student_email": s.student.email if s.student else "",
+                "submitted_at": s.submitted_at.isoformat() if s.submitted_at else "",
+                "relative_time": format_relative_time(s.submitted_at),
+                "status": s.status,
+                "is_late": s.is_late,
+                "needs_reevaluation": (s.status == "reevaluation_requested"),
+            }
+            for s in pending_queue_subs
+        ]
+
         # Submissions overview donut
         submissions_overview = {
             "ungraded": ungraded_submissions,
@@ -212,6 +233,7 @@ def get_dashboard_data(
             "submissions_overview": submissions_overview,
             "my_classes": my_classes_data,
             "upcoming_deadlines": upcoming_deadlines_data,
+            "grading_queue": grading_queue_data,
         }
 
     else:
@@ -234,7 +256,10 @@ def get_dashboard_data(
 
         accessible_assignments = (
             db.query(Assignment)
-            .filter(Assignment.class_id.in_(enrolled_class_ids))
+            .filter(
+                Assignment.class_id.in_(enrolled_class_ids),
+                Assignment.status != "draft",
+            )
             .order_by(Assignment.due_date.asc())
             .all()
             if enrolled_class_ids

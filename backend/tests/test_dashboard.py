@@ -106,3 +106,79 @@ def test_student_dashboard_metrics_and_scoping(client, teacher_headers, student_
     dash2 = client.get("/api/dashboard", headers=student_headers).json()
     assert dash2["metrics"]["submitted"] >= 1
     assert any(s["assignment_title"] == "OOPs Project" for s in dash2["recently_submitted"])
+
+
+def test_student_dashboard_excludes_draft_assignments(client, teacher_headers, student_headers):
+    """
+    Regression Test:
+    Ensures that draft assignments are strictly excluded from student dashboard aggregation:
+    - total_assignments metric does not count draft assignments.
+    - pending metric does not count draft assignments.
+    - upcoming_assignments list does not contain draft assignments.
+    - Teacher dashboard retains visibility over draft assignments.
+    """
+    # 1. Teacher creates class
+    cls_res = client.post(
+        "/api/classes",
+        json={"name": "Draft Exclude Class", "description": "Draft filtering verification"},
+        headers=teacher_headers,
+    )
+    assert cls_res.status_code == 201
+    cls_data = cls_res.json()
+    cls_id = cls_data["id"]
+    join_code = cls_data["join_code"]
+
+    # 2. Student joins class
+    join_res = client.post(
+        "/api/classes/join",
+        json={"join_code": join_code},
+        headers=student_headers,
+    )
+    assert join_res.status_code == 200
+
+    # 3. Teacher creates 1 active assignment and 1 draft assignment
+    due_date = (datetime.now(timezone.utc) + timedelta(days=4)).isoformat()
+
+    active_res = client.post(
+        "/api/assignments",
+        json={
+            "title": "Visible Active Task",
+            "subject": "System Design",
+            "due_date": due_date,
+            "status": "active",
+            "class_id": cls_id,
+        },
+        headers=teacher_headers,
+    )
+    assert active_res.status_code == 201
+
+    draft_res = client.post(
+        "/api/assignments",
+        json={
+            "title": "Confidential Draft Task",
+            "subject": "System Design",
+            "unit": 2,
+            "due_date": due_date,
+            "status": "draft",
+            "class_id": cls_id,
+        },
+        headers=teacher_headers,
+    )
+    assert draft_res.status_code == 201
+
+    # 4. Student checks dashboard
+    st_dash = client.get("/api/dashboard", headers=student_headers)
+    assert st_dash.status_code == 200
+    st_data = st_dash.json()
+
+    # Draft task must NOT be in upcoming_assignments
+    upcoming = st_data["upcoming_assignments"]
+    assert any(a["title"] == "Visible Active Task" for a in upcoming)
+    assert not any(a["title"] == "Confidential Draft Task" for a in upcoming)
+    assert all(a.get("status") != "draft" for a in upcoming)
+
+    # 5. Teacher checks dashboard
+    t_dash = client.get("/api/dashboard", headers=teacher_headers)
+    assert t_dash.status_code == 200
+    t_data = t_dash.json()
+    assert t_data["metrics"]["total_assignments"] >= 2

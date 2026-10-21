@@ -21,6 +21,32 @@ const API_ENDPOINTS = {
   classes: `${API_BASE}/api/classes`,
   joinClass: `${API_BASE}/api/classes/join`,
   semesters: `${API_BASE}/api/semesters`,
+  notifications: `${API_BASE}/api/notifications`,
+  analytics: Object.assign(
+    (classId) => `${API_BASE}/api/analytics/classes/${classId}`,
+    {
+      toString: () => `${API_BASE}/api/analytics`,
+      overview: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/overview${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+      rankings: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/subjects/${encodeURIComponent(subject)}/rankings`,
+      leaderboard: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/subjects/${encodeURIComponent(subject)}/leaderboard`,
+      alerts: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/alerts${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+      feedback: (classId, subject) => `${API_BASE}/api/analytics/student/feedback?class_id=${classId}${subject ? `&subject=${encodeURIComponent(subject)}` : ""}`,
+      summaryCsv: (classId) => `${API_BASE}/api/analytics/classes/${classId}/reports/summary.csv`,
+      detailedCsv: (classId, subject) => `${API_BASE}/api/analytics/classes/${classId}/reports/detailed.csv${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+    }
+  ),
+  workflow: {
+    extensions: (id) => `${API_BASE}/api/assignments/${id}/extensions`,
+    allowResubmission: (id) => `${API_BASE}/api/submissions/${id}/allow-resubmission`,
+    gradeCorrections: (id) => `${API_BASE}/api/submissions/${id}/corrections`,
+    correctGrade: (id) => `${API_BASE}/api/submissions/${id}/correct-grade`,
+    submissionHistory: (id) => `${API_BASE}/api/submissions/${id}/history`,
+    requestReevaluation: (id) => `${API_BASE}/api/submissions/${id}/request-reevaluation`,
+    reevaluations: (id) => `${API_BASE}/api/assignments/${id}/reevaluations`,
+    reevaluationDecision: (id) => `${API_BASE}/api/reevaluations/${id}/decision`,
+    finalize: (classId, subject) => `${API_BASE}/api/classes/${classId}/subjects/${encodeURIComponent(subject)}/finalize`,
+    finalized: (classId, subject) => `${API_BASE}/api/classes/${classId}/subjects/${encodeURIComponent(subject)}/finalized`,
+  },
 };
 
 // Application State
@@ -63,6 +89,9 @@ const state = {
   selectedSubmissionIds: new Set(),
 };
 
+let currentAnalyticsClassId = null;
+let currentAnalyticsSubject = "";
+
 // DOM Elements Cache
 const elements = {
   // Navigation & Layout
@@ -73,6 +102,11 @@ const elements = {
   navLinks: document.querySelectorAll(".nav-link"),
   globalSearchInput: document.getElementById("globalSearchInput"),
   notificationBtn: document.getElementById("notificationBtn"),
+  notificationDropdownWrapper: document.getElementById("notificationDropdownWrapper"),
+  notificationBadge: document.getElementById("notificationBadge"),
+  notificationMenu: document.getElementById("notificationMenu"),
+  notificationList: document.getElementById("notificationList"),
+  markAllNotificationsReadBtn: document.getElementById("markAllNotificationsReadBtn"),
   profileBtn: document.getElementById("profileBtn"),
   profileDropdownWrapper: document.getElementById("profileDropdownWrapper"),
   profileAvatarText: document.getElementById("profileAvatarText"),
@@ -93,7 +127,10 @@ const elements = {
   navClasses: document.getElementById("navClasses"),
   navSubmissions: document.getElementById("navSubmissions"),
   navCalendar: document.getElementById("navCalendar"),
+  navTextCalendar: document.getElementById("navTextCalendar"),
   navAnalytics: document.getElementById("navAnalytics"),
+  topNavAnalytics: document.getElementById("topNavAnalytics"),
+  topNavTextAnalytics: document.getElementById("topNavTextAnalytics"),
   navSettings: document.getElementById("navSettings"),
   navTextAssignments: document.getElementById("navTextAssignments"),
   navTextClasses: document.getElementById("navTextClasses"),
@@ -139,14 +176,27 @@ const elements = {
   resubmissionAlert: document.getElementById("resubmissionAlert"),
   reevaluationModalBackdrop: document.getElementById("reevaluationModalBackdrop"),
   closeReevaluationModalBtn: document.getElementById("closeReevaluationModalBtn"),
-  cancelReevaluationBtn: document.getElementById("cancelReevaluationBtn"),
-  confirmReevaluationBtn: document.getElementById("confirmReevaluationBtn"),
-  reevaluationReasonInput: document.getElementById("reevaluationReasonInput"),
+  cancelStudentReevalBtn: document.getElementById("cancelStudentReevalBtn"),
+  submitReevaluationRequestBtn: document.getElementById("submitReevaluationRequestBtn"),
+  submitReevaluationDecisionBtn: document.getElementById("submitReevaluationDecisionBtn"),
+  reevaluationStudentSection: document.getElementById("reevaluationStudentSection"),
+  reevaluationTeacherSection: document.getElementById("reevaluationTeacherSection"),
+  reevaluationTeacherReason: document.getElementById("reevaluationTeacherReason"),
+  reevalReasonInput: document.getElementById("reevalReasonInput"),
+  reevalDecisionSelect: document.getElementById("reevalDecisionSelect"),
+  reevalRevisedGrade: document.getElementById("reevalRevisedGrade"),
+  reevalDecisionNotes: document.getElementById("reevalDecisionNotes"),
   reevaluationAlert: document.getElementById("reevaluationAlert"),
+  btnModalRequestReeval: document.getElementById("btnModalRequestReeval"),
+  btnResultsCardReeval: document.getElementById("btnResultsCardReeval"),
+  viewSubReevalActionBox: document.getElementById("viewSubReevalActionBox"),
   submissionHistoryModalBackdrop: document.getElementById("submissionHistoryModalBackdrop"),
   closeSubmissionHistoryModalBtn: document.getElementById("closeSubmissionHistoryModalBtn"),
+  closeSubmissionHistoryBottomBtn: document.getElementById("closeSubmissionHistoryBottomBtn"),
   closeSubmissionHistoryFooterBtn: document.getElementById("closeSubmissionHistoryFooterBtn"),
   submissionHistoryTimeline: document.getElementById("submissionHistoryTimeline"),
+  historyAttemptsList: document.getElementById("historyAttemptsList"),
+  historyStudentMeta: document.getElementById("historyStudentMeta"),
   structureModalBackdrop: document.getElementById("structureModalBackdrop"),
   structureClassSelect: document.getElementById("structureClassSelect"),
   structureTreeContainer: document.getElementById("structureTreeContainer"),
@@ -155,17 +205,36 @@ const elements = {
   finalizeModalBackdrop: document.getElementById("finalizeModalBackdrop"),
   finalizeConfirmCheckbox: document.getElementById("finalizeConfirmCheckbox"),
   finalizeAuditNote: document.getElementById("finalizeAuditNote"),
+  finalizeAlert: document.getElementById("finalizeAlert"),
+  finalizeUnitsChecklist: document.getElementById("finalizeUnitsChecklist"),
+  finalizeNotesInput: document.getElementById("finalizeNotesInput"),
   confirmFinalizeBtn: document.getElementById("confirmFinalizeBtn"),
   cancelFinalizeBtn: document.getElementById("cancelFinalizeBtn"),
   closeFinalizeModalBtn: document.getElementById("closeFinalizeModalBtn"),
+  analyticsClassSelect: document.getElementById("analyticsClassSelect"),
+  analyticsSubjectSelect: document.getElementById("analyticsSubjectSelect"),
+  btnFinalizeResults: document.getElementById("btnFinalizeResults"),
+  btnExportSummaryCsv: document.getElementById("btnExportSummaryCsv"),
+  btnExportDetailedCsv: document.getElementById("btnExportDetailedCsv"),
+  btnToggleLeaderboard: document.getElementById("btnToggleLeaderboard"),
+  btnCloseLeaderboard: document.getElementById("btnCloseLeaderboard"),
   analyticsKpiRow: document.getElementById("analyticsKpiRow"),
+  analyticsRankingsCard: document.getElementById("analyticsRankingsCard"),
+  analyticsRankingsTitle: document.getElementById("analyticsRankingsTitle"),
+  analyticsRankingsSubtitle: document.getElementById("analyticsRankingsSubtitle"),
   analyticsUnitComparisonsBody: document.getElementById("analyticsUnitComparisonsBody"),
+  analyticsRightCard: document.getElementById("analyticsRightCard"),
+  analyticsRightCardTitle: document.getElementById("analyticsRightCardTitle"),
+  analyticsRightCardSubtitle: document.getElementById("analyticsRightCardSubtitle"),
   analyticsRightCardBody: document.getElementById("analyticsRightCardBody"),
   analyticsRankingsHead: document.getElementById("analyticsRankingsHead"),
   analyticsRankingsBody: document.getElementById("analyticsRankingsBody"),
   analyticsAlertsContainer: document.getElementById("analyticsAlertsContainer"),
   analyticsFinalizedBadge: document.getElementById("analyticsFinalizedBadge"),
+  analyticsStudentFeedbackCard: document.getElementById("analyticsStudentFeedbackCard"),
   analyticsStudentFeedbackBody: document.getElementById("analyticsStudentFeedbackBody"),
+  analyticsLeaderboardCard: document.getElementById("analyticsLeaderboardCard"),
+  analyticsLeaderboardTable: document.getElementById("analyticsLeaderboardTable"),
   analyticsLeaderboardBody: document.getElementById("analyticsLeaderboardBody"),
   // Semesters Page Elements
   semestersListContainer: document.getElementById("semestersListContainer"),
@@ -226,12 +295,26 @@ const elements = {
   submissionsEmptyState: document.getElementById("submissionsEmptyState"),
   submissionsEmptyTitle: document.getElementById("submissionsEmptyTitle"),
   submissionsEmptyText: document.getElementById("submissionsEmptyText"),
+  submissionsQueueTabs: document.getElementById("submissionsQueueTabs"),
+  countQueueAll: document.getElementById("countQueueAll"),
+  countQueueNeedsGrading: document.getElementById("countQueueNeedsGrading"),
+  countQueueDraftGrades: document.getElementById("countQueueDraftGrades"),
+  countQueueReeval: document.getElementById("countQueueReeval"),
+  countQueueReleased: document.getElementById("countQueueReleased"),
 
   // Calendar Page Elements
   calendarViewAssignmentsBtn: document.getElementById("calendarViewAssignmentsBtn"),
   calendarDeadlinesList: document.getElementById("calendarDeadlinesList"),
   calendarMiniMonthContainer: document.getElementById("calendarMiniMonthContainer"),
   calendarCurrentMonthLabel: document.getElementById("calendarCurrentMonthLabel"),
+  calendarPrevMonthBtn: document.getElementById("calendarPrevMonthBtn"),
+  calendarNextMonthBtn: document.getElementById("calendarNextMonthBtn"),
+  calendarMonthYearDisplay: document.getElementById("calendarMonthYearDisplay"),
+  calendarTodayBtn: document.getElementById("calendarTodayBtn"),
+  calendarAllDatesBtn: document.getElementById("calendarAllDatesBtn"),
+  calendarGridTitle: document.getElementById("calendarGridTitle"),
+  calendarAgendaTitle: document.getElementById("calendarAgendaTitle"),
+  calendarAgendaSubtitle: document.getElementById("calendarAgendaSubtitle"),
 
   // Analytics Page Elements
   analyticsPageTitle: document.getElementById("analyticsPageTitle"),
@@ -248,6 +331,11 @@ const elements = {
   settingsUserId: document.getElementById("settingsUserId"),
   settingsDefaultSort: document.getElementById("settingsDefaultSort"),
   settingsReminderToggle: document.getElementById("settingsReminderToggle"),
+  prefInAppEnabled: document.getElementById("prefInAppEnabled"),
+  prefEmailEnabled: document.getElementById("prefEmailEnabled"),
+  prefEmailGradeReleased: document.getElementById("prefEmailGradeReleased"),
+  prefEmailDeadline: document.getElementById("prefEmailDeadline"),
+  prefEmailReevaluation: document.getElementById("prefEmailReevaluation"),
   settingsSavePreferencesBtn: document.getElementById("settingsSavePreferencesBtn"),
   settingsLogoutBtn: document.getElementById("settingsLogoutBtn"),
   settingsClearCacheBtn: document.getElementById("settingsClearCacheBtn"),
@@ -356,8 +444,11 @@ const elements = {
   cancelDeleteBtn: document.getElementById("cancelDeleteBtn"),
   confirmDeleteBtn: document.getElementById("confirmDeleteBtn"),
 
-  // Classes Management
+  // Classes & Curriculum Management
   openClassesModalBtn: document.getElementById("openClassesModalBtn"),
+  openStructureModalBtn: document.getElementById("openStructureModalBtn"),
+  structureLoadingSpinner: document.getElementById("structureLoadingSpinner"),
+  structureEmptyState: document.getElementById("structureEmptyState"),
   sidebarClassesLink: document.getElementById("sidebarClassesLink"),
   classesBtnText: document.getElementById("classesBtnText"),
   classesModalBackdrop: document.getElementById("classesModalBackdrop"),
@@ -480,6 +571,10 @@ const elements = {
   gradingAuditCorrectBtn: document.getElementById("gradingAuditCorrectBtn"),
   gradingSubmissionHistoryBtn: document.getElementById("gradingSubmissionHistoryBtn"),
   gradingAuthorizeResubmissionBtn: document.getElementById("gradingAuthorizeResubmissionBtn"),
+  gradingReevaluationBanner: document.getElementById("gradingReevaluationBanner"),
+  gradingReevaluationReasonText: document.getElementById("gradingReevaluationReasonText"),
+  gradingResolveReevalBtn: document.getElementById("gradingResolveReevalBtn"),
+  gradingReviewReevalBtn: document.getElementById("gradingReviewReevalBtn"),
 
   auditCorrectModalBackdrop: document.getElementById("auditCorrectModalBackdrop"),
   closeAuditCorrectModalBtn: document.getElementById("closeAuditCorrectModalBtn"),
@@ -505,6 +600,7 @@ const elements = {
   confirmAuthorizeResubmissionBtn: document.getElementById("confirmAuthorizeResubmissionBtn"),
   authorizeResubmissionMessage: document.getElementById("authorizeResubmissionMessage"),
   resubmissionNotesInput: document.getElementById("resubmissionNotesInput"),
+  resubmissionDeadlineInput: document.getElementById("resubmissionDeadlineInput"),
 
   // Single Release Confirmation Modal
   singleReleaseConfirmBackdrop: document.getElementById("singleReleaseConfirmBackdrop"),
@@ -558,19 +654,22 @@ function setupEventListeners() {
     const rawHash = (window.location.hash || "").replace(/^#\/?/, "");
     const subjectMatch = rawHash.match(/^(?:classes|subjects)\/(\d+)/i);
     if (subjectMatch) {
-      viewSubjectDetail(parseInt(subjectMatch[1], 10));
+      viewSubjectDetail(parseInt(subjectMatch[1], 10), "assignments", false);
       return;
     }
-    const route = rawHash.toLowerCase() || "dashboard";
+    const route = rawHash || "dashboard";
     navigateToView(route, false);
   });
 
-  // Nav item click interaction (Top navigation bar and drawer)
-  document.querySelectorAll(".nav-link").forEach((link) => {
+  // Nav item click interaction (Top navigation bar, drawer, footer, settings, and modal links)
+  document.querySelectorAll("[data-nav]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       const target = link.getAttribute("data-nav");
       if (target) {
+        if (typeof closeAuthModal === "function") {
+          closeAuthModal();
+        }
         navigateToView(target, true);
       }
       closeSidebar();
@@ -835,9 +934,18 @@ function setupEventListeners() {
   elements.retryFetchBtn.addEventListener("click", fetchAssignments);
 
   // Top Bar Actions
-  elements.notificationBtn.addEventListener("click", () => {
-    showToast("You have 1 reminder: Check upcoming assignment deadlines.", "info");
-  });
+  if (elements.notificationBtn) {
+    elements.notificationBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (elements.notificationMenu) {
+        const isShown = elements.notificationMenu.style.display === "block";
+        elements.notificationMenu.style.display = isShown ? "none" : "block";
+        if (!isShown) {
+          fetchNotifications();
+        }
+      }
+    });
+  }
 
   // Profile dropdown toggle
   elements.profileBtn.addEventListener("click", (e) => {
@@ -845,12 +953,33 @@ function setupEventListeners() {
     toggleProfileMenu();
   });
 
-  // Close profile dropdown when clicking outside
+  // Close dropdowns when clicking outside
   document.addEventListener("click", (e) => {
     if (elements.profileDropdownWrapper && !elements.profileDropdownWrapper.contains(e.target)) {
       closeProfileMenu();
     }
+    if (elements.notificationDropdownWrapper && !elements.notificationDropdownWrapper.contains(e.target)) {
+      if (elements.notificationMenu) elements.notificationMenu.style.display = "none";
+    }
   });
+
+  if (elements.markAllNotificationsReadBtn) {
+    elements.markAllNotificationsReadBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try {
+        const res = await fetch(`${API_ENDPOINTS.notifications}/read-all`, {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          await fetchNotifications();
+        }
+      } catch (err) {
+        console.error("Failed to mark all notifications as read:", err);
+      }
+    });
+  }
 
   // Profile Menu actions
   if (elements.menuSwitchAccountBtn) {
@@ -922,7 +1051,7 @@ function setupEventListeners() {
       e.preventDefault();
       elements.navLinks.forEach((l) => l.classList.remove("active"));
       elements.sidebarClassesLink.classList.add("active");
-      openClassesModal();
+      navigateToView("classes", true);
       closeSidebar();
     });
   }
@@ -935,6 +1064,24 @@ function setupEventListeners() {
     elements.classesModalBackdrop.addEventListener("click", (e) => {
       if (e.target === elements.classesModalBackdrop) {
         closeClassesModal();
+      }
+    });
+  }
+
+  // Curriculum Units Modal Listeners
+  if (elements.openStructureModalBtn) {
+    elements.openStructureModalBtn.addEventListener("click", () => openStructureModal());
+  }
+  if (elements.closeStructureModalBtn) {
+    elements.closeStructureModalBtn.addEventListener("click", closeStructureModal);
+  }
+  if (elements.closeStructureFooterBtn) {
+    elements.closeStructureFooterBtn.addEventListener("click", closeStructureModal);
+  }
+  if (elements.structureModalBackdrop) {
+    elements.structureModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.structureModalBackdrop) {
+        closeStructureModal();
       }
     });
   }
@@ -1115,7 +1262,7 @@ function setupEventListeners() {
   }
 
   if (elements.gradingSubmissionHistoryBtn) {
-    elements.gradingSubmissionHistoryBtn.addEventListener("click", openSubmissionHistoryModal);
+    elements.gradingSubmissionHistoryBtn.addEventListener("click", openTeacherSpeedGraderHistoryModal);
   }
   if (elements.closeSubmissionHistoryModalBtn) {
     elements.closeSubmissionHistoryModalBtn.addEventListener("click", closeSubmissionHistoryModal);
@@ -1183,11 +1330,14 @@ function setupEventListeners() {
   if (elements.closeReevaluationModalBtn) {
     elements.closeReevaluationModalBtn.addEventListener("click", closeReevaluationModal);
   }
-  if (elements.cancelReevaluationBtn) {
-    elements.cancelReevaluationBtn.addEventListener("click", closeReevaluationModal);
+  if (elements.cancelStudentReevalBtn) {
+    elements.cancelStudentReevalBtn.addEventListener("click", closeReevaluationModal);
   }
-  if (elements.confirmReevaluationBtn) {
-    elements.confirmReevaluationBtn.addEventListener("click", handleSubmitReevaluationDecision);
+  if (elements.submitReevaluationRequestBtn) {
+    elements.submitReevaluationRequestBtn.addEventListener("click", handleSubmitReevaluationRequest);
+  }
+  if (elements.submitReevaluationDecisionBtn) {
+    elements.submitReevaluationDecisionBtn.addEventListener("click", handleSubmitReevaluationDecision);
   }
   if (elements.reevaluationModalBackdrop) {
     elements.reevaluationModalBackdrop.addEventListener("click", (e) => {
@@ -1199,6 +1349,9 @@ function setupEventListeners() {
   if (elements.closeSubmissionHistoryModalBtn) {
     elements.closeSubmissionHistoryModalBtn.addEventListener("click", closeSubmissionHistoryModal);
   }
+  if (elements.closeSubmissionHistoryBottomBtn) {
+    elements.closeSubmissionHistoryBottomBtn.addEventListener("click", closeSubmissionHistoryModal);
+  }
   if (elements.closeSubmissionHistoryFooterBtn) {
     elements.closeSubmissionHistoryFooterBtn.addEventListener("click", closeSubmissionHistoryModal);
   }
@@ -1208,7 +1361,7 @@ function setupEventListeners() {
     });
   }
 
-  // Resubmit and View History Button Listeners in View Submission Modal
+  // Resubmit, View History, and Request Re-evaluation Button Listeners in View Submission Modal
   if (elements.btnModalResubmitWork) {
     elements.btnModalResubmitWork.addEventListener("click", () => {
       if (state.currentViewingSubmission && state.currentViewingAssignment) {
@@ -1223,6 +1376,20 @@ function setupEventListeners() {
     elements.btnModalViewHistory.addEventListener("click", () => {
       if (state.currentViewingSubmission) {
         openSubmissionHistoryModal(state.currentViewingSubmission);
+      }
+    });
+  }
+  if (elements.btnModalRequestReeval) {
+    elements.btnModalRequestReeval.addEventListener("click", () => {
+      if (state.currentViewingSubmission) {
+        openStudentReevaluationModal(state.currentViewingSubmission);
+      }
+    });
+  }
+  if (elements.btnResultsCardReeval) {
+    elements.btnResultsCardReeval.addEventListener("click", () => {
+      if (state.currentViewingSubmission) {
+        openStudentReevaluationModal(state.currentViewingSubmission);
       }
     });
   }
@@ -1453,14 +1620,60 @@ function setupEventListeners() {
     elements.settingsClearCacheBtn.addEventListener("click", clearSettingsPreferences);
   }
 
-  // Keyboard Shortcuts (ESC to close modals/drawers)
+  // Analytics Page Controls
+  if (elements.analyticsClassSelect) {
+    elements.analyticsClassSelect.addEventListener("change", handleAnalyticsClassChange);
+  }
+  if (elements.analyticsSubjectSelect) {
+    elements.analyticsSubjectSelect.addEventListener("change", handleAnalyticsSubjectChange);
+  }
+  if (elements.btnExportSummaryCsv) {
+    elements.btnExportSummaryCsv.addEventListener("click", handleDownloadSummaryCsv);
+  }
+  if (elements.btnExportDetailedCsv) {
+    elements.btnExportDetailedCsv.addEventListener("click", handleDownloadDetailedCsv);
+  }
+  if (elements.btnToggleLeaderboard) {
+    elements.btnToggleLeaderboard.addEventListener("click", toggleLeaderboard);
+  }
+  if (elements.btnCloseLeaderboard) {
+    elements.btnCloseLeaderboard.addEventListener("click", () => {
+      if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+    });
+  }
+  if (elements.btnFinalizeResults) {
+    elements.btnFinalizeResults.addEventListener("click", openFinalizeModal);
+  }
+  if (elements.confirmFinalizeBtn) {
+    elements.confirmFinalizeBtn.addEventListener("click", handleConfirmFinalize);
+  }
+  if (elements.cancelFinalizeBtn) {
+    elements.cancelFinalizeBtn.addEventListener("click", () => {
+      if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "none";
+    });
+  }
+  if (elements.closeFinalizeModalBtn) {
+    elements.closeFinalizeModalBtn.addEventListener("click", () => {
+      if (elements.finalizeModalBackdrop) elements.finalizeModalBackdrop.style.display = "none";
+    });
+  }
+
+  // Keyboard Shortcuts (ESC to close modals/drawers, Ctrl+K to search)
   document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if (elements.globalSearchInput) {
+        e.preventDefault();
+        elements.globalSearchInput.focus();
+        elements.globalSearchInput.select();
+      }
+    }
     if (e.key === "Escape") {
       closeDrawer();
       closeDeleteModal();
       closeSidebar();
       closeProfileMenu();
       closeClassesModal();
+      closeStructureModal();
       closeSubmitWorkModal();
       closeViewSubmissionModal();
       closeTeacherSubmissionsModal();
@@ -1503,15 +1716,15 @@ async function fetchNotifications() {
 
     if (elements.notificationList) {
       if (!notifications.length) {
-        elements.notificationList.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>`;
+        elements.notificationList.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No notifications</div>`;
       } else {
         elements.notificationList.innerHTML = notifications.slice(0, 15).map(n => `
-          <div class="notification-item" data-id="${n.id}" data-link="${escapeHtml(n.link_url || '')}" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; background: ${n.is_read ? 'transparent' : '#f0f9ff'}; display: flex; flex-direction: column; gap: 0.25rem;">
+          <div class="notification-item" data-id="${n.id}" data-link="${escapeHtml(n.link_url || '')}" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; background: ${n.is_read ? 'transparent' : 'var(--surface-highlight)'}; display: flex; flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 600; font-size: 0.825rem; color: #1e293b;">${escapeHtml(n.title)}</span>
-              <span style="font-size: 0.7rem; color: #94a3b8;">${new Date(n.created_at).toLocaleDateString([], {month:'short', day:'numeric'})}</span>
+              <span style="font-weight: 600; font-size: 0.825rem; color: var(--text-main);">${escapeHtml(n.title)}</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">${new Date(n.created_at).toLocaleDateString([], {month:'short', day:'numeric'})}</span>
             </div>
-            <div style="font-size: 0.8rem; color: #475569;">${escapeHtml(n.message)}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(n.message)}</div>
           </div>
         `).join("");
 
@@ -1875,8 +2088,26 @@ async function handleConfirmGradeCorrection() {
 
 // Submission History Modal
 async function openSubmissionHistoryModal(sub) {
-  if (!elements.submissionHistoryList) return;
-  elements.submissionHistoryList.innerHTML = `<p style="color: #64748b;">Loading history...</p>`;
+  if (!sub) {
+    if (state.currentGradingIndex >= 0 && state.currentGradingSubmissions && state.currentGradingIndex < state.currentGradingSubmissions.length) {
+      sub = state.currentGradingSubmissions[state.currentGradingIndex];
+    } else if (state.currentViewingSubmission) {
+      sub = state.currentViewingSubmission;
+    }
+  }
+  if (!sub) return;
+
+  const container = elements.historyAttemptsList || document.getElementById("historyAttemptsList");
+  if (!container) return;
+
+  const assignment = state.currentGradingAssignment || state.currentViewingAssignment;
+  const asgnTitle = (assignment && assignment.title) || sub.assignment_title || "Assignment";
+  const stLabel = sub.student_name ? `${sub.student_name} • ` : "";
+  if (elements.historyStudentMeta) {
+    elements.historyStudentMeta.textContent = `${stLabel}${asgnTitle}`;
+  }
+
+  container.innerHTML = `<div style="padding: 1.5rem; color: #64748b; text-align: center;"><div class="spinner" style="margin: 0 auto 0.75rem;"></div>Loading attempt history...</div>`;
   if (elements.submissionHistoryModalBackdrop) elements.submissionHistoryModalBackdrop.style.display = "flex";
 
   try {
@@ -1884,38 +2115,64 @@ async function openSubmissionHistoryModal(sub) {
       credentials: "same-origin",
       headers: { Accept: "application/json" }
     });
-    if (res.ok) {
-      const history = await res.json();
-      let html = "";
-      html += `
-        <div style="padding: 0.85rem; border: 1.5px solid #2563eb; border-radius: var(--radius-sm); background: #eff6ff;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-            <span style="font-weight: 700; color: #1e3a8a;">Attempt #${sub.attempt_number || 1} (Current Active)</span>
-            <span style="font-size: 0.75rem; color: #64748b;">${new Date(sub.submitted_at).toLocaleString()}</span>
-          </div>
-          <div style="font-size: 0.85rem;">File: <strong>${escapeHtml(sub.file_name || 'submission')}</strong> (${formatBytes(sub.file_size || 0)})</div>
-          <div style="font-size: 0.8rem; color: #475569; margin-top: 0.2rem;">Grade: <strong>${sub.grade !== null ? sub.grade : 'Ungraded'}</strong></div>
-        </div>
-      `;
-
-      if (history.length > 0) {
-        html += `<h5 style="margin: 0.75rem 0 0.4rem; font-size: 0.85rem; color: #64748b;">Prior Attempts:</h5>`;
-        html += history.map(h => `
-          <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; font-size: 0.85rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-              <span style="font-weight: 600;">Attempt #${h.attempt_number} (Archived)</span>
-              <span style="font-size: 0.75rem; color: #94a3b8;">${new Date(h.submitted_at).toLocaleString()}</span>
-            </div>
-            <div>File: <strong>${escapeHtml(h.file_name || 'submission')}</strong> (${formatBytes(h.file_size || 0)})</div>
-            <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">Score at time: ${h.grade !== null ? h.grade : 'Ungraded'} | Feedback: ${escapeHtml(h.feedback || 'None')}</div>
-          </div>
-        `).join("");
-      }
-
-      elements.submissionHistoryList.innerHTML = html;
+    if (!res.ok) {
+      container.innerHTML = `<p style="color: var(--danger); padding: 1rem;">Failed to load attempt history (${res.status}).</p>`;
+      return;
     }
+
+    const history = await res.json();
+    const formattedDate = formatDisplayDateTime(sub.submitted_at);
+    const maxMarks = (assignment && assignment.max_marks) || sub.max_marks || 100;
+    const gradeStr = (sub.grade !== null && sub.grade !== undefined)
+      ? `${sub.grade} / ${maxMarks}`
+      : "Pending Review";
+    const assignmentId = (assignment && assignment.id) || sub.assignment_id;
+    const downloadUrl = sub.download_url || `${API_BASE}/api/assignments/${assignmentId}/submissions/${sub.id}/download`;
+
+    let html = `
+      <div class="history-attempt-card" style="border: 1.5px solid var(--primary); background: rgba(40, 87, 71, 0.05); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+          <div>
+            <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem;">Attempt #${sub.attempt_number || 1} (Current Active Submission)</div>
+            <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.2rem;">Submitted: ${formattedDate}</div>
+            <div style="font-size: 0.85rem; margin-top: 0.35rem;"><strong>File:</strong> ${escapeHtml(sub.file_name || "submission")} (${formatBytes(sub.file_size || 0)})</div>
+            <div style="font-size: 0.85rem; margin-top: 0.2rem; color: var(--text-main);"><strong>Grade:</strong> ${gradeStr}</div>
+            ${sub.feedback ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 0.25rem; font-style: italic;">"${escapeHtml(sub.feedback)}"</div>` : ""}
+          </div>
+          <a class="btn btn-secondary btn-sm" href="${downloadUrl}" download="${escapeHtml(sub.file_name || "submission")}" target="_blank" rel="noopener">
+            Download
+          </a>
+        </div>
+      </div>
+    `;
+
+    if (history && history.length > 0) {
+      html += `<h5 style="margin: 1rem 0 0.5rem; font-size: 0.85rem; color: #64748b; font-weight: 600;">Archived Prior Attempts (${history.length}):</h5>`;
+      html += history.map(h => {
+        const hDate = formatDisplayDateTime(h.submitted_at);
+        const hGrade = (h.grade !== null && h.grade !== undefined) ? `${h.grade} / ${maxMarks}` : "Ungraded at time";
+        const hDownload = h.download_url || `${API_BASE}/api/assignments/${assignmentId}/submissions/${sub.id}/download`;
+        return `
+          <div class="history-attempt-card" style="border: 1px solid var(--border-color); background: #f8fafc; padding: 0.85rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+              <div>
+                <div style="font-weight: 600; font-size: 0.9rem;">Attempt #${h.attempt_number} (Archived)</div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem;">Submitted: ${hDate}</div>
+                <div style="font-size: 0.825rem; margin-top: 0.3rem;"><strong>File:</strong> ${escapeHtml(h.file_name || "submission")} (${formatBytes(h.file_size || 0)})</div>
+                <div style="font-size: 0.825rem; margin-top: 0.15rem; color: #475569;"><strong>Score:</strong> ${hGrade}</div>
+                ${h.feedback ? `<div style="font-size: 0.775rem; color: #64748b; margin-top: 0.2rem; font-style: italic;">"${escapeHtml(h.feedback)}"</div>` : ""}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } else {
+      html += `<p style="font-size: 0.825rem; color: #64748b; font-style: italic; margin-top: 0.5rem;">No prior archived attempts recorded for this submission.</p>`;
+    }
+
+    container.innerHTML = html;
   } catch (e) {
-    elements.submissionHistoryList.innerHTML = `<p style="color: var(--danger);">Failed to load history.</p>`;
+    container.innerHTML = `<p style="color: var(--danger); padding: 1rem;">Failed to load attempt history.</p>`;
   }
 }
 
@@ -1945,8 +2202,8 @@ function openTeacherReevaluationModal(req) {
 async function handleSubmitReevaluationRequest() {
   if (!currentWorkflowSubmission) return;
   const reasonVal = elements.reevalReasonInput ? elements.reevalReasonInput.value.trim() : "";
-  if (!reasonVal) {
-    showToast("Please provide a reason for re-evaluation.", "warning");
+  if (!reasonVal || reasonVal.length < 5) {
+    showToast("Please provide a specific reason for re-evaluation (at least 5 characters).", "warning");
     return;
   }
 
@@ -1958,14 +2215,14 @@ async function handleSubmitReevaluationRequest() {
       body: JSON.stringify({ reason: reasonVal })
     });
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       showToast(err.detail || "Failed to submit re-evaluation request.", "error");
       return;
     }
     showToast("Re-evaluation request submitted to instructor.", "success");
-    if (elements.reevaluationModalBackdrop) elements.reevaluationModalBackdrop.style.display = "none";
+    closeReevaluationModal();
   } catch (e) {
-    showToast("Network error", "error");
+    showToast("Network error submitting re-evaluation request.", "error");
   }
 }
 
@@ -2029,8 +2286,10 @@ async function openFinalizeModal() {
 }
 
 async function handleConfirmFinalize() {
-  const checkedUnits = Array.from(document.querySelectorAll(".finalize-unit-check:checked")).map(cb => cb.value).join(",");
-  const auditNotes = elements.finalizeNotesInput ? elements.finalizeNotesInput.value.trim() : null;
+  const checkedUnits = Array.from(document.querySelectorAll(".finalize-unit-check:checked"))
+    .map(cb => parseInt(cb.value, 10))
+    .filter(n => !isNaN(n));
+  const auditNotes = elements.finalizeNotesInput ? elements.finalizeNotesInput.value.trim() || null : null;
 
   try {
     const res = await fetch(API_ENDPOINTS.workflow.finalize(currentAnalyticsClassId, currentAnalyticsSubject), {
@@ -2038,8 +2297,8 @@ async function handleConfirmFinalize() {
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
-        required_units: checkedUnits || "1",
-        audit_notes: auditNotes
+        required_units: checkedUnits.length > 0 ? checkedUnits : [1],
+        notes: auditNotes
       })
     });
     if (!res.ok) {
@@ -2061,6 +2320,10 @@ async function toggleLeaderboard() {
   const isHidden = elements.analyticsLeaderboardCard.style.display === "none";
 
   if (isHidden) {
+    if (!currentAnalyticsSubject) {
+      showToast("Please select a subject to view the leaderboard.", "warning");
+      return;
+    }
     try {
       const res = await fetch(API_ENDPOINTS.analytics.leaderboard(currentAnalyticsClassId, currentAnalyticsSubject), {
         credentials: "same-origin",
@@ -2070,14 +2333,18 @@ async function toggleLeaderboard() {
         const resData = await res.json();
         const board = Array.isArray(resData) ? resData : (resData.leaderboard || []);
         if (elements.analyticsLeaderboardBody) {
-          elements.analyticsLeaderboardBody.innerHTML = board.map(b => `
-            <tr style="${(b.is_self || b.is_current_user) ? 'background: #eff6ff; font-weight: 600;' : ''}">
-              <td><strong>#${b.rank}</strong></td>
-              <td>${escapeHtml(b.display_name)}${(b.is_self || b.is_current_user) ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
-              <td style="color: #2563eb; font-weight: 700;">${(b.percentage ?? b.score) !== null && (b.percentage ?? b.score) !== undefined ? (b.percentage ?? b.score) + '%' : '—'}</td>
-              <td>${b.units_completed ?? b.completed_units ?? 0}</td>
-            </tr>
-          `).join("");
+          if (!board.length) {
+            elements.analyticsLeaderboardBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">No student results available for this leaderboard.</td></tr>`;
+          } else {
+            elements.analyticsLeaderboardBody.innerHTML = board.map(b => `
+              <tr style="${(b.is_self || b.is_current_user) ? 'background: #eff6ff; font-weight: 600;' : ''}">
+                <td><strong>#${b.rank}</strong></td>
+                <td>${escapeHtml(b.display_name)}${(b.is_self || b.is_current_user) ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+                <td style="color: #2563eb; font-weight: 700;">${(b.percentage ?? b.score) !== null && (b.percentage ?? b.score) !== undefined ? (b.percentage ?? b.score) + '%' : '—'}</td>
+                <td>${b.units_completed ?? b.completed_units ?? 0}</td>
+              </tr>
+            `).join("");
+          }
         }
         elements.analyticsLeaderboardCard.style.display = "block";
       }
@@ -2102,7 +2369,11 @@ function handleDownloadDetailedCsv() {
     showToast("Select a class first.", "warning");
     return;
   }
-  window.open(API_ENDPOINTS.analytics.detailedCsv(currentAnalyticsClassId), "_blank");
+  if (!currentAnalyticsSubject) {
+    showToast("Please select a specific subject to download detailed results.", "warning");
+    return;
+  }
+  window.open(API_ENDPOINTS.analytics.detailedCsv(currentAnalyticsClassId, currentAnalyticsSubject), "_blank");
 }
 
 
@@ -2356,6 +2627,7 @@ async function handleConfirmDelete() {
     return;
   }
 
+  const epoch = state.authEpoch;
   const id = state.deletePendingId;
   elements.confirmDeleteBtn.disabled = true;
   elements.confirmDeleteBtn.textContent = "Deleting...";
@@ -2415,35 +2687,110 @@ async function handleConfirmDelete() {
  *    - NOT completed and NOT overdue
  *    - AND assignment.status === "active" (default)
  */
-function getEffectiveStatus(assignment) {
-  // Rule 1: Completion status takes precedence (completed assignments are never overdue)
-  const isCompleted = assignment.status === "completed" || assignment.status === "closed";
-  if (isCompleted) {
-    return "completed";
+function getEffectiveStatus(assignment, studentSubmission) {
+  if (!assignment) return "active";
+
+  const isStudent = (state.currentUser && state.currentUser.role === "student") || studentSubmission !== undefined;
+  const mySub = studentSubmission !== undefined
+    ? studentSubmission
+    : (isStudent && state.mySubmissions ? state.mySubmissions[assignment.id] : null);
+
+  // Student perspective
+  if (isStudent) {
+    if (mySub) {
+      // 1. Resubmission authorized check
+      const resubAllowed = Boolean(mySub.resubmission_allowed);
+      let isResubExpired = false;
+      if (resubAllowed && mySub.resubmission_deadline) {
+        isResubExpired = new Date(mySub.resubmission_deadline).getTime() < Date.now();
+      }
+      if (resubAllowed && !isResubExpired) {
+        return "resubmit";
+      }
+
+      // 2. Graded check
+      if (mySub.status === "released" || (mySub.grade !== null && mySub.grade !== undefined)) {
+        return "graded";
+      }
+
+      // 3. Submitted check (never overdue once submitted!)
+      return "submitted";
+    }
+
+    // Student has not submitted:
+    const dueDate = new Date(assignment.due_date);
+    const now = new Date();
+    const isPastDue = !isNaN(dueDate.getTime()) && dueDate < now;
+
+    if (isPastDue || assignment.status === "overdue" || assignment.status === "closed") {
+      return "overdue";
+    }
+    if (assignment.status === "completed") {
+      return "completed";
+    }
+    return "not_submitted";
   }
 
-  // Rule 2: Overdue calculation from due date and non-completed state
-  const dueDate = new Date(assignment.due_date);
-  const now = new Date();
-  const isPastDue = !isNaN(dueDate.getTime()) && dueDate < now;
-
-  if (isPastDue || assignment.status === "overdue") {
-    return "overdue";
-  }
-
-  // Rule 3: Draft status (not overdue, not completed)
+  // Teacher perspective
+  // Rule 1: Draft assignments
   if (assignment.status === "draft") {
     return "draft";
   }
 
-  // Rule 4: Active status
+  // Rule 2: Completed / Closed assignments
+  if (assignment.status === "completed" || assignment.status === "closed") {
+    return "completed";
+  }
+
+  // Rule 3: Overdue assignments
+  const dueDate = new Date(assignment.due_date);
+  const now = new Date();
+  const isPastDue = !isNaN(dueDate.getTime()) && dueDate < now;
+  if (isPastDue || assignment.status === "overdue") {
+    return "overdue";
+  }
+
+  // Rule 4: Active
   return "active";
+}
+
+/**
+ * Dynamically synchronizes status filter dropdown options based on current user role
+ */
+function syncStatusFilterOptions() {
+  if (!elements.statusFilter) return;
+  const isStudent = state.currentUser && state.currentUser.role === "student";
+  const curVal = elements.statusFilter.value;
+  if (isStudent) {
+    elements.statusFilter.innerHTML = `
+      <option value="all">All Status</option>
+      <option value="not_submitted">Not Submitted</option>
+      <option value="submitted">Submitted</option>
+      <option value="graded">Graded</option>
+      <option value="resubmit">Needs Resubmission</option>
+    `;
+  } else {
+    elements.statusFilter.innerHTML = `
+      <option value="all">All Status</option>
+      <option value="active">Active</option>
+      <option value="draft">Draft</option>
+      <option value="completed">Completed</option>
+      <option value="overdue">Overdue</option>
+    `;
+  }
+  if (Array.from(elements.statusFilter.options).some((o) => o.value === curVal)) {
+    elements.statusFilter.value = curVal;
+  } else {
+    elements.statusFilter.value = "all";
+    state.filters.status = "all";
+  }
 }
 
 /**
  * Updates the 4 statistics summary cards dynamically
  */
 function updateStatistics(assignments) {
+  const isStudent = state.currentUser && state.currentUser.role === "student";
   const total = assignments.length;
   let activeCount = 0;
   let completedCount = 0;
@@ -2451,15 +2798,26 @@ function updateStatistics(assignments) {
 
   assignments.forEach((assignment) => {
     const status = getEffectiveStatus(assignment);
-    if (status === "active") activeCount++;
-    else if (status === "completed") completedCount++;
-    else if (status === "overdue") overdueCount++;
+    if (isStudent) {
+      if (status === "submitted" || status === "graded") {
+        completedCount++;
+      } else if (status === "overdue") {
+        overdueCount++;
+      } else {
+        // "not_submitted", "resubmit", "active"
+        activeCount++;
+      }
+    } else {
+      if (status === "active") activeCount++;
+      else if (status === "completed") completedCount++;
+      else if (status === "overdue") overdueCount++;
+    }
   });
 
-  elements.statTotalCount.textContent = total;
-  elements.statActiveCount.textContent = activeCount;
-  elements.statCompletedCount.textContent = completedCount;
-  elements.statOverdueCount.textContent = overdueCount;
+  if (elements.statTotalCount) elements.statTotalCount.textContent = total;
+  if (elements.statActiveCount) elements.statActiveCount.textContent = activeCount;
+  if (elements.statCompletedCount) elements.statCompletedCount.textContent = completedCount;
+  if (elements.statOverdueCount) elements.statOverdueCount.textContent = overdueCount;
 }
 
 // ==========================================================================
@@ -2467,6 +2825,8 @@ function updateStatistics(assignments) {
 // ==========================================================================
 
 function applyFiltersAndRender() {
+  syncStatusFilterOptions();
+  const isStudent = state.currentUser && state.currentUser.role === "student";
   const { search, subject, status, sort } = state.filters;
 
   let filtered = [...state.assignments];
@@ -2500,6 +2860,12 @@ function applyFiltersAndRender() {
   if (status !== "all") {
     filtered = filtered.filter((item) => {
       const effectiveStatus = getEffectiveStatus(item);
+      if (isStudent) {
+        if (status === "not_submitted") {
+          return effectiveStatus === "not_submitted" || effectiveStatus === "overdue";
+        }
+        return effectiveStatus === status;
+      }
       return effectiveStatus === status;
     });
   }
@@ -2543,7 +2909,7 @@ function renderTable(assignments) {
     if (state.assignments.length === 0) {
       elements.emptyStateText.textContent = isTeacher
         ? "No assignments in the database yet. Click below to create your first assignment."
-        : "No assignments are currently available.";
+        : "No assignments are currently available. Join a class using your instructor's join code to access upcoming coursework.";
     } else {
       elements.emptyStateText.textContent = "No assignments match your active search or filters. Try adjusting your filters.";
     }
@@ -2692,6 +3058,42 @@ function renderTable(assignments) {
       }
     }
 
+    let teacherProgressBadge = "";
+    if (isTeacher) {
+      if (assignment.class_id) {
+        const subCount = assignment.submission_count !== undefined ? assignment.submission_count : 0;
+        const totalStudents = assignment.total_students !== undefined ? assignment.total_students : 0;
+        const pct = totalStudents > 0 ? Math.min(100, Math.round((subCount / totalStudents) * 100)) : 0;
+        teacherProgressBadge = `
+          <div class="submission-progress-chip" title="${subCount} of ${totalStudents} students submitted (${pct}%)">
+            <span class="progress-counts">${subCount}/${totalStudents} submitted</span>
+            <div class="progress-bar-mini" aria-hidden="true">
+              <div class="progress-fill-mini" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      } else {
+        teacherProgressBadge = `<span class="submission-progress-chip unassigned">Draft (0 enrolled)</span>`;
+      }
+    }
+
+    let statusBadgeHtml = "";
+    if (isStudent) {
+      if (effectiveStatus === "resubmit") {
+        statusBadgeHtml = `<span class="status-pill status-resubmit">↻ Needs Resubmission</span>`;
+      } else if (effectiveStatus === "graded") {
+        statusBadgeHtml = `<span class="status-pill status-graded">✓ Graded</span>`;
+      } else if (effectiveStatus === "submitted") {
+        statusBadgeHtml = `<span class="status-pill status-submitted">✓ Submitted</span>`;
+      } else if (effectiveStatus === "overdue") {
+        statusBadgeHtml = `<span class="status-pill status-overdue">Missing (Overdue)</span>`;
+      } else {
+        statusBadgeHtml = `<span class="status-pill status-not-submitted">Not Submitted</span>`;
+      }
+    } else {
+      statusBadgeHtml = `<span class="status-pill status-${effectiveStatus}">${capitalize(effectiveStatus)}</span>`;
+    }
+
     tr.innerHTML = `
       <td class="col-num">${index + 1}</td>
       <td class="col-title" title="${escapeHtml(assignment.description || assignment.title)}">
@@ -2709,10 +3111,8 @@ function renderTable(assignments) {
       <td class="col-due">${formattedDate}</td>
       <td class="col-status">
         <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
-          <span class="status-pill status-${effectiveStatus}">
-            ${capitalize(effectiveStatus)}
-          </span>
-          ${studentSubBadge}
+          ${statusBadgeHtml}
+          ${isTeacher ? teacherProgressBadge : studentSubBadge}
         </div>
       </td>
       <td class="col-actions">
@@ -2767,6 +3167,7 @@ function renderTable(assignments) {
  */
 async function loadClassSubjects(classId, preselectedSubjectName = null, preselectedSubjectId = null) {
   if (!elements.formSubject) return;
+  const epoch = state.authEpoch;
 
   if (!classId) {
     // When no class is selected: subject dropdown must be disabled with placeholder
@@ -3576,17 +3977,25 @@ function escapeHtml(str) {
  * Returns true if the user's role has permission to access the target route.
  */
 function canUserAccessRoute(user, route) {
-  if (!user || !user.role) return false;
   const normalized = (route || "").toLowerCase().trim();
-  if (!SUPPORTED_VIEWS.includes(normalized)) return false;
+  if (["privacy", "terms"].includes(normalized)) return true;
+  if (!user || !user.role) return false;
+
+  // Extract base route segment for parameterized subpaths like classes/12 or subjects/12
+  const baseSegment = normalized.split("/")[0];
+  const canonicalRoute = baseSegment === "subjects" ? "classes" : (baseSegment === "students" ? "submissions" : baseSegment);
+
+  if (!SUPPORTED_VIEWS.includes(canonicalRoute) && !SUPPORTED_VIEWS.includes(baseSegment) && !SUPPORTED_VIEWS.includes(normalized)) {
+    return false;
+  }
 
   const rolePermissions = {
-    teacher: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
-    student: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings"],
+    teacher: ["dashboard", "semesters", "assignments", "classes", "submissions", "reports", "calendar", "analytics", "settings", "privacy", "terms"],
+    student: ["dashboard", "assignments", "classes", "submissions", "calendar", "analytics", "settings", "privacy", "terms"],
   };
 
   const allowedRoutes = rolePermissions[user.role] || ["dashboard"];
-  return allowedRoutes.includes(normalized);
+  return allowedRoutes.includes(canonicalRoute);
 }
 
 /**
@@ -3677,10 +4086,20 @@ function clearUserState() {
   if (elements.dashMetricsRow) elements.dashMetricsRow.innerHTML = "";
   if (elements.dashDueAssignmentsList) elements.dashDueAssignmentsList.innerHTML = "";
   if (elements.dashRecentSubmissionsList) elements.dashRecentSubmissionsList.innerHTML = "";
+  if (elements.analyticsKpiRow) elements.analyticsKpiRow.innerHTML = "";
   if (elements.analyticsRankingsBody) elements.analyticsRankingsBody.innerHTML = "";
   if (elements.analyticsUnitComparisonsBody) elements.analyticsUnitComparisonsBody.innerHTML = "";
   if (elements.analyticsStudentFeedbackBody) elements.analyticsStudentFeedbackBody.innerHTML = "";
   if (elements.analyticsLeaderboardBody) elements.analyticsLeaderboardBody.innerHTML = "";
+  if (elements.analyticsAlertsContainer) {
+    elements.analyticsAlertsContainer.innerHTML = "";
+    elements.analyticsAlertsContainer.style.display = "none";
+  }
+  if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+  if (elements.analyticsStudentFeedbackCard) elements.analyticsStudentFeedbackCard.style.display = "none";
+  if (elements.analyticsFinalizedBadge) elements.analyticsFinalizedBadge.style.display = "none";
+  state.analyticsOverviewData = null;
+  state.analyticsRankingsData = null;
   if (elements.notificationList) {
     elements.notificationList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">No notifications</div>';
   }
@@ -3824,14 +4243,24 @@ async function checkCurrentUser() {
       setAuthToken(null);
       state.currentUser = null;
       updateUserUI(null);
-      openAuthModal("signin");
+      const rawRoute = (window.location.hash || "").replace(/^#\/?/, "") || (window.location.pathname || "").replace(/^\//, "");
+      if (["privacy", "terms"].includes(rawRoute.toLowerCase())) {
+        navigateToView(rawRoute.toLowerCase(), false);
+      } else {
+        openAuthModal("signin");
+      }
     }
   } catch (err) {
     console.error("Auth check failed:", err);
     setAuthToken(null);
     state.currentUser = null;
     updateUserUI(null);
-    openAuthModal("signin");
+    const rawRoute = (window.location.hash || "").replace(/^#\/?/, "") || (window.location.pathname || "").replace(/^\//, "");
+    if (["privacy", "terms"].includes(rawRoute.toLowerCase())) {
+      navigateToView(rawRoute.toLowerCase(), false);
+    } else {
+      openAuthModal("signin");
+    }
   }
 }
 
@@ -3870,34 +4299,46 @@ function updateUserUI(user) {
       if (elements.navTextClasses) elements.navTextClasses.textContent = "Classes";
       if (elements.navTextSubmissions) elements.navTextSubmissions.textContent = "Submissions";
       if (elements.navTextAnalytics) elements.navTextAnalytics.textContent = "Analytics";
+      if (elements.topNavTextAnalytics) elements.topNavTextAnalytics.textContent = "Analytics";
       if (elements.globalSearchInput) elements.globalSearchInput.placeholder = "Search assignments, classes, students...";
     } else {
       if (elements.navTextAssignments) elements.navTextAssignments.textContent = "My Assignments";
       if (elements.navTextClasses) elements.navTextClasses.textContent = "My Classes";
       if (elements.navTextSubmissions) elements.navTextSubmissions.textContent = "My Submissions";
       if (elements.navTextAnalytics) elements.navTextAnalytics.textContent = "Results";
+      if (elements.topNavTextAnalytics) elements.topNavTextAnalytics.textContent = "Results";
       if (elements.globalSearchInput) elements.globalSearchInput.placeholder = "Search assignments, classes, subjects...";
     }
 
     // Role-based visibility
+    const teacherNavItems = document.querySelectorAll('.nav-item[data-role="teacher"]');
     if (user.role === "teacher") {
+      teacherNavItems.forEach((item) => { item.style.display = ""; });
       if (elements.openCreateDrawerBtn) elements.openCreateDrawerBtn.style.display = "inline-flex";
       if (elements.mobileFabBtn) elements.mobileFabBtn.style.display = "flex";
       if (elements.emptyStateCreateBtn) elements.emptyStateCreateBtn.style.display = "inline-flex";
       if (elements.openClassesModalBtn) elements.openClassesModalBtn.style.display = "inline-flex";
+      if (elements.openStructureModalBtn) elements.openStructureModalBtn.style.display = "inline-flex";
       if (elements.classesBtnText) elements.classesBtnText.textContent = "My Classes";
       if (elements.formClassGroup) elements.formClassGroup.style.display = "flex";
     } else {
       // Student
+      teacherNavItems.forEach((item) => { item.style.display = "none"; });
       if (elements.openCreateDrawerBtn) elements.openCreateDrawerBtn.style.display = "none";
       if (elements.mobileFabBtn) elements.mobileFabBtn.style.display = "none";
       if (elements.emptyStateCreateBtn) elements.emptyStateCreateBtn.style.display = "none";
       if (elements.openClassesModalBtn) elements.openClassesModalBtn.style.display = "inline-flex";
+      if (elements.openStructureModalBtn) elements.openStructureModalBtn.style.display = "inline-flex";
       if (elements.classesBtnText) elements.classesBtnText.textContent = "My Classes";
       if (elements.formClassGroup) elements.formClassGroup.style.display = "none";
     }
   } else {
     // Unauthenticated Guest
+    const teacherNavItems = document.querySelectorAll('.nav-item[data-role="teacher"]');
+    teacherNavItems.forEach((item) => { item.style.display = "none"; });
+
+    if (elements.navTextAnalytics) elements.navTextAnalytics.textContent = "Analytics";
+    if (elements.topNavTextAnalytics) elements.topNavTextAnalytics.textContent = "Analytics";
     if (elements.profileAvatarText) elements.profileAvatarText.textContent = "?";
     if (elements.profileBtn) elements.profileBtn.title = "Not signed in";
     if (elements.profileMenuAvatar) elements.profileMenuAvatar.textContent = "?";
@@ -3916,6 +4357,7 @@ function updateUserUI(user) {
     if (elements.mobileFabBtn) elements.mobileFabBtn.style.display = "none";
     if (elements.emptyStateCreateBtn) elements.emptyStateCreateBtn.style.display = "none";
     if (elements.openClassesModalBtn) elements.openClassesModalBtn.style.display = "none";
+    if (elements.openStructureModalBtn) elements.openStructureModalBtn.style.display = "none";
   }
 }
 
@@ -3982,34 +4424,60 @@ const SUPPORTED_VIEWS = [
   "notifications",
   "analytics",
   "settings",
+  "privacy",
+  "terms",
 ];
 
 /**
  * Switch primary view and keep URL hash + sidebar synchronized
  */
 function navigateToView(viewName, updateHash = true) {
-  let rawView = (viewName || "").toLowerCase().trim();
+  const fullInput = (viewName || "").trim();
+  const qIndex = fullInput.indexOf("?");
+  let rawBase = qIndex >= 0 ? fullInput.substring(0, qIndex) : fullInput;
+  let queryString = qIndex >= 0 ? fullInput.substring(qIndex + 1) : "";
+
+  let rawView = rawBase.toLowerCase().trim();
   let targetView = rawView;
+
+  // Handle parameterized routes like classes/12 or subjects/12
+  const subjectParamMatch = targetView.match(/^(?:classes|subjects)\/(\d+)/i);
+  let targetSubjectId = null;
+  if (subjectParamMatch) {
+    targetSubjectId = parseInt(subjectParamMatch[1], 10);
+    targetView = "classes";
+  }
 
   // Handle aliases
   if (targetView === "subjects") targetView = "classes";
   if (targetView === "students") targetView = "submissions";
-  if (targetView === "notifications") targetView = "calendar";
+  if (targetView === "notifications") {
+    targetView = "dashboard";
+    if (elements.notificationMenu) {
+      elements.notificationMenu.style.display = "block";
+      fetchNotifications();
+    }
+  }
 
   if (!SUPPORTED_VIEWS.includes(targetView) && !SUPPORTED_VIEWS.includes(rawView)) {
     targetView = "dashboard";
+    rawView = "dashboard";
+    queryString = "";
   }
 
   if (state.currentUser && !canUserAccessRoute(state.currentUser, targetView)) {
     targetView = "dashboard";
     rawView = "dashboard";
+    targetSubjectId = null;
+    queryString = "";
   }
   state.activeView = targetView;
   state.currentView = targetView;
 
   if (updateHash) {
-    if (window.location.hash !== `#${rawView}`) {
-      window.location.hash = `#${rawView}`;
+    const newHash = `#${rawView}${queryString ? "?" + queryString : ""}`;
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
     }
   }
 
@@ -4022,6 +4490,7 @@ function navigateToView(viewName, updateHash = true) {
   const targetElement = document.getElementById(`${targetView}View`);
   if (targetElement) {
     targetElement.style.display = targetView === "dashboard" ? "flex" : "block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // 3. Synchronize active highlight across top navbar and drawer
@@ -4030,20 +4499,83 @@ function navigateToView(viewName, updateHash = true) {
     link.classList.add("active");
   });
 
+  // Safe parameter parser for supported query params
+  const searchParams = new URLSearchParams(queryString);
+
   // 4. Trigger view-specific data loading
   if (targetView === "dashboard") {
     fetchDashboard();
   } else if (targetView === "semesters") {
     loadSemestersPageView();
   } else if (targetView === "assignments") {
-    fetchAssignments();
+    fetchAssignments().then(() => {
+      if (searchParams.has("resubmit")) {
+        const asgnId = parseInt(searchParams.get("resubmit"), 10);
+        if (!isNaN(asgnId)) {
+          const asgn = (state.assignments || []).find((a) => a.id === asgnId);
+          if (asgn) {
+            const mySub = state.mySubmissions ? state.mySubmissions[asgn.id] : null;
+            openSubmitWorkModal(asgn, mySub);
+          }
+        }
+      } else if (searchParams.has("view_result")) {
+        const asgnId = parseInt(searchParams.get("view_result"), 10);
+        if (!isNaN(asgnId)) {
+          const asgn = (state.assignments || []).find((a) => a.id === asgnId);
+          if (asgn) {
+            const mySub = state.mySubmissions ? state.mySubmissions[asgn.id] : null;
+            if (mySub) openViewSubmissionModal(asgn, mySub);
+          }
+        }
+      }
+    });
   } else if (targetView === "classes") {
+    if (targetSubjectId) {
+      state.activeSubjectId = targetSubjectId;
+    } else {
+      state.activeSubjectId = null;
+      state.activeSubject = null;
+      state.activeSubjectTab = null;
+    }
     loadClassesPageView();
   } else if (targetView === "submissions") {
-    loadSubmissionsPageView();
+    if (searchParams.has("status") || searchParams.has("queue")) {
+      const q = searchParams.get("status") || searchParams.get("queue");
+      if (elements.submissionsStatusFilter) {
+        elements.submissionsStatusFilter.value = q;
+      }
+    }
+    loadSubmissionsPageView().then(() => {
+      if (searchParams.has("sub")) {
+        const subId = parseInt(searchParams.get("sub"), 10);
+        if (!isNaN(subId) && state.submissionsData) {
+          const foundIdx = state.submissionsData.findIndex((s) => s.id === subId);
+          if (foundIdx >= 0) {
+            const s = state.submissionsData[foundIdx];
+            state.currentGradingAssignment = {
+              id: s.assignment_id,
+              title: s.assignment_title,
+              class_name: s.class_name,
+              max_marks: 100,
+            };
+            state.currentGradingSubmissions = state.submissionsData;
+            state.currentGradingIndex = foundIdx;
+            openGradingWorkspace(foundIdx);
+          }
+        }
+      }
+    });
   } else if (targetView === "reports") {
     loadReportsPageView();
   } else if (targetView === "calendar") {
+    if (searchParams.has("date")) {
+      const parsedDate = new Date(searchParams.get("date"));
+      if (!isNaN(parsedDate.getTime())) {
+        calendarNavYear = parsedDate.getFullYear();
+        calendarNavMonth = parsedDate.getMonth();
+        calendarSelectedDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+      }
+    }
     loadCalendarPageView();
   } else if (targetView === "analytics") {
     loadAnalyticsPageView();
@@ -4086,6 +4618,10 @@ async function loadClassesPageView() {
   }
   if (elements.classesPageActionText) {
     elements.classesPageActionText.textContent = isTeacher ? "Create Class" : "Join Class";
+  }
+  if (elements.classesPageActionBtn) {
+    elements.classesPageActionBtn.title = isTeacher ? "Create Class" : "Join Class";
+    elements.classesPageActionBtn.setAttribute("aria-label", isTeacher ? "Create Class" : "Join Class");
   }
 
   await fetchClasses();
@@ -4234,13 +4770,6 @@ async function loadClassesPageView() {
             </svg>
           </button>
         </div>
-        <button type="button" class="btn btn-primary classes-toolbar-create-btn" onclick="openClassesModal()" title="${isTeacher ? 'Create Class' : 'Join Class'}">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span>${isTeacher ? "Create Class" : "Join Class"}</span>
-        </button>
       </div>
     </div>
   `;
@@ -4277,7 +4806,7 @@ async function loadClassesPageView() {
                 <div class="class-card-heading">
                   <div class="class-title-code-wrap">
                     <span class="class-card-abbrev">${escapeHtml(abbrev)}</span>
-                    ${cls.join_code ? `
+                    ${(isTeacher && cls.join_code) ? `
                       <span class="class-join-code-badge" onclick="event.stopPropagation(); copyJoinCode('${escapeHtml(cls.join_code)}')" title="Click to copy join code">
                         <span>${escapeHtml(cls.join_code)}</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4285,7 +4814,11 @@ async function loadClassesPageView() {
                           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                         </svg>
                       </span>
-                    ` : ''}
+                    ` : (!isTeacher ? `
+                      <span class="class-join-code-badge class-enrolled-badge" style="background: rgba(40,87,71,0.08); color: var(--primary); border-color: rgba(40,87,71,0.2); cursor: default;" title="Enrolled course">
+                        <span>Enrolled</span>
+                      </span>
+                    ` : '')}
                   </div>
                   <p class="class-card-desc">${escapeHtml(cls.description || cls.name)}</p>
                 </div>
@@ -4327,6 +4860,7 @@ async function loadClassesPageView() {
           </div>
 
           <div class="class-card-bottom-actions">
+            ${isTeacher ? `
             <button class="btn-class-students" type="button" onclick="event.stopPropagation(); viewSubjectDetail(${cls.id}, 'students')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -4334,6 +4868,15 @@ async function loadClassesPageView() {
               </svg>
               <span>Students</span>
             </button>
+            ` : `
+            <button class="btn-class-results" type="button" onclick="event.stopPropagation(); navigateToView('analytics')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <span>Results</span>
+            </button>
+            `}
             <button class="btn-class-assignments" type="button" onclick="event.stopPropagation(); viewSubjectDetail(${cls.id}, 'assignments')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -4448,14 +4991,15 @@ function copyJoinCode(code) {
  */
 async function loadSubmissionsPageView() {
   if (!elements.submissionsPageTable) return;
+  const epoch = state.authEpoch;
 
   const isTeacher = state.currentUser?.role === "teacher";
   if (elements.submissionsPageTitle) {
-    elements.submissionsPageTitle.textContent = isTeacher ? "Submissions" : "My Submissions";
+    elements.submissionsPageTitle.textContent = isTeacher ? "Submissions & Work Queue" : "My Submissions";
   }
   if (elements.submissionsPageSubtitle) {
     elements.submissionsPageSubtitle.textContent = isTeacher
-      ? "Review student submitted work, timeliness, and submission files across your assignments."
+      ? "Review student submitted work, grade pending submissions, manage draft grades, and decide re-evaluations."
       : "Track your completed submissions, submission times, and download submitted work files.";
   }
 
@@ -4490,6 +5034,35 @@ async function loadSubmissionsPageView() {
     }
   }
 
+  // Wire up Work Queue Tabs for Teachers
+  if (elements.submissionsQueueTabs && !elements.submissionsQueueTabs.dataset.wired) {
+    elements.submissionsQueueTabs.dataset.wired = "true";
+    elements.submissionsQueueTabs.querySelectorAll(".queue-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const queueVal = tab.getAttribute("data-queue");
+        if (elements.submissionsStatusFilter) {
+          elements.submissionsStatusFilter.value = queueVal;
+        }
+        elements.submissionsQueueTabs.querySelectorAll(".queue-tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        filterAndRenderSubmissions();
+      });
+    });
+  }
+
+  if (elements.submissionsStatusFilter && !elements.submissionsStatusFilter.dataset.tabWired) {
+    elements.submissionsStatusFilter.dataset.tabWired = "true";
+    elements.submissionsStatusFilter.addEventListener("change", () => {
+      const val = elements.submissionsStatusFilter.value;
+      if (elements.submissionsQueueTabs) {
+        elements.submissionsQueueTabs.querySelectorAll(".queue-tab").forEach((t) => {
+          t.classList.toggle("active", t.getAttribute("data-queue") === val);
+        });
+      }
+      filterAndRenderSubmissions();
+    });
+  }
+
   if (elements.submissionsLoadingState) elements.submissionsLoadingState.style.display = "flex";
   if (elements.submissionsEmptyState) elements.submissionsEmptyState.style.display = "none";
   if (elements.submissionsTableBody) elements.submissionsTableBody.innerHTML = "";
@@ -4518,7 +5091,36 @@ async function loadSubmissionsPageView() {
   }
 }
 
+function updateTeacherQueueTabs() {
+  if (!elements.submissionsQueueTabs) return;
+  const isTeacher = state.currentUser?.role === "teacher";
+  if (!isTeacher) {
+    elements.submissionsQueueTabs.style.display = "none";
+    return;
+  }
+  elements.submissionsQueueTabs.style.display = "flex";
+
+  const all = state.submissionsData || [];
+  const needsGradingCount = all.filter((s) => s.grade === null || s.grade === undefined || s.status === "submitted" || s.status === "pending_review").length;
+  const draftGradesCount = all.filter((s) => (s.grade !== null && s.grade !== undefined) && s.status !== "released").length;
+  const reevalCount = all.filter((s) => s.needs_reevaluation === true || Boolean(s.reevaluation_reason) || Boolean(s.reevaluation_id)).length;
+  const releasedCount = all.filter((s) => s.status === "released").length;
+
+  if (elements.countQueueAll) elements.countQueueAll.textContent = all.length;
+  if (elements.countQueueNeedsGrading) elements.countQueueNeedsGrading.textContent = needsGradingCount;
+  if (elements.countQueueDraftGrades) elements.countQueueDraftGrades.textContent = draftGradesCount;
+  if (elements.countQueueReeval) elements.countQueueReeval.textContent = reevalCount;
+  if (elements.countQueueReleased) elements.countQueueReleased.textContent = releasedCount;
+
+  // Sync tab active class with select dropdown
+  const currentFilter = elements.submissionsStatusFilter?.value || "all";
+  elements.submissionsQueueTabs.querySelectorAll(".queue-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.getAttribute("data-queue") === currentFilter);
+  });
+}
+
 function filterAndRenderSubmissions() {
+  updateTeacherQueueTabs();
   const isTeacher = state.currentUser?.role === "teacher";
   const search = (elements.submissionsSearchInput?.value || "").trim().toLowerCase();
   const statusFilter = elements.submissionsStatusFilter?.value || "all";
@@ -4534,7 +5136,16 @@ function filterAndRenderSubmissions() {
     });
   }
 
-  if (statusFilter === "ontime") {
+  // Work Queue filters
+  if (statusFilter === "needs_grading") {
+    list = list.filter((s) => s.grade === null || s.grade === undefined || s.status === "submitted" || s.status === "pending_review");
+  } else if (statusFilter === "draft_grades") {
+    list = list.filter((s) => (s.grade !== null && s.grade !== undefined) && s.status !== "released");
+  } else if (statusFilter === "pending_reevaluation") {
+    list = list.filter((s) => s.needs_reevaluation === true || Boolean(s.reevaluation_reason) || Boolean(s.reevaluation_id));
+  } else if (statusFilter === "released") {
+    list = list.filter((s) => s.status === "released");
+  } else if (statusFilter === "ontime") {
     list = list.filter((s) => !s.is_late);
   } else if (statusFilter === "late") {
     list = list.filter((s) => s.is_late);
@@ -4547,9 +5158,19 @@ function filterAndRenderSubmissions() {
       elements.submissionsEmptyTitle.textContent = search ? "No matching submissions" : "No submissions found";
     }
     if (elements.submissionsEmptyText) {
-      elements.submissionsEmptyText.textContent = search
-        ? "Try adjusting your search query or filter."
-        : (isTeacher ? "No student work has been submitted yet for your assignments." : "You have not submitted work for any assignments yet.");
+      if (search) {
+        elements.submissionsEmptyText.textContent = "Try adjusting your search query or filter.";
+      } else if (statusFilter === "needs_grading") {
+        elements.submissionsEmptyText.textContent = "All caught up! No submissions currently require grading.";
+      } else if (statusFilter === "draft_grades") {
+        elements.submissionsEmptyText.textContent = "No unreleased draft grades pending.";
+      } else if (statusFilter === "pending_reevaluation") {
+        elements.submissionsEmptyText.textContent = "No student re-evaluation requests are currently pending review.";
+      } else {
+        elements.submissionsEmptyText.textContent = isTeacher
+          ? "No student work has been submitted yet for your assignments."
+          : "You have not submitted work for any assignments yet.";
+      }
     }
     return;
   }
@@ -4558,8 +5179,8 @@ function filterAndRenderSubmissions() {
 
   const rows = list.map((s, idx) => {
     const statusPill = s.is_late
-      ? `<span class="dash-pill pill-overdue">Late</span>`
-      : `<span class="dash-pill pill-submitted">On-Time</span>`;
+      ? `<span class="submission-pill status-late">Late</span>`
+      : `<span class="submission-pill status-ontime">On-Time</span>`;
     const submittedTime = formatDisplayDateTime(s.submitted_at);
     const notesText = s.notes ? escapeHtml(s.notes) : "—";
     const isPdf = (s.file_name || "").toLowerCase().endsWith(".pdf");
@@ -4584,8 +5205,8 @@ function filterAndRenderSubmissions() {
         <tr>
           <td>${idx + 1}</td>
           <td>
-            <div style="font-weight: 600; color: #0f172a;">${escapeHtml(s.student_name)}</div>
-            <div style="font-size: 0.775rem; color: #64748b;">${escapeHtml(s.student_email)}</div>
+            <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(s.student_name)}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">${escapeHtml(s.student_email)}</div>
           </td>
           <td><strong>${escapeHtml(s.assignment_title)}</strong></td>
           <td>${escapeHtml(s.class_name)}</td>
@@ -4629,8 +5250,12 @@ function filterAndRenderSubmissions() {
         ? `<button class="btn btn-warning btn-xs submissions-resubmit-btn" data-index="${idx}" type="button" title="Resubmit revised attempt">Resubmit</button>`
         : "";
 
+      const reevalActionBtn = isReleased
+        ? `<button class="btn btn-outline-secondary btn-xs submissions-reeval-btn" data-index="${idx}" type="button" title="Request Grade Re-evaluation">Request Re-eval</button>`
+        : "";
+
       const gradeHtml = isReleased
-        ? `<strong>${s.grade}</strong> / ${s.max_marks || 100} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">(${Math.round((s.grade / (s.max_marks || 100)) * 100)}%)</span>`
+        ? `<strong style="color: var(--text-main); font-weight: 700;">${s.grade}</strong> / ${s.max_marks || 100} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">(${Math.round((s.grade / (s.max_marks || 100)) * 100)}%)</span>`
         : `<span style="color: var(--text-muted); font-size: 0.825rem;">Pending Review</span>`;
 
       return `
@@ -4651,6 +5276,7 @@ function filterAndRenderSubmissions() {
           <td class="col-sub-actions" style="text-align: right; white-space: nowrap;">
             <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
               ${resubmitActionBtn}
+              ${reevalActionBtn}
               <button class="btn btn-secondary btn-xs view-sub-details-btn" data-index="${idx}" type="button">
                 View Details
               </button>
@@ -4680,8 +5306,9 @@ function filterAndRenderSubmissions() {
               class_name: sub.class_name,
               max_marks: sub.max_marks || 100,
             };
-            state.currentGradingSubmissions = [sub];
-            openGradingWorkspace(0);
+            state.currentGradingSubmissions = list;
+            state.currentGradingIndex = idx;
+            openGradingWorkspace(idx);
           }
         });
       });
@@ -4699,8 +5326,9 @@ function filterAndRenderSubmissions() {
               class_name: sub.class_name,
               max_marks: sub.max_marks || 100,
             };
-            state.currentGradingSubmissions = [sub];
-            openGradingWorkspace(0);
+            state.currentGradingSubmissions = list;
+            state.currentGradingIndex = idx;
+            openGradingWorkspace(idx);
           }
         });
       });
@@ -4716,6 +5344,16 @@ function filterAndRenderSubmissions() {
               { id: subItem.assignment_id, title: subItem.assignment_title, class_name: subItem.class_name },
               subItem
             );
+          }
+        });
+      });
+
+      const reevalBtns = elements.submissionsTableBody.querySelectorAll(".submissions-reeval-btn");
+      reevalBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          if (!isNaN(idx) && list[idx]) {
+            openStudentReevaluationModal(list[idx]);
           }
         });
       });
@@ -4803,42 +5441,282 @@ async function loadCalendarPageView() {
   renderMiniCalendar(now, sortedAssignments);
 }
 
-function calculateDaysRemaining(dateStr) {
-  if (!dateStr) return 0;
-  const now = new Date();
-  const due = new Date(dateStr);
-  const diffTime = due - now;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+let calendarNavYear = new Date().getFullYear();
+let calendarNavMonth = new Date().getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
+let calendarSelectedDate = null; // Date object or null for all dates
+let isCalendarNavWired = false;
+
+/**
+ * Initializes and wires Calendar navigation buttons once
+ */
+function wireCalendarControls() {
+  if (isCalendarNavWired) return;
+  isCalendarNavWired = true;
+
+  if (elements.calendarPrevMonthBtn) {
+    elements.calendarPrevMonthBtn.addEventListener("click", () => {
+      calendarNavMonth--;
+      if (calendarNavMonth < 0) {
+        calendarNavMonth = 11;
+        calendarNavYear--;
+      }
+      renderCalendarView();
+    });
+  }
+
+  if (elements.calendarNextMonthBtn) {
+    elements.calendarNextMonthBtn.addEventListener("click", () => {
+      calendarNavMonth++;
+      if (calendarNavMonth > 11) {
+        calendarNavMonth = 0;
+        calendarNavYear++;
+      }
+      renderCalendarView();
+    });
+  }
+
+  if (elements.calendarTodayBtn) {
+    elements.calendarTodayBtn.addEventListener("click", () => {
+      const today = new Date();
+      calendarNavYear = today.getFullYear();
+      calendarNavMonth = today.getMonth();
+      calendarSelectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      renderCalendarView();
+    });
+  }
+
+  if (elements.calendarAllDatesBtn) {
+    elements.calendarAllDatesBtn.addEventListener("click", () => {
+      calendarSelectedDate = null;
+      renderCalendarView();
+    });
+  }
+
+  if (elements.calendarViewAssignmentsBtn) {
+    elements.calendarViewAssignmentsBtn.addEventListener("click", () => {
+      navigateToView("assignments", true);
+    });
+  }
 }
 
-function renderMiniCalendar(currentDate, assignments) {
+/**
+ * Renders the complete standalone Calendar page
+ */
+async function loadCalendarPageView() {
+  wireCalendarControls();
+
+  if (!state.assignments || !state.assignments.length) {
+    await fetchAssignments();
+  }
+
+  renderCalendarView();
+}
+
+/**
+ * Renders the calendar schedule grid and deadlines agenda
+ */
+function renderCalendarView() {
+  if (!elements.calendarDeadlinesList && !elements.calendarMiniMonthContainer) return;
+
+  const isStudent = state.currentUser && state.currentUser.role === "student";
+  const isTeacher = state.currentUser && state.currentUser.role === "teacher";
+
+  // Update Month & Year header display
+  const monthDate = new Date(calendarNavYear, calendarNavMonth, 1);
+  const monthName = monthDate.toLocaleDateString("en-US", { month: "long" });
+  if (elements.calendarMonthYearDisplay) {
+    elements.calendarMonthYearDisplay.textContent = `${monthName} ${calendarNavYear}`;
+  }
+
+  // Active status on Today vs All Deadlines buttons
+  if (elements.calendarAllDatesBtn) {
+    elements.calendarAllDatesBtn.classList.toggle("active", calendarSelectedDate === null);
+  }
+  if (elements.calendarTodayBtn) {
+    const today = new Date();
+    const isTodaySelected = calendarSelectedDate &&
+      calendarSelectedDate.getFullYear() === today.getFullYear() &&
+      calendarSelectedDate.getMonth() === today.getMonth() &&
+      calendarSelectedDate.getDate() === today.getDate();
+    elements.calendarTodayBtn.classList.toggle("active", Boolean(isTodaySelected));
+  }
+
+  // Filter assignments based on student draft privacy
+  let allDueAssignments = [...(state.assignments || [])]
+    .filter((a) => a.due_date);
+
+  if (isStudent) {
+    // Strictly filter out teacher drafts and unassigned assignments
+    allDueAssignments = allDueAssignments.filter((a) => a.status !== "draft" && a.class_id);
+  }
+
+  allDueAssignments.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
+  // Render Monthly Interactive Grid
+  renderCalendarMonthGrid(allDueAssignments);
+
+  // Filter Agenda items by selected date or month
+  let agendaItems = allDueAssignments;
+  if (calendarSelectedDate) {
+    const selY = calendarSelectedDate.getFullYear();
+    const selM = calendarSelectedDate.getMonth();
+    const selD = calendarSelectedDate.getDate();
+    agendaItems = allDueAssignments.filter((a) => {
+      const d = new Date(a.due_date);
+      return d.getFullYear() === selY && d.getMonth() === selM && d.getDate() === selD;
+    });
+
+    if (elements.calendarCurrentMonthLabel) {
+      elements.calendarCurrentMonthLabel.textContent = calendarSelectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+    if (elements.calendarAgendaSubtitle) {
+      elements.calendarAgendaSubtitle.textContent = `Deadlines for ${calendarSelectedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+    }
+  } else {
+    if (elements.calendarCurrentMonthLabel) {
+      elements.calendarCurrentMonthLabel.textContent = "All Deadlines";
+    }
+    if (elements.calendarAgendaSubtitle) {
+      elements.calendarAgendaSubtitle.textContent = "Sorted chronologically by due date";
+    }
+  }
+
+  // Render Agenda List
+  if (elements.calendarDeadlinesList) {
+    if (!agendaItems.length) {
+      const emptyMsg = calendarSelectedDate
+        ? `No deadlines scheduled for ${calendarSelectedDate.toLocaleDateString("en-US", { month: "long", day: "numeric" })}.`
+        : "No upcoming assignment deadlines scheduled.";
+      elements.calendarDeadlinesList.innerHTML = `
+        <div class="dash-empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+          <p style="color: var(--text-muted); font-size: 0.9rem;">${emptyMsg}</p>
+          ${calendarSelectedDate ? `<button class="btn btn-outline btn-sm" id="calendarResetToAllBtn" type="button" style="margin-top: 0.75rem;">View All Deadlines</button>` : ""}
+        </div>
+      `;
+      const resetBtn = elements.calendarDeadlinesList.querySelector("#calendarResetToAllBtn");
+      if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+          calendarSelectedDate = null;
+          renderCalendarView();
+        });
+      }
+    } else {
+      elements.calendarDeadlinesList.innerHTML = agendaItems.map((asgn) => {
+        const badge = formatDateBadge(asgn.due_date);
+        const days = calculateDaysRemaining(asgn.due_date);
+        const chipClass = days < 0 ? "days-left-chip" : (days <= 2 ? "days-left-chip warning" : "days-left-chip muted");
+        const daysText = days < 0 ? "Overdue" : (days === 0 ? "Due Today" : `${days} days left`);
+
+        const effectiveStatus = getEffectiveStatus(asgn);
+        let statusBadge = "";
+        if (isStudent) {
+          const mySub = state.mySubmissions ? state.mySubmissions[asgn.id] : null;
+          if (effectiveStatus === "resubmit") {
+            statusBadge = `<span class="submission-pill status-resubmit-allowed">↻ Resubmit</span>`;
+          } else if (effectiveStatus === "graded") {
+            const score = mySub && mySub.grade !== null && mySub.grade !== undefined ? mySub.grade : "—";
+            statusBadge = `<span class="submission-pill status-released">Score: ${score}/${asgn.max_marks || 100}</span>`;
+          } else if (effectiveStatus === "submitted") {
+            statusBadge = `<span class="submission-pill status-ontime">✓ Submitted</span>`;
+          } else if (effectiveStatus === "overdue") {
+            statusBadge = `<span class="status-pill status-overdue">Missing</span>`;
+          } else {
+            statusBadge = `<span class="${chipClass}">${daysText}</span>`;
+          }
+        } else if (isTeacher) {
+          const subCount = asgn.submission_count !== undefined ? asgn.submission_count : 0;
+          const tot = asgn.total_students || 0;
+          statusBadge = `<span class="submission-progress-chip" style="margin: 0; font-weight: 600;">${subCount}/${tot} submitted</span>`;
+        } else {
+          statusBadge = `<span class="${chipClass}">${daysText}</span>`;
+        }
+
+        return `
+          <div class="calendar-item" data-asgn-id="${asgn.id}" tabindex="0" role="button" aria-label="Open ${escapeHtml(asgn.title)} details">
+            <div class="dash-item-main">
+              <div class="dash-date-badge">
+                <span class="dash-date-month">${badge.month}</span>
+                <span class="dash-date-day">${badge.day}</span>
+              </div>
+              <div class="dash-item-texts">
+                <span class="dash-item-title" style="font-weight: 600;">${escapeHtml(asgn.title)}</span>
+                <span class="dash-item-sub">${escapeHtml(asgn.class_name || asgn.subject || "General")} • Unit ${asgn.unit || 1}</span>
+              </div>
+            </div>
+            <div class="dash-item-meta" style="display: flex; align-items: center; gap: 0.5rem;">
+              ${statusBadge}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Clicking an agenda item opens the correct detail or submission workflow directly
+      elements.calendarDeadlinesList.querySelectorAll(".calendar-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          const asgnId = parseInt(item.getAttribute("data-asgn-id"), 10);
+          const asgn = (state.assignments || []).find((a) => a.id === asgnId);
+          if (!asgn) return;
+
+          if (isStudent) {
+            const mySub = state.mySubmissions ? state.mySubmissions[asgn.id] : null;
+            if (mySub) {
+              openViewSubmissionModal(asgn, mySub);
+            } else {
+              openSubmitWorkModal(asgn);
+            }
+          } else if (isTeacher) {
+            openTeacherSubmissionsModal(asgn);
+          } else {
+            navigateToView("assignments", true);
+          }
+        });
+      });
+    }
+  }
+}
+
+/**
+ * Builds the interactive monthly table grid for the current navigated month/year
+ */
+function renderCalendarMonthGrid(assignments) {
   if (!elements.calendarMiniMonthContainer) return;
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const year = calendarNavYear;
+  const month = calendarNavMonth;
   const firstDayIndex = new Date(year, month, 1).getDay();
   const lastDay = new Date(year, month + 1, 0).getDate();
-  const today = currentDate.getDate();
+  const today = new Date();
 
-  const deadlineDays = new Set();
+  // Map deadlines in this month by date number -> count
+  const deadlineDays = new Map();
   assignments.forEach((a) => {
     if (!a.due_date) return;
     const d = new Date(a.due_date);
     if (d.getFullYear() === year && d.getMonth() === month) {
-      deadlineDays.add(d.getDate());
+      const dayNum = d.getDate();
+      deadlineDays.set(dayNum, (deadlineDays.get(dayNum) || 0) + 1);
     }
   });
 
   let html = `
-    <table class="calendar-mini-table">
+    <table class="calendar-mini-table" role="grid" aria-label="Course schedule for ${new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}">
       <thead>
-        <tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr>
+        <tr>
+          <th scope="col">Su</th>
+          <th scope="col">Mo</th>
+          <th scope="col">Tu</th>
+          <th scope="col">We</th>
+          <th scope="col">Th</th>
+          <th scope="col">Fr</th>
+          <th scope="col">Sa</th>
+        </tr>
       </thead>
       <tbody><tr>
   `;
 
   for (let i = 0; i < firstDayIndex; i++) {
-    html += `<td></td>`;
+    html += `<td class="empty-cell" aria-hidden="true"></td>`;
   }
 
   let currentDay = 1;
@@ -4850,195 +5728,540 @@ function renderMiniCalendar(currentDate, assignments) {
       dayOfWeek = 0;
     }
 
-    const isToday = currentDay === today;
+    const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === currentDay;
     const hasDeadline = deadlineDays.has(currentDay);
-    let classes = [];
+    const deadlineCount = deadlineDays.get(currentDay) || 0;
+    const isSelected = calendarSelectedDate &&
+      calendarSelectedDate.getFullYear() === year &&
+      calendarSelectedDate.getMonth() === month &&
+      calendarSelectedDate.getDate() === currentDay;
+
+    let classes = ["day-cell"];
     if (isToday) classes.push("today");
     if (hasDeadline) classes.push("has-deadline");
+    if (isSelected) classes.push("selected-date");
 
-    html += `<td class="${classes.join(" ")}" title="${hasDeadline ? 'Assignment deadline on this date' : ''}">${currentDay}</td>`;
+    const dlTitle = hasDeadline ? `${deadlineCount} assignment deadline${deadlineCount > 1 ? 's' : ''}` : '';
+    const dateLabel = `${new Date(year, month, currentDay).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${dlTitle ? ': ' + dlTitle : ''}`;
+
+    html += `
+      <td class="${classes.join(' ')}" data-day="${currentDay}" role="gridcell" tabindex="0" aria-label="${escapeHtml(dateLabel)}" title="${escapeHtml(dlTitle)}">
+        ${currentDay}
+      </td>
+    `;
 
     currentDay++;
     dayOfWeek++;
   }
 
   while (dayOfWeek < 7) {
-    html += `<td></td>`;
+    html += `<td class="empty-cell" aria-hidden="true"></td>`;
     dayOfWeek++;
   }
 
   html += `</tr></tbody></table>`;
 
   elements.calendarMiniMonthContainer.innerHTML = html;
+
+  // Day cell click events for date selection
+  elements.calendarMiniMonthContainer.querySelectorAll(".day-cell").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const dayNum = parseInt(cell.getAttribute("data-day"), 10);
+      if (!isNaN(dayNum)) {
+        if (calendarSelectedDate &&
+            calendarSelectedDate.getFullYear() === year &&
+            calendarSelectedDate.getMonth() === month &&
+            calendarSelectedDate.getDate() === dayNum) {
+          // Toggle off if clicking the already-selected date
+          calendarSelectedDate = null;
+        } else {
+          calendarSelectedDate = new Date(year, month, dayNum);
+        }
+        renderCalendarView();
+      }
+    });
+
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        cell.click();
+      }
+    });
+  });
+}
+
+function calculateDaysRemaining(dateStr) {
+  if (!dateStr) return 0;
+  const now = new Date();
+  const due = new Date(dateStr);
+  const diffTime = due - now;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 /**
- * Renders the standalone Analytics page
+ * Renders the standalone Analytics & Academic Performance page
  */
 async function loadAnalyticsPageView() {
-  if (!elements.analyticsKpiRow) return;
+  const epoch = state.authEpoch;
 
-  const isTeacher = state.currentUser?.role === "teacher";
+  if (!state.currentUser) {
+    if (elements.analyticsKpiRow) elements.analyticsKpiRow.innerHTML = "";
+    if (elements.analyticsRankingsBody) {
+      elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Please sign in to view academic analytics and performance insights.</td></tr>`;
+    }
+    openAuthModal("signin", "Please sign in to access analytics.");
+    return;
+  }
+
+  const isTeacher = state.currentUser.role === "teacher";
   if (elements.analyticsPageTitle) {
-    elements.analyticsPageTitle.textContent = isTeacher ? "Analytics & Reports" : "Results & Academic Progress";
+    elements.analyticsPageTitle.textContent = isTeacher ? "Analytics & Results" : "Results & Academic Progress";
   }
   if (elements.analyticsPageSubtitle) {
     elements.analyticsPageSubtitle.textContent = isTeacher
-      ? "Class-wide submission rates, student engagement metrics, and grading analytics."
-      : "Personal assignment completion history, timeliness compliance, and course results.";
+      ? "Detailed academic insights, unit-wise rankings, and finalized performance metrics."
+      : "Personal assignment feedback, unit performance, and privacy-safe class standing.";
   }
 
+  // Ensure classes and assignments are loaded
+  if (!state.classes || state.classes.length === 0) {
+    await fetchClasses();
+  }
+  if (epoch !== state.authEpoch) return;
+
+  if (!state.assignments || state.assignments.length === 0) {
+    try {
+      const asgnRes = await fetch(API_ENDPOINTS.assignments, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: getAuthHeaders(),
+        signal: state.activeAbortController?.signal,
+      });
+      if (asgnRes.ok) {
+        state.assignments = await asgnRes.json();
+      }
+    } catch (_) {}
+  }
+  if (epoch !== state.authEpoch) return;
+
+  const classes = state.classes || [];
+
+  // Populate Class Select Dropdown
+  if (elements.analyticsClassSelect) {
+    if (classes.length === 0) {
+      elements.analyticsClassSelect.innerHTML = '<option value="">No Classes Available</option>';
+      currentAnalyticsClassId = null;
+      currentAnalyticsSubject = "";
+      if (elements.analyticsSubjectSelect) {
+        elements.analyticsSubjectSelect.innerHTML = '<option value="">All Subjects</option>';
+      }
+      renderAnalyticsEmptyState(isTeacher ? "No classes found. Please create a class first." : "You are not enrolled in any classes yet.");
+      return;
+    }
+
+    // Retain selected class if still valid in user's classes, otherwise default to first class
+    const isCurrentValid = currentAnalyticsClassId && classes.some(c => c.id === currentAnalyticsClassId);
+    if (!isCurrentValid) {
+      currentAnalyticsClassId = classes[0].id;
+    }
+
+    elements.analyticsClassSelect.innerHTML = '<option value="">Select Class...</option>' +
+      classes.map(c => `<option value="${c.id}" ${c.id === currentAnalyticsClassId ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("");
+  }
+
+  // Populate Subjects for the selected class
+  await populateAnalyticsSubjectSelect(currentAnalyticsClassId);
+  if (epoch !== state.authEpoch) return;
+
+  // Fetch and display analytics data
+  await refreshAnalyticsData();
+}
+
+/**
+ * Populates the subject dropdown with subjects belonging strictly to the selected class
+ */
+async function populateAnalyticsSubjectSelect(classId) {
+  if (!elements.analyticsSubjectSelect) return;
+  if (!classId) {
+    elements.analyticsSubjectSelect.innerHTML = '<option value="">All Subjects</option>';
+    currentAnalyticsSubject = "";
+    return;
+  }
+
+  const epoch = state.authEpoch;
+  const subjectSet = new Set();
+
   try {
-    const res = await fetch(API_ENDPOINTS.dashboard, {
+    const res = await fetch(`${API_ENDPOINTS.classes}/${classId}/subjects`, {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
       signal: state.activeAbortController?.signal,
     });
     if (epoch !== state.authEpoch) return;
-    if (!res.ok) return;
-    const data = await res.json();
+    if (res.ok) {
+      const subs = await res.json();
+      (subs || []).forEach((s) => {
+        if (s.name && s.name.trim()) subjectSet.add(s.name.trim());
+      });
+    }
+  } catch (_) {}
 
-    if (isTeacher) {
-      const totalSubs = data.submissions_overview?.total || 0;
-      const lateSubs = data.submissions_overview?.late || 0;
-      const onTimeRate = totalSubs > 0 ? Math.round(((totalSubs - lateSubs) / totalSubs) * 100) + "%" : "100%";
+  // Also include distinct subjects from assignments belonging to this class
+  (state.assignments || []).forEach((a) => {
+    if (a.class_id == classId && a.subject && a.subject.trim()) {
+      subjectSet.add(a.subject.trim());
+    }
+  });
 
-      elements.analyticsKpiRow.innerHTML = `
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.total_assignments}</span>
-            <span class="dash-metric-label">Total Assignments</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.total_students}</span>
-            <span class="dash-metric-label">Enrolled Students</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.pending_grading}</span>
-            <span class="dash-metric-label">Total Submissions</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${onTimeRate}</span>
-            <span class="dash-metric-label">On-Time Rate</span>
-          </div>
-        </div>
-      `;
+  const subjects = Array.from(subjectSet).sort();
 
-      if (elements.analyticsLeftCard) {
-        elements.analyticsLeftCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Submission Breakdown</h2></div>
-          <div id="analyticsDonutContainer"></div>
-        `;
-        const overview = data.submissions_overview || { graded: 0, pending: 0, late: 0, total: 0 };
-        renderDonutChart("analyticsDonutContainer", overview.total, "Total", [
-          { label: "Graded", value: overview.graded, color: "#10b981" },
-          { label: "Pending", value: overview.pending, color: "#3b82f6" },
-          { label: "Late", value: overview.late, color: "#ef4444" },
-        ]);
+  // Validate current subject selection
+  if (currentAnalyticsSubject && !subjectSet.has(currentAnalyticsSubject)) {
+    currentAnalyticsSubject = "";
+  }
+  // Auto-select if there is exactly 1 subject in this class
+  if (!currentAnalyticsSubject && subjects.length === 1) {
+    currentAnalyticsSubject = subjects[0];
+  }
+
+  let html = '<option value="">All Subjects</option>';
+  subjects.forEach((s) => {
+    html += `<option value="${escapeHtml(s)}" ${s === currentAnalyticsSubject ? "selected" : ""}>${escapeHtml(s)}</option>`;
+  });
+  elements.analyticsSubjectSelect.innerHTML = html;
+}
+
+/**
+ * Change handler for Class select dropdown
+ */
+async function handleAnalyticsClassChange(e) {
+  const val = e.target.value;
+  currentAnalyticsClassId = val ? parseInt(val, 10) : null;
+  currentAnalyticsSubject = "";
+  if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+
+  if (!currentAnalyticsClassId) {
+    if (elements.analyticsSubjectSelect) {
+      elements.analyticsSubjectSelect.innerHTML = '<option value="">All Subjects</option>';
+    }
+    renderAnalyticsEmptyState("Select a class to view academic analytics and performance insights.");
+    return;
+  }
+
+  await populateAnalyticsSubjectSelect(currentAnalyticsClassId);
+  await refreshAnalyticsData();
+}
+
+/**
+ * Change handler for Subject select dropdown
+ */
+async function handleAnalyticsSubjectChange(e) {
+  currentAnalyticsSubject = e.target.value ? e.target.value.trim() : "";
+  if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+  await refreshAnalyticsData();
+}
+
+/**
+ * Primary data fetcher for Analytics View
+ */
+async function refreshAnalyticsData() {
+  const epoch = state.authEpoch;
+  const classId = currentAnalyticsClassId;
+  const subject = currentAnalyticsSubject;
+
+  if (!classId) {
+    renderAnalyticsEmptyState("Select a class to view academic analytics and performance insights.");
+    return;
+  }
+
+  const isTeacher = state.currentUser?.role === "teacher";
+
+  // Action Buttons visibility
+  if (elements.btnExportSummaryCsv) {
+    elements.btnExportSummaryCsv.style.display = isTeacher ? "inline-flex" : "none";
+  }
+  if (elements.btnExportDetailedCsv) {
+    elements.btnExportDetailedCsv.style.display = (isTeacher && subject) ? "inline-flex" : "none";
+  }
+  if (elements.btnFinalizeResults) {
+    elements.btnFinalizeResults.style.display = (isTeacher && subject) ? "inline-flex" : "none";
+  }
+  if (elements.btnToggleLeaderboard) {
+    elements.btnToggleLeaderboard.style.display = subject ? "inline-flex" : "none";
+  }
+
+  showAnalyticsLoadingState();
+
+  try {
+    // 1. Fetch Class Overview
+    const overviewUrl = API_ENDPOINTS.analytics.overview(classId, subject || undefined);
+    const overviewRes = await fetch(overviewUrl, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
+    });
+    if (epoch !== state.authEpoch) return;
+
+    if (!overviewRes.ok) {
+      if (overviewRes.status === 403) {
+        showAnalyticsError("Access denied: You are not authorized to view analytics for this class.");
+        return;
       }
+      showAnalyticsError("Unable to load class analytics at this time.");
+      return;
+    }
 
-      if (elements.analyticsRightCard) {
-        const classesList = (data.my_classes || []).map((cls) => `
-          <div class="dash-list-item">
-            <div class="dash-item-main">
-              <div class="dash-icon-box purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-              <div class="dash-item-texts">
-                <span class="dash-item-title">${escapeHtml(cls.name)}</span>
-                <span class="dash-item-sub">${escapeHtml(cls.description)}</span>
-              </div>
-            </div>
-            <div class="dash-item-meta"><span class="dash-pill pill-new">${cls.student_count || 0} enrolled</span></div>
-          </div>
-        `).join("");
+    const overviewData = await overviewRes.json();
+    state.analyticsOverviewData = overviewData;
+    renderAnalyticsOverview(overviewData);
 
-        elements.analyticsRightCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Class Distribution</h2></div>
-          <div class="dash-list">${classesList || '<div class="dash-empty-state"><p>No classes created yet.</p></div>'}</div>
-        `;
+    // 2. Role-specific: Teacher Alerts vs Student Feedback
+    if (isTeacher) {
+      if (elements.analyticsStudentFeedbackCard) {
+        elements.analyticsStudentFeedbackCard.style.display = "none";
+      }
+      try {
+        const alertsUrl = API_ENDPOINTS.analytics.alerts(classId, subject || undefined);
+        const alertsRes = await fetch(alertsUrl, {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          signal: state.activeAbortController?.signal,
+        });
+        if (epoch === state.authEpoch && alertsRes.ok) {
+          const alertsData = await alertsRes.json();
+          renderTeacherAlerts(alertsData);
+        } else {
+          if (elements.analyticsAlertsContainer) elements.analyticsAlertsContainer.style.display = "none";
+        }
+      } catch (_) {
+        if (elements.analyticsAlertsContainer) elements.analyticsAlertsContainer.style.display = "none";
       }
     } else {
-      const totalAsgns = data.metrics.total_assignments || 0;
-      const submitted = data.metrics.submitted || 0;
-      const completionRate = totalAsgns > 0 ? Math.round((submitted / totalAsgns) * 100) + "%" : "100%";
-
-      elements.analyticsKpiRow.innerHTML = `
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${totalAsgns}</span>
-            <span class="dash-metric-label">Total Assigned</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${submitted}</span>
-            <span class="dash-metric-label">Completed</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${data.metrics.pending}</span>
-            <span class="dash-metric-label">Pending</span>
-          </div>
-        </div>
-        <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-          <div class="dash-metric-data">
-            <span class="dash-metric-val">${completionRate}</span>
-            <span class="dash-metric-label">Completion Rate</span>
-          </div>
-        </div>
-      `;
-
-      if (elements.analyticsLeftCard) {
-        elements.analyticsLeftCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Submission Status</h2></div>
-          <div id="analyticsStudentDonutContainer"></div>
-        `;
-        const statusObj = data.submission_status || { pending: 0, submitted: 0, overdue: 0, total: 0 };
-        renderDonutChart("analyticsStudentDonutContainer", statusObj.total, "Total", [
-          { label: "Pending", value: statusObj.pending, color: "#3b82f6" },
-          { label: "Submitted", value: statusObj.submitted, color: "#10b981" },
-          { label: "Overdue", value: statusObj.overdue, color: "#ef4444" },
-        ]);
+      // Student: hide teacher alerts, fetch private feedback
+      if (elements.analyticsAlertsContainer) {
+        elements.analyticsAlertsContainer.style.display = "none";
       }
+      if (elements.analyticsStudentFeedbackCard) {
+        elements.analyticsStudentFeedbackCard.style.display = "block";
+      }
+      try {
+        const feedbackUrl = API_ENDPOINTS.analytics.feedback(classId, subject || undefined);
+        const feedbackRes = await fetch(feedbackUrl, {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          signal: state.activeAbortController?.signal,
+        });
+        if (epoch === state.authEpoch) {
+          if (feedbackRes.ok) {
+            const feedbackData = await feedbackRes.json();
+            renderStudentFeedback(feedbackData);
+          } else {
+            renderStudentFeedback([]);
+          }
+        }
+      } catch (_) {
+        renderStudentFeedback([]);
+      }
+    }
 
-      if (elements.analyticsRightCard) {
-        const classesList = (data.my_classes || []).map((cls) => `
-          <div class="dash-list-item">
-            <div class="dash-item-main">
-              <div class="dash-icon-box blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg></div>
-              <div class="dash-item-texts">
-                <span class="dash-item-title">${escapeHtml(cls.name)}</span>
-                <span class="dash-item-sub">${escapeHtml(cls.teacher_name || "Instructor")}</span>
-              </div>
-            </div>
-            <div class="dash-item-meta"><span class="dash-pill pill-graded">Enrolled</span></div>
-          </div>
-        `).join("");
+    // 3. Rankings (requires a subject)
+    if (subject) {
+      const rankingsUrl = API_ENDPOINTS.analytics.rankings(classId, subject);
+      const rankingsRes = await fetch(rankingsUrl, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        signal: state.activeAbortController?.signal,
+      });
+      if (epoch !== state.authEpoch) return;
 
-        elements.analyticsRightCard.innerHTML = `
-          <div class="dash-card-header"><h2 class="dash-card-title">Enrolled Classes</h2></div>
-          <div class="dash-list">${classesList || '<div class="dash-empty-state"><p>Not enrolled in any classes.</p></div>'}</div>
+      if (rankingsRes.ok) {
+        const rankingsData = await rankingsRes.json();
+        state.analyticsRankingsData = rankingsData;
+        renderAnalyticsRankings(rankingsData);
+      } else {
+        if (elements.analyticsRankingsBody) {
+          elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #ef4444;">Failed to load rankings for ${escapeHtml(subject)}.</td></tr>`;
+        }
+      }
+    } else {
+      // "All Subjects" selected: prompt user to pick a subject for rankings
+      if (elements.analyticsFinalizedBadge) elements.analyticsFinalizedBadge.style.display = "none";
+      if (elements.analyticsRankingsHead) {
+        elements.analyticsRankingsHead.innerHTML = `
+          <th>Rank</th>
+          <th>Student</th>
+          <th>Provisional %</th>
+          <th>Final %</th>
+          <th>Status</th>
         `;
+      }
+      if (elements.analyticsRankingsBody) {
+        elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a specific subject above to view unit-by-unit rankings, provisional percentages, and finalized results.</td></tr>`;
       }
     }
   } catch (err) {
+    if (epoch !== state.authEpoch) return;
     console.error("Analytics fetch error:", err);
+    showAnalyticsError("Network error: Failed to fetch analytics data.");
   }
+}
+
+/**
+ * Display loading spinner state across analytics panels
+ */
+function showAnalyticsLoadingState() {
+  if (elements.analyticsKpiRow) {
+    elements.analyticsKpiRow.innerHTML = `
+      <div style="padding: 1.5rem; width: 100%; text-align: center; color: var(--text-muted);">
+        <span class="spinner" style="display:inline-block; margin-right:8px; vertical-align:middle;"></span>
+        <span>Loading academic metrics...</span>
+      </div>
+    `;
+  }
+  if (elements.analyticsRankingsBody) {
+    elements.analyticsRankingsBody.innerHTML = `
+      <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <span class="spinner" style="display:inline-block; margin-right:8px; vertical-align:middle;"></span>
+        <span>Loading performance rankings...</span>
+      </td></tr>
+    `;
+  }
+  if (elements.analyticsUnitComparisonsBody) {
+    elements.analyticsUnitComparisonsBody.innerHTML = `
+      <div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
+        <span class="spinner" style="display:inline-block; margin-right:8px; vertical-align:middle;"></span>
+        <span>Loading unit comparisons...</span>
+      </div>
+    `;
+  }
+  if (elements.analyticsRightCardBody) {
+    elements.analyticsRightCardBody.innerHTML = `
+      <div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
+        <span class="spinner" style="display:inline-block; margin-right:8px; vertical-align:middle;"></span>
+        <span>Loading distribution...</span>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Empty state renderer when no classes or data are available
+ */
+function renderAnalyticsEmptyState(message) {
+  if (elements.analyticsKpiRow) {
+    elements.analyticsKpiRow.innerHTML = `
+      <div class="dash-empty-state" style="padding: 2.5rem 1rem; width: 100%; text-align: center;">
+        <p style="margin: 0; color: var(--text-muted); font-size: 0.95rem;">${escapeHtml(message)}</p>
+      </div>
+    `;
+  }
+  if (elements.analyticsRankingsBody) {
+    elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">${escapeHtml(message)}</td></tr>`;
+  }
+  if (elements.analyticsUnitComparisonsBody) {
+    elements.analyticsUnitComparisonsBody.innerHTML = `<div class="dash-empty-state"><p>${escapeHtml(message)}</p></div>`;
+  }
+  if (elements.analyticsRightCardBody) {
+    elements.analyticsRightCardBody.innerHTML = `<div class="dash-empty-state"><p>${escapeHtml(message)}</p></div>`;
+  }
+  if (elements.btnExportSummaryCsv) elements.btnExportSummaryCsv.style.display = "none";
+  if (elements.btnExportDetailedCsv) elements.btnExportDetailedCsv.style.display = "none";
+  if (elements.btnFinalizeResults) elements.btnFinalizeResults.style.display = "none";
+  if (elements.btnToggleLeaderboard) elements.btnToggleLeaderboard.style.display = "none";
+  if (elements.analyticsAlertsContainer) elements.analyticsAlertsContainer.style.display = "none";
+  if (elements.analyticsStudentFeedbackCard) elements.analyticsStudentFeedbackCard.style.display = "none";
+  if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+}
+
+/**
+ * Error state renderer for failed network requests or unauthorized responses
+ */
+function showAnalyticsError(message) {
+  if (elements.analyticsKpiRow) {
+    elements.analyticsKpiRow.innerHTML = `
+      <div class="analytics-error-banner">
+        <p style="margin: 0; font-weight: 500;">${escapeHtml(message)}</p>
+      </div>
+    `;
+  }
+  if (elements.analyticsRankingsBody) {
+    elements.analyticsRankingsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">${escapeHtml(message)}</td></tr>`;
+  }
+  if (elements.analyticsUnitComparisonsBody) {
+    elements.analyticsUnitComparisonsBody.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: var(--danger);"><p>${escapeHtml(message)}</p></div>`;
+  }
+  if (elements.analyticsRightCardBody) {
+    elements.analyticsRightCardBody.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: var(--danger);"><p>${escapeHtml(message)}</p></div>`;
+  }
+  if (elements.btnExportSummaryCsv) elements.btnExportSummaryCsv.style.display = "none";
+  if (elements.btnExportDetailedCsv) elements.btnExportDetailedCsv.style.display = "none";
+  if (elements.btnFinalizeResults) elements.btnFinalizeResults.style.display = "none";
+  if (elements.btnToggleLeaderboard) elements.btnToggleLeaderboard.style.display = "none";
+  if (elements.analyticsAlertsContainer) elements.analyticsAlertsContainer.style.display = "none";
+  if (elements.analyticsStudentFeedbackCard) elements.analyticsStudentFeedbackCard.style.display = "none";
+  if (elements.analyticsLeaderboardCard) elements.analyticsLeaderboardCard.style.display = "none";
+}
+
+/**
+ * Renders individual student assessment feedback notes and grades (Student only)
+ */
+function renderStudentFeedback(items) {
+  if (!elements.analyticsStudentFeedbackBody) return;
+  if (!items || items.length === 0) {
+    elements.analyticsStudentFeedbackBody.innerHTML = `
+      <div class="dash-empty-state" style="padding: 1.5rem; text-align: center;">
+        <p>No assessment feedback recorded yet for this class.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const html = `
+    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+      ${items.map((item) => {
+        const hasScore = item.grade !== null && item.grade !== undefined;
+        const scoreStr = hasScore ? `${item.grade} / ${item.max_marks}` : "Ungraded / Pending";
+        const pct = hasScore && item.max_marks > 0 ? Math.round((item.grade / item.max_marks) * 100) + "%" : "";
+        const isReleased = item.status === "released";
+        const statusBadge = isReleased
+          ? '<span class="submission-pill status-graded" style="font-size:0.75rem;">Released</span>'
+          : '<span class="submission-pill status-draft" style="font-size:0.75rem;">Submitted</span>';
+        const lateBadge = item.is_late
+          ? '<span class="submission-pill status-late" style="font-size:0.75rem; margin-left: 0.5rem;">Late</span>'
+          : "";
+
+        return `
+          <div class="analytics-feedback-item">
+            <div class="analytics-feedback-header">
+              <div>
+                <span class="analytics-feedback-title">Unit ${item.unit}: ${escapeHtml(item.assignment_title)}</span>
+                <div style="margin-top: 0.35rem;">
+                  ${statusBadge}
+                  ${lateBadge}
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <span class="analytics-feedback-score">${scoreStr}</span>
+                ${pct ? `<div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">${pct}</div>` : ""}
+              </div>
+            </div>
+            ${item.feedback ? `
+              <div class="analytics-feedback-notes">
+                <strong style="color: var(--text-main); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Instructor Feedback:</strong>
+                <p style="margin: 0; line-height: 1.5;">${escapeHtml(item.feedback)}</p>
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+  elements.analyticsStudentFeedbackBody.innerHTML = html;
 }
 
 /**
@@ -5065,9 +6288,35 @@ function loadSettingsPageView() {
   if (savedReminder !== null && elements.settingsReminderToggle) {
     elements.settingsReminderToggle.checked = savedReminder === "true";
   }
+
+  fetchNotificationPreferences();
 }
 
-function saveSettingsPreferences() {
+/**
+ * Loads notification preferences from backend API
+ */
+async function fetchNotificationPreferences() {
+  if (!state.currentUser) return;
+  try {
+    const res = await fetch(`${API_ENDPOINTS.notifications}/preferences`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
+    });
+    if (!res.ok) return;
+    const prefs = await res.json();
+    if (elements.prefInAppEnabled) elements.prefInAppEnabled.checked = Boolean(prefs.in_app_enabled);
+    if (elements.prefEmailEnabled) elements.prefEmailEnabled.checked = Boolean(prefs.email_enabled);
+    if (elements.prefEmailGradeReleased) elements.prefEmailGradeReleased.checked = Boolean(prefs.email_on_grade_released);
+    if (elements.prefEmailDeadline) elements.prefEmailDeadline.checked = Boolean(prefs.email_on_deadline);
+    if (elements.prefEmailReevaluation) elements.prefEmailReevaluation.checked = Boolean(prefs.email_on_reevaluation);
+  } catch (err) {
+    console.error("Failed to load notification preferences:", err);
+  }
+}
+
+async function saveSettingsPreferences() {
   if (elements.settingsDefaultSort) {
     const sortVal = elements.settingsDefaultSort.value;
     localStorage.setItem("assignflow_sort_pref", sortVal);
@@ -5077,7 +6326,54 @@ function saveSettingsPreferences() {
   if (elements.settingsReminderToggle) {
     localStorage.setItem("assignflow_reminder_pref", String(elements.settingsReminderToggle.checked));
   }
-  showToast("Preferences saved successfully!", "success");
+
+  const payload = {
+    in_app_enabled: elements.prefInAppEnabled ? elements.prefInAppEnabled.checked : true,
+    email_enabled: elements.prefEmailEnabled ? elements.prefEmailEnabled.checked : false,
+    email_on_grade_released: elements.prefEmailGradeReleased ? elements.prefEmailGradeReleased.checked : true,
+    email_on_deadline: elements.prefEmailDeadline ? elements.prefEmailDeadline.checked : true,
+    email_on_reevaluation: elements.prefEmailReevaluation ? elements.prefEmailReevaluation.checked : true,
+  };
+
+  const saveBtn = elements.settingsSavePreferencesBtn;
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
+  try {
+    const res = await fetch(`${API_ENDPOINTS.notifications}/preferences`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      if (elements.prefInAppEnabled) elements.prefInAppEnabled.checked = Boolean(updated.in_app_enabled);
+      if (elements.prefEmailEnabled) elements.prefEmailEnabled.checked = Boolean(updated.email_enabled);
+      if (elements.prefEmailGradeReleased) elements.prefEmailGradeReleased.checked = Boolean(updated.email_on_grade_released);
+      if (elements.prefEmailDeadline) elements.prefEmailDeadline.checked = Boolean(updated.email_on_deadline);
+      if (elements.prefEmailReevaluation) elements.prefEmailReevaluation.checked = Boolean(updated.email_on_reevaluation);
+      showToast("Preferences saved successfully!", "success");
+      fetchNotifications();
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      showToast(errData.detail || "Failed to save notification preferences.", "error");
+    }
+  } catch (err) {
+    console.error("Save preferences error:", err);
+    showToast("Failed to connect to backend.", "error");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Preferences";
+    }
+  }
 }
 
 function clearSettingsPreferences() {
@@ -5265,12 +6561,19 @@ function renderSemesterDashboard(dashData) {
   state.activeSemesterId = sem.id;
 
   // 1. Hero Banner
-  if (elements.dashGreeting) elements.dashGreeting.textContent = "Good morning,";
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning," : (hour < 18 ? "Good afternoon," : "Good evening,");
+  if (elements.dashGreeting) elements.dashGreeting.textContent = timeGreeting;
   if (elements.dashUserName) elements.dashUserName.textContent = state.currentUser?.full_name || "Teacher";
-  if (elements.dashSubtitle) elements.dashSubtitle.textContent = "Here's an overview of your semester.";
+  if (elements.dashSubtitle) elements.dashSubtitle.textContent = `Here's an overview of your semester (${escapeHtml(sem.name)}).`;
 
+  const teacherRole = state.currentUser?.role || "teacher";
   if (elements.dashRolePill) {
-    elements.dashRolePill.style.display = "none";
+    elements.dashRolePill.style.display = "inline-flex";
+    elements.dashRolePill.className = `dash-role-pill ${teacherRole}`;
+  }
+  if (elements.dashRolePillText) {
+    elements.dashRolePillText.textContent = capitalize(teacherRole);
   }
 
   // Right side of Hero: Semester Selector Dropdown Pill + Create Assignment Button
@@ -5307,7 +6610,7 @@ function renderSemesterDashboard(dashData) {
   if (elements.dashMetricsRow) {
     elements.dashMetricsRow.innerHTML = `
       <div class="dash-metric-card" onclick="navigateToView('classes')" title="View subjects">
-        <div class="dash-metric-icon icon-amber">
+        <div class="dash-metric-icon icon-blue">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
             <path d="M6 6h10"/><path d="M6 10h10"/>
@@ -5323,7 +6626,7 @@ function renderSemesterDashboard(dashData) {
       </div>
 
       <div class="dash-metric-card" onclick="navigateToView('assignments')" title="View assignments">
-        <div class="dash-metric-icon icon-amber">
+        <div class="dash-metric-icon icon-green">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="8" x2="16" y1="10" y2="10"/><line x1="8" x2="12" y1="14" y2="14"/>
           </svg>
@@ -5353,9 +6656,9 @@ function renderSemesterDashboard(dashData) {
       </div>
 
       <div class="dash-metric-card" onclick="navigateToView('reports')" title="View reports">
-        <div class="dash-metric-icon icon-amber">
+        <div class="dash-metric-icon icon-purple">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="9" stroke="rgba(217, 119, 6, 0.25)"/>
+            <circle cx="12" cy="12" r="9" stroke="var(--border-subtle)"/>
             <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-linecap="round"/>
           </svg>
         </div>
@@ -5589,6 +6892,21 @@ function renderSemesterDashboard(dashData) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </div>
           </div>
+
+          <div class="dark-quick-action-item" onclick="navigateToView('analytics')">
+            <div class="dark-qa-left">
+              <div class="dark-qa-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+              </div>
+              <div class="dark-qa-texts">
+                <span class="dark-qa-title">View Analytics</span>
+                <span class="dark-qa-desc">Class performance & insights</span>
+              </div>
+            </div>
+            <div class="dark-chevron-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -5644,43 +6962,71 @@ function renderSemesterDashboard(dashData) {
     `;
   }
 
-  // 4B. Center Column: Grading Queue
-  const queueItems = (dashData.upcoming_deadlines || []).slice(0, 3);
+  // 4B. Center Column: Grading Queue (Authoritative pending work)
+  const realQueue = dashData.grading_queue || [];
   let queueHtml = "";
-  if (queueItems.length > 0) {
-    queueHtml = queueItems.map((item) => `
-      <div class="dash-queue-item" onclick="navigateToView('submissions')">
-        <div class="dash-queue-left">
-          <div class="dash-queue-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line>
-            </svg>
+  if (realQueue.length > 0) {
+    queueHtml = realQueue.slice(0, 5).map((item) => {
+      const isReeval = Boolean(item.needs_reevaluation);
+      const badgeClass = isReeval ? "dash-queue-pill warning" : "dash-queue-pill";
+      const badgeText = isReeval ? "Re-eval Request" : (item.is_late ? "Late (Ungraded)" : "Needs Grading");
+      return `
+        <div class="dash-queue-item" data-sub-id="${item.id}" data-asgn-id="${item.assignment_id}" style="cursor: pointer;">
+          <div class="dash-queue-left">
+            <div class="dash-queue-icon" style="background: rgba(40, 87, 71, 0.1); color: var(--primary);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+            </div>
+            <div class="dash-queue-texts">
+              <span class="dash-queue-title">${escapeHtml(item.student_name)} • ${escapeHtml(item.assignment_title)}</span>
+              <span class="dash-queue-sub">${escapeHtml(item.class_name || "Coursework")} • ${formatDisplayDate(item.submitted_at)}</span>
+            </div>
           </div>
-          <div class="dash-queue-texts">
-            <span class="dash-queue-title">${escapeHtml(item.class_name)} – ${escapeHtml(item.title)}</span>
-            <span class="dash-queue-sub">${item.submissions_count || (item.days_left ? "0 submissions" : "2 submissions")}</span>
+          <span class="${badgeClass}">${badgeText}</span>
+          <div class="dash-metric-chevron" style="width: 28px; height: 28px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
         </div>
-        <span class="dash-queue-pill">${escapeHtml(item.badge_label || (item.days_left + " days left"))}</span>
-        <div class="dash-metric-chevron" style="width: 28px; height: 28px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   } else {
-    queueHtml = '<div class="dash-empty-state"><p>No items in grading queue.</p></div>';
+    queueHtml = '<div class="dash-empty-state"><p>All caught up! No pending submissions needing grading.</p></div>';
   }
 
   if (elements.dashBottomCenterCard) {
     elements.dashBottomCenterCard.innerHTML = `
       <div class="dash-card-header">
-        <h2 class="dash-card-title">Grading Queue</h2>
+        <h2 class="dash-card-title">Grading Queue ${realQueue.length ? `(${realQueue.length})` : ""}</h2>
         <button class="dash-card-link" onclick="navigateToView('submissions')">View all</button>
       </div>
       <div class="dash-queue-list">
         ${queueHtml}
       </div>
     `;
+
+    // Direct SpeedGrader workspace opening from Dashboard Grading Queue
+    elements.dashBottomCenterCard.querySelectorAll(".dash-queue-item").forEach((qEl) => {
+      qEl.addEventListener("click", () => {
+        const subId = parseInt(qEl.getAttribute("data-sub-id"), 10);
+        const item = realQueue.find((q) => q.id === subId);
+        if (item) {
+          state.currentGradingAssignment = {
+            id: item.assignment_id,
+            title: item.assignment_title,
+            class_name: item.class_name,
+            max_marks: 100,
+          };
+          state.currentGradingSubmissions = realQueue;
+          const foundIdx = realQueue.findIndex((q) => q.id === subId);
+          state.currentGradingIndex = foundIdx >= 0 ? foundIdx : 0;
+          openGradingWorkspace(state.currentGradingIndex);
+        }
+      });
+    });
   }
 
   // 4C. Right Column: Semester Timeline
@@ -5799,14 +7145,18 @@ function renderDashboard(data) {
   const isTeacher = data.role === "teacher";
 
   // 1. Hero Banner
-  if (elements.dashGreeting) elements.dashGreeting.textContent = "Good morning,";
-  if (elements.dashUserName) elements.dashUserName.textContent = data.user.full_name || (isTeacher ? "Teacher" : "Student");
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning," : (hour < 18 ? "Good afternoon," : "Good evening,");
+  if (elements.dashGreeting) elements.dashGreeting.textContent = timeGreeting;
+  const realName = data.user.full_name || state.currentUser?.full_name || (isTeacher ? "Teacher" : "Student");
+  if (elements.dashUserName) elements.dashUserName.textContent = realName;
 
   if (elements.dashRolePill) {
-    elements.dashRolePill.className = `dash-role-pill ${data.role}`;
+    elements.dashRolePill.style.display = "inline-flex";
+    elements.dashRolePill.className = `dash-role-pill ${data.role || "student"}`;
   }
   if (elements.dashRolePillText) {
-    elements.dashRolePillText.textContent = capitalize(data.role);
+    elements.dashRolePillText.textContent = capitalize(data.role || "student");
   }
   if (elements.dashSubtitle) {
     elements.dashSubtitle.textContent = isTeacher
@@ -5851,7 +7201,7 @@ function renderDashboard(data) {
           </div>
         </div>
         <div class="dash-metric-card">
-          <div class="dash-metric-icon icon-blue">
+          <div class="dash-metric-icon icon-amber">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
@@ -5879,7 +7229,7 @@ function renderDashboard(data) {
       `;
     } else {
       elements.dashMetricsRow.innerHTML = `
-        <div class="dash-metric-card">
+        <div class="dash-metric-card" onclick="navigateToView('assignments')" style="cursor: pointer;" title="View all assignments">
           <div class="dash-metric-icon icon-blue">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -5893,7 +7243,7 @@ function renderDashboard(data) {
             <span class="dash-metric-label">Total Assignments</span>
           </div>
         </div>
-        <div class="dash-metric-card">
+        <div class="dash-metric-card" onclick="navigateToView('assignments')" style="cursor: pointer;" title="View pending assignments">
           <div class="dash-metric-icon icon-amber">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -5904,7 +7254,7 @@ function renderDashboard(data) {
             <span class="dash-metric-label">Pending</span>
           </div>
         </div>
-        <div class="dash-metric-card">
+        <div class="dash-metric-card" onclick="navigateToView('submissions')" style="cursor: pointer;" title="View your submissions">
           <div class="dash-metric-icon icon-green">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
@@ -5915,7 +7265,7 @@ function renderDashboard(data) {
             <span class="dash-metric-label">Submitted</span>
           </div>
         </div>
-        <div class="dash-metric-card">
+        <div class="dash-metric-card" onclick="navigateToView('assignments')" style="cursor: pointer;" title="View overdue assignments">
           <div class="dash-metric-icon icon-coral">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -5992,16 +7342,28 @@ function renderDashboard(data) {
     }
 
   } else {
-    // Student Left: Upcoming Assignments
+    // Student Middle Row: 3 Columns
+    // 1. Left Column: Upcoming Deadlines
     const upcomingList = (data.upcoming_assignments || []).map((asgn) => {
       const formattedDate = formatDisplayDate(asgn.due_date);
-      const daysText = asgn.days_left >= 0 ? `${asgn.days_left} days left` : "Overdue";
-      const chipClass = asgn.days_left <= 2 ? "days-left-chip" : (asgn.days_left <= 5 ? "days-left-chip warning" : "days-left-chip muted");
+      let chipClass = "days-left-chip muted";
+      let chipText = `${asgn.days_left} days left`;
+      if (asgn.days_left < 0) {
+        chipClass = "days-left-chip overdue";
+        chipText = "Overdue";
+      } else if (asgn.days_left === 0) {
+        chipClass = "days-left-chip warning due-soon";
+        chipText = "Due Today";
+      } else if (asgn.days_left <= 2) {
+        chipClass = "days-left-chip warning due-soon";
+        chipText = "Due Soon";
+      }
+
       return `
         <div class="dash-list-item" style="cursor: pointer;" onclick="navigateToView('assignments')">
           <div class="dash-item-main">
-            <div class="dash-icon-box blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="dash-icon-box sage">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -6016,9 +7378,9 @@ function renderDashboard(data) {
           <div class="dash-item-meta">
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem;">
               <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">${formattedDate}</span>
-              <span class="${chipClass}">${daysText}</span>
+              <span class="${chipClass}">${chipText}</span>
             </div>
-            <svg class="dash-item-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="dash-item-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </div>
@@ -6026,9 +7388,15 @@ function renderDashboard(data) {
       `;
     }).join("");
 
+    elements.dashMidLeftCard.className = "dash-box-card student-dash-card";
     elements.dashMidLeftCard.innerHTML = `
       <div class="dash-card-header">
-        <h2 class="dash-card-title">Upcoming Assignments</h2>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line>
+          </svg>
+          <h2 class="dash-card-title">Upcoming Deadlines</h2>
+        </div>
         <button class="dash-card-link" id="linkStudentUpcomingViewAll">View All &rarr;</button>
       </div>
       <div class="dash-list">
@@ -6040,28 +7408,142 @@ function renderDashboard(data) {
       navigateToView("assignments");
     });
 
-    // Student Right: Submission Status Donut
+    // 2. Center Column: My Classes
+    const enrolledMidClassesList = (data.my_classes || []).map((cls) => `
+      <div class="dash-list-item" style="cursor: pointer;" onclick="navigateToView('classes')">
+        <div class="dash-item-main">
+          <div class="dash-icon-box soft-sage">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M6 6h10"></path>
+              <path d="M6 10h10"></path>
+            </svg>
+          </div>
+          <div class="dash-item-texts">
+            <span class="dash-item-title">${escapeHtml(cls.name)}</span>
+            <span class="dash-item-sub">${escapeHtml(cls.teacher_name)} &bull; ${escapeHtml(cls.description)}</span>
+          </div>
+        </div>
+        <div class="dash-item-meta">
+          <svg class="dash-item-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+      </div>
+    `).join("");
+
+    elements.dashMidCenterCard.className = "dash-box-card student-dash-card";
+    elements.dashMidCenterCard.innerHTML = `
+      <div class="dash-card-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <h2 class="dash-card-title">My Classes</h2>
+        </div>
+        <button class="dash-card-link" id="linkStudentMidClassesManage">Manage &rarr;</button>
+      </div>
+      <div class="dash-list">
+        ${enrolledMidClassesList || '<div class="dash-empty-state"><p>Not enrolled in any classes yet.</p><button class="btn btn-secondary btn-sm" onclick="openClassesModal()">+ Join Class</button></div>'}
+      </div>
+    `;
+
+    document.getElementById("linkStudentMidClassesManage")?.addEventListener("click", () => {
+      navigateToView("classes");
+    });
+
+    // 3. Right Column: Mini Calendar & Quick Actions
+    elements.dashMidRightCard.className = "dash-box-card student-dash-card student-calendar-card";
+    const nowCal = new Date();
+    const curYear = nowCal.getFullYear();
+    const curMonth = nowCal.getMonth();
+    const monthYearLabel = nowCal.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const firstDayIndex = new Date(curYear, curMonth, 1).getDay();
+    const lastDay = new Date(curYear, curMonth + 1, 0).getDate();
+    const today = nowCal.getDate();
+
+    const deadlineDays = new Set();
+    (data.upcoming_assignments || []).forEach((a) => {
+      if (!a.due_date) return;
+      const d = new Date(a.due_date);
+      if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
+        deadlineDays.add(d.getDate());
+      }
+    });
+
+    let calRowsHtml = "<tr>";
+    for (let i = 0; i < firstDayIndex; i++) {
+      calRowsHtml += "<td></td>";
+    }
+    let currentDay = 1;
+    let dayOfWeek = firstDayIndex;
+    while (currentDay <= lastDay) {
+      if (dayOfWeek === 7) {
+        calRowsHtml += "</tr><tr>";
+        dayOfWeek = 0;
+      }
+      const isToday = currentDay === today;
+      const hasDeadline = deadlineDays.has(currentDay);
+      let dayClasses = [];
+      if (isToday) dayClasses.push("today");
+      if (hasDeadline) dayClasses.push("has-deadline");
+      calRowsHtml += `<td class="${dayClasses.join(" ")}" title="${hasDeadline ? 'Assignment deadline on this date' : ''}">${currentDay}</td>`;
+      currentDay++;
+      dayOfWeek++;
+    }
+    while (dayOfWeek < 7) {
+      calRowsHtml += "<td></td>";
+      dayOfWeek++;
+    }
+    calRowsHtml += "</tr>";
+
     elements.dashMidRightCard.innerHTML = `
       <div class="dash-card-header">
-        <h2 class="dash-card-title">Submission Status</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${escapeHtml(monthYearLabel)}</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Academic Schedule</span>
+        </div>
       </div>
-      <div id="studentDonutContainer"></div>
+      <div class="student-calendar-wrap">
+        <table class="student-dash-cal-table">
+          <thead>
+            <tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr>
+          </thead>
+          <tbody>
+            ${calRowsHtml}
+          </tbody>
+        </table>
+      </div>
+      <div class="student-dash-quick-actions">
+        <div class="student-qa-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+          <span>Quick Actions</span>
+        </div>
+        <div class="student-qa-buttons">
+          <button class="btn btn-primary btn-sm" id="btnStudentDashJoinClass" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Join Class</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnStudentDashSubmissions" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <span>View Submissions</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnStudentDashResults" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span>Academic Results</span>
+          </button>
+        </div>
+      </div>
     `;
-    const statusObj = data.submission_status || { pending: 0, submitted: 0, overdue: 0, total: 0 };
-    if (statusObj.released !== undefined && statusObj.pending_review !== undefined) {
-      renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
-        { label: "Pending", value: statusObj.pending, color: "#D9E8DF" },
-        { label: "In Review", value: statusObj.pending_review, color: "#946200" },
-        { label: "Released", value: statusObj.released, color: "#24764B" },
-        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
-      ]);
-    } else {
-      renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
-        { label: "Pending", value: statusObj.pending, color: "#D9E8DF" },
-        { label: "Submitted", value: statusObj.submitted, color: "#24764B" },
-        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
-      ]);
-    }
+
+    document.getElementById("btnStudentDashJoinClass")?.addEventListener("click", () => openClassesModal());
+    document.getElementById("btnStudentDashSubmissions")?.addEventListener("click", () => navigateToView("submissions"));
+    document.getElementById("btnStudentDashResults")?.addEventListener("click", () => navigateToView("analytics"));
   }
 
   // 4. Bottom Row Cards
@@ -6196,11 +7678,41 @@ function renderDashboard(data) {
     document.getElementById("qaTileCreateAssignment")?.addEventListener("click", () => openDrawer());
     document.getElementById("qaTileManageClasses")?.addEventListener("click", () => openClassesModal());
     document.getElementById("qaTileReviewSubmissions")?.addEventListener("click", () => navigateToView("assignments"));
-    document.getElementById("qaTileViewAnalytics")?.addEventListener("click", () => showToast("Analytics dashboard is coming soon!", "info"));
+    document.getElementById("qaTileViewAnalytics")?.addEventListener("click", () => navigateToView("analytics"));
 
   } else {
-    // Student Bottom Row
-    // Left: Recently Submitted
+    // Student Bottom Row: 3 Columns
+    // 1. Left Column: Submission Overview Donut
+    elements.dashBottomLeftCard.className = "dash-box-card student-dash-card";
+    elements.dashBottomLeftCard.innerHTML = `
+      <div class="dash-card-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10"></path>
+          </svg>
+          <h2 class="dash-card-title">Submission Overview</h2>
+        </div>
+      </div>
+      <div id="studentDonutContainer"></div>
+    `;
+    const statusObj = data.submission_status || { pending: 0, submitted: 0, overdue: 0, total: 0 };
+    if (statusObj.released !== undefined && statusObj.pending_review !== undefined) {
+      renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
+        { label: "Pending", value: statusObj.pending, color: "#F6E5B8" },
+        { label: "Pending Review", value: statusObj.pending_review, color: "#E09F3E" },
+        { label: "Released", value: statusObj.released, color: "#285747" },
+        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
+      ]);
+    } else {
+      renderDonutChart("studentDonutContainer", statusObj.total, "Total", [
+        { label: "Pending", value: statusObj.pending, color: "#F6E5B8" },
+        { label: "Submitted", value: statusObj.submitted, color: "#285747" },
+        { label: "Overdue", value: statusObj.overdue, color: "#B42318" },
+      ]);
+    }
+
+    // 2. Center Column: Recent Submissions
     const recentlySubmittedList = (data.recently_submitted || []).map((sub) => {
       const formattedDate = formatDisplayDate(sub.submitted_at);
       let statusBadge = "";
@@ -6209,33 +7721,42 @@ function renderDashboard(data) {
       } else {
         statusBadge = `<span class="submission-pill status-ungraded">Pending Review</span>`;
       }
+      const resubmitBadge = sub.resubmission_allowed
+        ? `<span class="submission-pill status-resubmit-allowed" style="font-size:0.7rem; padding: 0.15rem 0.45rem;">↻ Resubmit</span>`
+        : "";
+
       return `
         <div class="dash-list-item" style="cursor: pointer;" onclick="navigateToView('submissions')">
           <div class="dash-item-main">
-            <div class="dash-icon-box purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="dash-icon-box sage">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
             </div>
             <div class="dash-item-texts">
               <span class="dash-item-title">${escapeHtml(sub.assignment_title)}</span>
-              <span class="dash-item-sub">${escapeHtml(sub.class_name)}</span>
+              <span class="dash-item-sub">${escapeHtml(sub.class_name)} &bull; ${formattedDate}</span>
             </div>
           </div>
-          <div class="dash-item-meta">
-            <span class="dash-item-time">${formattedDate}</span>
+          <div class="dash-item-meta" style="flex-direction: column; align-items: flex-end; gap: 0.25rem;">
             ${statusBadge}
+            ${resubmitBadge}
           </div>
         </div>
       `;
     }).join("");
 
-    elements.dashBottomLeftCard.innerHTML = `
+    elements.dashBottomCenterCard.className = "dash-box-card student-dash-card";
+    elements.dashBottomCenterCard.innerHTML = `
       <div class="dash-card-header">
-        <h2 class="dash-card-title">Recently Submitted</h2>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <h2 class="dash-card-title">Recent Submissions</h2>
+        </div>
         <button class="dash-card-link" id="linkStudentRecentlySubmittedViewAll">View All &rarr;</button>
       </div>
       <div class="dash-list">
@@ -6247,67 +7768,78 @@ function renderDashboard(data) {
       navigateToView("submissions");
     });
 
-    // Right: My Classes
-    const enrolledClassesList = (data.my_classes || []).map((cls) => `
-      <div class="dash-list-item">
-        <div class="dash-item-main">
-          <div class="dash-icon-box blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-              <path d="M6 6h10"></path>
-              <path d="M6 10h10"></path>
-            </svg>
-          </div>
-          <div class="dash-item-texts">
-            <span class="dash-item-title">${escapeHtml(cls.name)}</span>
-            <span class="dash-item-sub">${escapeHtml(cls.description)}</span>
-          </div>
-        </div>
-        <div class="dash-item-meta">
-          <span class="student-class-teacher">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>${escapeHtml(cls.teacher_name)}</span>
-          </span>
-        </div>
-      </div>
-    `).join("");
+    // 3. Right Column: Academic Progress & Feedback Guidance
+    const totalCount = data.metrics.total_assignments || 0;
+    const completedPct = totalCount > 0 ? Math.min(100, Math.round((data.metrics.submitted / totalCount) * 100)) : 0;
 
+    elements.dashBottomRightCard.className = "dash-box-card student-dash-card";
     elements.dashBottomRightCard.innerHTML = `
       <div class="dash-card-header">
-        <h2 class="dash-card-title">My Classes</h2>
-        <button class="dash-card-link" id="linkStudentClassesViewAll">View All &rarr;</button>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <h2 class="dash-card-title">Academic Progress</h2>
+        </div>
       </div>
-      <div class="dash-list">
-        ${enrolledClassesList || '<div class="dash-empty-state"><p>Not enrolled in any classes yet.</p></div>'}
+      <div class="student-progress-body">
+        <div class="student-progress-stat">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+            <span style="font-size: 0.825rem; font-weight: 600; color: var(--text-main);">Coursework Completed</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">${completedPct}%</span>
+          </div>
+          <div class="student-progress-bar-wrap">
+            <div class="student-progress-bar-fill" style="width: ${completedPct}%;"></div>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.35rem; display: block;">${data.metrics.submitted} of ${totalCount} assignments submitted</span>
+        </div>
+
+        <div class="student-feedback-indicator-card">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div class="feedback-indicator-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">${data.metrics.released || 0} Released Grades</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">Instructor feedback available</div>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btnStudentViewFeedback" type="button" style="margin-top: 0.75rem; width: 100%;">
+            View Feedback & Results &rarr;
+          </button>
+        </div>
       </div>
     `;
 
-    document.getElementById("linkStudentClassesViewAll")?.addEventListener("click", () => {
-      openClassesModal();
+    document.getElementById("btnStudentViewFeedback")?.addEventListener("click", () => {
+      navigateToView("analytics");
     });
 
-    // Bottom Full Width: Keep Going Banner
-    elements.dashFullWidthWrap.innerHTML = `
-      <div class="dash-keep-going-banner">
-        <div class="kg-left">
-          <div class="kg-check-circle">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
+    // 4. Bottom Full Width: Keep Going Banner
+    if (elements.dashFullWidthWrap) {
+      elements.dashFullWidthWrap.style.display = "block";
+      elements.dashFullWidthWrap.innerHTML = `
+        <div class="dash-keep-going-banner">
+          <div class="kg-left">
+            <div class="kg-check-circle">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div>
+              <h2 class="kg-text-title">Educational workflows, simplified.</h2>
+              <p class="kg-text-desc">Track deadlines, submit coursework, and review teacher feedback seamlessly.</p>
+            </div>
           </div>
-          <div>
-            <h2 class="kg-text-title">Keep Going!</h2>
-            <p class="kg-text-desc">You are on track. Complete your pending assignments.</p>
+          <div class="kg-illustration">
+            ${STUDY_ILLUSTRATION_SVG}
           </div>
         </div>
-        <div class="kg-illustration">
-          ${STUDY_ILLUSTRATION_SVG}
-        </div>
-      </div>
-    `;
+      `;
+    }
   }
 }
 
@@ -6527,6 +8059,7 @@ async function handleRegisterSubmit(e) {
  */
 async function handleLogout() {
   closeProfileMenu();
+  const epoch = state.authEpoch;
   try {
     await fetch(API_ENDPOINTS.authLogout, {
       method: "POST",
@@ -6553,6 +8086,7 @@ async function handleLogout() {
  * (Owned classes for teachers, enrolled classes for students)
  */
 async function fetchClasses() {
+  const epoch = state.authEpoch;
   if (!state.currentUser) {
     state.classes = [];
     populateClassFilterOptions([]);
@@ -6675,6 +8209,125 @@ function closeClassesModal() {
     elements.classesModalBackdrop.style.display = "none";
   }
   clearClassesAlert();
+}
+
+/**
+ * Opens Curriculum Units & Assessments modal
+ */
+async function openStructureModal() {
+  if (!state.currentUser) {
+    openAuthModal("signin", "Please sign in to view curriculum units.");
+    return;
+  }
+
+  if (elements.structureModalBackdrop) {
+    elements.structureModalBackdrop.style.display = "flex";
+  }
+  if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "flex";
+  if (elements.structureTreeContainer) elements.structureTreeContainer.innerHTML = "";
+  if (elements.structureEmptyState) elements.structureEmptyState.style.display = "none";
+
+  try {
+    const res = await fetch(`${API_ENDPOINTS.assignments}/structure/units`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: state.activeAbortController?.signal,
+    });
+    if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "none";
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        if (elements.structureEmptyState) elements.structureEmptyState.style.display = "block";
+      } else {
+        renderStructureTree(data);
+      }
+    } else {
+      if (elements.structureEmptyState) {
+        elements.structureEmptyState.style.display = "block";
+        elements.structureEmptyState.innerHTML = `<p style="color: var(--danger);">Failed to load curriculum units.</p>`;
+      }
+    }
+  } catch (err) {
+    if (elements.structureLoadingSpinner) elements.structureLoadingSpinner.style.display = "none";
+    if (elements.structureEmptyState) {
+      elements.structureEmptyState.style.display = "block";
+      elements.structureEmptyState.innerHTML = `<p style="color: var(--danger);">Failed to load curriculum units: ${escapeHtml(err.message || "Network error")}</p>`;
+    }
+  }
+}
+
+/**
+ * Closes Curriculum Units modal
+ */
+function closeStructureModal() {
+  if (elements.structureModalBackdrop) {
+    elements.structureModalBackdrop.style.display = "none";
+  }
+}
+
+/**
+ * Renders hierarchical assessment tree by Class -> Subject -> Unit
+ */
+function renderStructureTree(classList) {
+  if (!elements.structureTreeContainer) return;
+  if (!classList || classList.length === 0) {
+    if (elements.structureEmptyState) elements.structureEmptyState.style.display = "block";
+    return;
+  }
+  if (elements.structureEmptyState) elements.structureEmptyState.style.display = "none";
+
+  elements.structureTreeContainer.innerHTML = classList.map((c) => {
+    const subjects = c.subjects || [];
+    return `
+      <div class="structure-class-card">
+        <div class="structure-class-header">
+          <h4 class="structure-class-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M6 6h10"></path>
+              <path d="M6 10h10"></path>
+            </svg>
+            <span>${escapeHtml(c.class_name || "General")}</span>
+          </h4>
+          <span class="badge badge-secondary" style="font-size: 0.75rem;">${subjects.length} ${subjects.length === 1 ? 'Subject' : 'Subjects'}</span>
+        </div>
+        <div class="structure-subjects-grid">
+          ${subjects.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.85rem;">No subjects registered.</p>' : subjects.map((s) => {
+            const units = s.units || [];
+            return `
+              <div class="structure-subject-card">
+                <div class="structure-subject-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <span>${escapeHtml(s.subject || "Unassigned")}</span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-left: auto;">${units.length} ${units.length === 1 ? 'Unit' : 'Units'}</span>
+                </div>
+                <div class="structure-units-list">
+                  ${units.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.825rem;">No units registered.</p>' : units.map((u) => {
+                    const dueFormatted = u.due_date ? formatDisplayDate(u.due_date) : "No due date";
+                    return `
+                      <div class="structure-unit-item">
+                        <div class="structure-unit-header">
+                          <span class="structure-unit-num">Unit ${u.unit || "—"}</span>
+                          <span class="structure-unit-marks">${u.max_marks !== null && u.max_marks !== undefined ? u.max_marks + ' Marks' : '—'}</span>
+                        </div>
+                        <div class="structure-unit-assessment-title">${escapeHtml(u.title || "Untitled Assessment")}</div>
+                        <div class="structure-unit-due">Due: ${dueFormatted}</div>
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 /**
@@ -6909,6 +8562,7 @@ async function handleDeleteClass(classId, className) {
     return;
   }
 
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.classes}/${classId}`, {
       method: "DELETE",
@@ -6946,6 +8600,7 @@ async function handleViewClassStudents(classId, className) {
     elements.studentsTableContainer.innerHTML = '<div class="spinner" style="margin: 2rem auto;"></div>';
   }
 
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.classes}/${classId}/students`, {
       method: "GET",
@@ -7270,6 +8925,18 @@ async function handleSubmitWorkForm(e) {
   e.preventDefault();
   if (!state.currentSubmittingAssignment) return;
 
+  if (state.currentSubmittingExistingSubmission?.resubmission_allowed && state.currentSubmittingExistingSubmission.resubmission_deadline) {
+    if (new Date(state.currentSubmittingExistingSubmission.resubmission_deadline).getTime() < Date.now()) {
+      if (elements.submitWorkAlert) {
+        elements.submitWorkAlert.className = "auth-alert error";
+        elements.submitWorkAlert.textContent = "The resubmission deadline has expired. New attempts cannot be submitted.";
+        elements.submitWorkAlert.style.display = "block";
+      }
+      if (elements.btnSubmitWork) elements.btnSubmitWork.disabled = true;
+      return;
+    }
+  }
+
   const fileInput = elements.submissionFileInput;
   if (!fileInput.files || fileInput.files.length === 0) {
     if (elements.submissionFileError) {
@@ -7515,9 +9182,16 @@ async function openViewSubmissionModal(assignment, submission = null) {
     } else {
       if (elements.viewSubFeedbackBox) elements.viewSubFeedbackBox.style.display = "none";
     }
+
+    if (elements.btnModalRequestReeval) elements.btnModalRequestReeval.style.display = "inline-flex";
+    if (elements.btnResultsCardReeval) elements.btnResultsCardReeval.style.display = "inline-flex";
+    if (elements.viewSubReevalActionBox) elements.viewSubReevalActionBox.style.display = "flex";
   } else {
     if (elements.viewSubResultsCard) elements.viewSubResultsCard.style.display = "none";
     if (elements.viewSubPendingBanner) elements.viewSubPendingBanner.style.display = "flex";
+    if (elements.btnModalRequestReeval) elements.btnModalRequestReeval.style.display = "none";
+    if (elements.btnResultsCardReeval) elements.btnResultsCardReeval.style.display = "none";
+    if (elements.viewSubReevalActionBox) elements.viewSubReevalActionBox.style.display = "none";
   }
 
   if (elements.viewSubStatusPill) {
@@ -7647,6 +9321,7 @@ async function openTeacherSubmissionsModal(assignment) {
  * Fetches teacher submissions from API and updates roster
  */
 async function fetchTeacherSubmissions(assignment) {
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.assignments}/${assignment.id}/submissions`, {
       method: "GET",
@@ -8078,10 +9753,18 @@ function closeSubmissionPreviewModal() {
  * Opens SpeedGrader workspace for submission at index
  */
 function openGradingWorkspace(index) {
-  if (index < 0 || index >= state.currentGradingSubmissions.length) return;
+  if (index < 0 || !state.currentGradingSubmissions || index >= state.currentGradingSubmissions.length) return;
   state.currentGradingIndex = index;
-  const assignment = state.currentGradingAssignment;
   const sub = state.currentGradingSubmissions[index];
+  if (!sub) return;
+
+  state.currentGradingAssignment = {
+    id: sub.assignment_id,
+    title: sub.assignment_title || (state.currentGradingAssignment ? state.currentGradingAssignment.title : "Assignment"),
+    class_name: sub.class_name || (state.currentGradingAssignment ? state.currentGradingAssignment.class_name : ""),
+    max_marks: sub.max_marks || (state.currentGradingAssignment ? state.currentGradingAssignment.max_marks : 100),
+  };
+  const assignment = state.currentGradingAssignment;
   const maxMarks = assignment && assignment.max_marks ? assignment.max_marks : 100;
 
   // Title and subtitle
@@ -8100,6 +9783,45 @@ function openGradingWorkspace(index) {
   }
   if (elements.gradingNextStudentBtn) {
     elements.gradingNextStudentBtn.disabled = index === state.currentGradingSubmissions.length - 1;
+  }
+
+  // Pending Re-evaluation Request Banner & Actions
+  const hasReeval = Boolean(sub.needs_reevaluation || sub.reevaluation_reason || sub.reevaluation_id);
+  if (elements.gradingReevaluationBanner) {
+    if (hasReeval) {
+      elements.gradingReevaluationBanner.style.display = "block";
+      if (elements.gradingReevaluationReasonText) {
+        elements.gradingReevaluationReasonText.textContent = sub.reevaluation_reason
+          ? `"${sub.reevaluation_reason}"`
+          : "Student requested a review of their assessed grade.";
+      }
+      if (elements.gradingResolveReevalBtn) {
+        elements.gradingResolveReevalBtn.onclick = () => {
+          openTeacherReevaluationModal({
+            id: sub.reevaluation_id || sub.id,
+            submission_id: sub.id,
+            reason: sub.reevaluation_reason || "Student requested a review of their grade.",
+            previous_grade: sub.grade,
+          });
+        };
+      }
+    } else {
+      elements.gradingReevaluationBanner.style.display = "none";
+    }
+  }
+
+  if (elements.gradingReviewReevalBtn) {
+    elements.gradingReviewReevalBtn.style.display = hasReeval ? "inline-flex" : "none";
+    if (hasReeval) {
+      elements.gradingReviewReevalBtn.onclick = () => {
+        openTeacherReevaluationModal({
+          id: sub.reevaluation_id || sub.id,
+          submission_id: sub.id,
+          reason: sub.reevaluation_reason || "Student requested a review of their grade.",
+          previous_grade: sub.grade,
+        });
+      };
+    }
   }
 
   // Clear alerts and errors
@@ -8516,6 +10238,7 @@ function closeSingleReleaseModal() {
  * Confirms single grade release via API
  */
 async function confirmSingleRelease(targetSubId = null) {
+  const epoch = state.authEpoch;
   const currentSub = state.currentGradingSubmissions && state.currentGradingSubmissions[state.currentGradingIndex];
   const subId = targetSubId || state.pendingSingleReleaseSubId || (currentSub && currentSub.id);
   const assignment = state.currentGradingAssignment;
@@ -9113,49 +10836,12 @@ async function confirmAuditCorrect() {
 }
 
 /**
- * Opens Submission History & Archived Attempts Modal
+ * Opens Submission History & Archived Attempts Modal for teacher SpeedGrader
  */
-function openSubmissionHistoryModal() {
-  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+function openTeacherSpeedGraderHistoryModal() {
+  if (state.currentGradingIndex < 0 || !state.currentGradingSubmissions || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
   const sub = state.currentGradingSubmissions[state.currentGradingIndex];
-  const assignment = state.currentGradingAssignment;
-  const maxMarks = assignment && assignment.max_marks ? assignment.max_marks : 100;
-
-  if (elements.historyStudentMeta) {
-    elements.historyStudentMeta.textContent = `${sub.student_name} (${sub.student_email}) • ${assignment ? assignment.title : "Assignment"}`;
-  }
-
-  if (elements.historyAttemptsList) {
-    const formattedDate = formatDisplayDateTime(sub.submitted_at);
-    const gradeStr = (sub.grade !== null && sub.grade !== undefined)
-      ? `${sub.grade} / ${maxMarks}`
-      : "Ungraded";
-    const assignmentId = (assignment && assignment.id) || sub.assignment_id;
-    const downloadUrl = sub.download_url || `${API_BASE}/api/assignments/${assignmentId}/submissions/${sub.id}/download`;
-
-    elements.historyAttemptsList.innerHTML = `
-      <div class="history-attempt-card">
-        <div>
-          <div class="history-attempt-title">Attempt 1 (Current Active Submission)</div>
-          <div class="history-attempt-date">Submitted: ${formattedDate} • Status: ${sub.status}</div>
-          <div style="font-size: 0.85rem; margin-top: 0.25rem;"><strong>File:</strong> ${escapeHtml(sub.file_name || "submission")} (${formatBytes(sub.file_size)})</div>
-          <div style="font-size: 0.85rem; color: var(--primary); margin-top: 0.25rem;"><strong>Grade:</strong> ${gradeStr}</div>
-        </div>
-        <div>
-          <a class="btn btn-secondary btn-sm" href="${downloadUrl}" download="${escapeHtml(sub.file_name || "submission")}" target="_blank" rel="noopener">
-            Download
-          </a>
-        </div>
-      </div>
-    `;
-  }
-
-  if (elements.submissionHistoryModalBackdrop) {
-    elements.submissionHistoryModalBackdrop.style.display = "flex";
-    if (elements.closeSubmissionHistoryBottomBtn) {
-      elements.closeSubmissionHistoryBottomBtn.focus();
-    }
-  }
+  openSubmissionHistoryModal(sub);
 }
 
 /**
@@ -9179,10 +10865,19 @@ function openAuthorizeResubmissionModal() {
 
   if (elements.authorizeResubmissionMessage) {
     elements.authorizeResubmissionMessage.innerHTML =
-      `Authorizing a resubmission grants <strong>${escapeHtml(sub.student_name)}</strong> permission to upload a new attempt. Their existing attempt will be retained in history.`;
+      `Authorizing a resubmission grants <strong>${escapeHtml(sub.student_name)}</strong> permission to upload a new attempt. Their existing attempt will be safely retained in submission history.`;
   }
   if (elements.resubmissionNotesInput) {
-    elements.resubmissionNotesInput.value = "";
+    elements.resubmissionNotesInput.value = sub.resubmission_note || "";
+  }
+  if (elements.resubmissionDeadlineInput) {
+    if (sub.resubmission_deadline) {
+      const d = new Date(sub.resubmission_deadline);
+      const pad = (n) => String(n).padStart(2, "0");
+      elements.resubmissionDeadlineInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } else {
+      elements.resubmissionDeadlineInput.value = "";
+    }
   }
 
   if (elements.authorizeResubmissionModalBackdrop) {
@@ -9206,14 +10901,72 @@ function closeAuthorizeResubmissionModal() {
 }
 
 /**
- * Confirms Authorize Resubmission
+ * Confirms Authorize Resubmission via authoritative backend API
  */
-function confirmAuthorizeResubmission() {
-  if (state.currentGradingIndex < 0 || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
+async function confirmAuthorizeResubmission() {
+  if (state.currentGradingIndex < 0 || !state.currentGradingSubmissions || state.currentGradingIndex >= state.currentGradingSubmissions.length) return;
   const sub = state.currentGradingSubmissions[state.currentGradingIndex];
+  if (!sub) return;
 
-  showToast(`Resubmission authorized for ${sub.student_name}.`, "success");
-  closeAuthorizeResubmissionModal();
+  const notes = elements.resubmissionNotesInput ? elements.resubmissionNotesInput.value.trim() : "";
+  const deadlineVal = elements.resubmissionDeadlineInput ? elements.resubmissionDeadlineInput.value : "";
+  let resubmissionDeadline = null;
+  if (deadlineVal) {
+    const d = new Date(deadlineVal);
+    if (isNaN(d.getTime())) {
+      showToast("Please provide a valid resubmission deadline date and time.", "error");
+      return;
+    }
+    resubmissionDeadline = d.toISOString();
+  }
+
+  const confirmBtn = elements.confirmAuthorizeResubmissionBtn;
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Authorizing...";
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/submissions/${sub.id}/allow-resubmission`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        resubmission_note: notes || null,
+        resubmission_deadline: resubmissionDeadline,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to authorize resubmission (HTTP ${res.status})`);
+    }
+
+    sub.resubmission_allowed = true;
+    sub.resubmission_note = notes || null;
+    sub.resubmission_deadline = resubmissionDeadline;
+
+    showToast(`Resubmission authorized for ${sub.student_name}.`, "success");
+    closeAuthorizeResubmissionModal();
+
+    if (typeof openGradingWorkspace === "function") {
+      openGradingWorkspace(state.currentGradingIndex);
+    }
+    if (typeof filterAndRenderSubmissions === "function") {
+      filterAndRenderSubmissions();
+    }
+  } catch (err) {
+    console.error("Authorize resubmission error:", err);
+    showToast(err.message || "Failed to authorize resubmission.", "error");
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Authorize Resubmission";
+    }
+  }
 }
 
 /* ================================================================ */
@@ -9631,6 +11384,7 @@ async function handleSaveEditSemester(e) {
 
 async function handleArchiveSemester(semesterId) {
   if (!confirm("Are you sure you want to archive this semester? Its academic records will be preserved safely.")) return;
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}/archive`, {
       method: "PUT",
@@ -9654,6 +11408,7 @@ async function handleArchiveSemester(semesterId) {
 
 async function handleFinalizeSemester(semesterId) {
   if (!confirm("Finalize semester results? This marks official grades for all subjects. All assessments must be graded and released.")) return;
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}/finalize`, {
       method: "PUT",
@@ -9682,6 +11437,7 @@ async function handleFinalizeSemester(semesterId) {
 
 async function handleDeleteSemester(semesterId, semName) {
   if (!confirm(`Are you sure you want to delete semester "${semName}"?\nNote: Semesters with existing subjects or submissions cannot be deleted and must be archived.`)) return;
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.semesters}/${semesterId}`, {
       method: "DELETE",
@@ -9784,15 +11540,17 @@ async function handleSubmitAddSubject(e) {
 /* SUBJECT & ASSIGNMENTS WITHIN SEMESTER (Screen 3 & 4 Reference)    */
 /* ================================================================ */
 
-async function viewSubjectDetail(subjectId, activeTab = "assignments") {
+async function viewSubjectDetail(subjectId, activeTab = "assignments", updateHash = true) {
   state.activeSubjectId = parseInt(subjectId, 10);
   state.activeSubjectTab = activeTab;
-  navigateToView("classes");
+  navigateToView(`classes/${subjectId}`, updateHash);
 }
 
 async function renderSubjectDetailView() {
   if (!elements.classesPageContent || !state.activeSubjectId) return;
 
+  const epoch = state.authEpoch;
+  const isTeacher = state.currentUser?.role === "teacher";
   const subjectId = state.activeSubjectId;
   let subject = (state.classes || []).find((c) => c.id === subjectId);
 
@@ -9828,10 +11586,14 @@ async function renderSubjectDetailView() {
   }
 
   const semName = state.activeSemester?.name || "Semester 5";
-  const activeTab = state.activeSubjectTab || "assignments";
+  let activeTab = state.activeSubjectTab || "assignments";
+  if (!isTeacher && activeTab === "students") {
+    activeTab = "assignments";
+    state.activeSubjectTab = "assignments";
+  }
 
-  if (activeTab === "students") {
-    // Screen 4: Student Performance (Subject-wise)
+  if (activeTab === "students" && isTeacher) {
+    // Screen 4: Student Performance (Subject-wise) - Teacher Only
     elements.classesPageContent.innerHTML = `
       <div class="subject-detail-container">
         <!-- Breadcrumbs (Screen 4) -->
@@ -9961,15 +11723,19 @@ async function renderSubjectDetailView() {
     return;
   }
 
-  // Screen 3: Subject and Assignments (Within a Semester)
+  // Screen 3: Subject and Assignments
   elements.classesPageContent.innerHTML = `
     <div class="subject-detail-container">
       <!-- Breadcrumbs (Screen 3) -->
       <nav class="academic-breadcrumbs" aria-label="Breadcrumb">
         <ol class="breadcrumb-list">
+          ${isTeacher ? `
           <li class="breadcrumb-item"><a href="#semesters" onclick="navigateToView('semesters'); return false;">Semesters</a></li>
           <li class="breadcrumb-separator">›</li>
           <li class="breadcrumb-item"><a href="#dashboard" onclick="navigateToView('dashboard'); return false;">${escapeHtml(semName)}</a></li>
+          ` : `
+          <li class="breadcrumb-item"><a href="#classes" onclick="navigateToView('classes'); return false;">My Classes</a></li>
+          `}
           <li class="breadcrumb-separator">›</li>
           <li class="breadcrumb-item active">${escapeHtml(subject.name)}</li>
         </ol>
@@ -9979,15 +11745,17 @@ async function renderSubjectDetailView() {
       <div class="page-header-row" style="margin-top: 0.5rem;">
         <div class="page-header-left">
           <h1 class="page-title">${escapeHtml(subject.name)}</h1>
-          <p class="page-subtitle">${escapeHtml(subject.description || "Core Course Subject")}</p>
+          <p class="page-subtitle">${escapeHtml(subject.description || (isTeacher ? "Core Course Subject" : "Enrolled Course"))}</p>
         </div>
         <div class="page-header-actions">
+          ${isTeacher ? `
           <button class="btn btn-primary" onclick="openCreateAssignmentForSubject(${subject.id})">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>+ Create Assignment</span>
           </button>
+          ` : ""}
           <button class="btn btn-outline" onclick="exitSubjectDetail()">
-            <span>&larr; All Subjects</span>
+            <span>&larr; ${isTeacher ? "All Subjects" : "All Classes"}</span>
           </button>
         </div>
       </div>
@@ -9996,8 +11764,8 @@ async function renderSubjectDetailView() {
       <div class="subject-tabs-nav">
         <button class="subject-tab-btn ${activeTab === 'overview' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'overview')">Overview</button>
         <button class="subject-tab-btn ${activeTab === 'assignments' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'assignments')">Assignments</button>
-        <button class="subject-tab-btn ${activeTab === 'students' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'students')">Students</button>
-        <button class="subject-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'analytics')">Analytics</button>
+        ${isTeacher ? `<button class="subject-tab-btn ${activeTab === 'students' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'students')">Students</button>` : ""}
+        <button class="subject-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" onclick="viewSubjectDetail(${subject.id}, 'analytics')">${isTeacher ? "Analytics" : "Results"}</button>
       </div>
 
       <div id="subjectTabContentWrap" style="margin-top: 1.25rem;">
@@ -10015,12 +11783,27 @@ async function renderSubjectDetailView() {
         <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #0f172a;">Course Overview</h3>
         <p style="color: #64748b; margin-bottom: 1.25rem;">${escapeHtml(subject.description || "No description provided.")}</p>
         <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+          ${isTeacher ? `
           <div>
             <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Student Join Code</span>
             <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-top: 0.25rem; cursor: pointer;" onclick="copyJoinCode('${escapeHtml(subject.join_code)}')">
               ${escapeHtml(subject.join_code)}
             </div>
           </div>
+          ` : `
+          <div>
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Instructor</span>
+            <div style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 0.25rem;">
+              ${escapeHtml(subject.teacher_name || "Course Instructor")}
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Status</span>
+            <div style="margin-top: 0.25rem;">
+              <span class="status-pill status-active" style="font-size: 0.8rem;">Enrolled</span>
+            </div>
+          </div>
+          `}
           <div>
             <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Enrolled Students</span>
             <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 0.25rem;">${subject.student_count || 0}</div>
@@ -10036,6 +11819,10 @@ async function renderSubjectDetailView() {
   }
 
   if (activeTab === "analytics") {
+    if (!isTeacher) {
+      navigateToView("analytics");
+      return;
+    }
     contentWrap.innerHTML = `
       <div class="academic-table-card" style="padding: 1.5rem;">
         <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #0f172a;">Subject Analytics</h3>
@@ -10064,13 +11851,19 @@ async function renderSubjectDetailView() {
       if (assignments.length === 0) {
         contentWrap.innerHTML = `
           <div class="dash-empty-state" style="padding: 3rem 1rem; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center;">
-            <p>No assignments created for ${escapeHtml(subject.name)} yet.</p>
+            <p>No assignments ${isTeacher ? "created" : "published"} for ${escapeHtml(subject.name)} yet.</p>
+            ${isTeacher ? `
             <button class="btn btn-primary" onclick="openCreateAssignmentForSubject(${subject.id})" style="margin-top: 1rem;">
               + Create First Assignment
             </button>
+            ` : ""}
           </div>
         `;
         return;
+      }
+
+      if (!isTeacher) {
+        await fetchStudentSubmissions(assignments);
       }
 
       const rowsHtml = assignments.map((as, idx) => {
@@ -10081,23 +11874,63 @@ async function renderSubjectDetailView() {
         const isOpen = as.status === "active" || as.status === "open";
         const statusClass = isOpen ? "open" : (isDraft ? "draft" : (isClosed ? "danger" : "info"));
         const statusLabel = isOpen ? "Open" : (isDraft ? "Draft" : (isClosed ? "Closed" : "Scheduled"));
-        const submissionDisplay = isDraft ? "-" : `${as.submission_count || 0} / ${as.total_students || subject.student_count || '-'}`;
+
+        if (isTeacher) {
+          const submissionDisplay = isDraft ? "-" : `${as.submission_count || 0} / ${as.total_students || subject.student_count || '-'}`;
+          return `
+            <tr>
+              <td style="color: #64748b; font-weight: 500;">${idx + 1}</td>
+              <td style="font-weight: 600; color: #1e293b;">
+                <span style="cursor: pointer;" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">${escapeHtml(as.title)}</span>
+              </td>
+              <td><span class="type-pill">${escapeHtml(typeLabel)}</span></td>
+              <td style="color: #475569; font-weight: 500;">${dueDateFormatted}</td>
+              <td style="font-weight: 600; color: #1e293b;">${submissionDisplay}</td>
+              <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+              <td>
+                <button class="academic-menu-btn" title="Assignment options" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        // Student-specific presentation
+        const mySub = state.mySubmissions ? state.mySubmissions[as.id] : null;
+        let myStatusBadge = `<span class="submission-pill status-unsubmitted">Not Submitted</span>`;
+        let actionBtn = `
+          <button class="btn btn-primary btn-sm" onclick="openSubmitWorkModal({ id: ${as.id}, title: '${escapeHtml(as.title)}', class_name: '${escapeHtml(subject.name)}' })">
+            Submit Work
+          </button>
+        `;
+
+        if (mySub) {
+          if (mySub.status === "graded" && mySub.grade_released) {
+            myStatusBadge = `<span class="submission-pill status-graded">Graded: ${mySub.grade}/${as.max_marks || 100}</span>`;
+          } else if (mySub.status === "graded") {
+            myStatusBadge = `<span class="submission-pill status-submitted">Pending Review</span>`;
+          } else {
+            myStatusBadge = `<span class="submission-pill status-submitted">Submitted</span>`;
+          }
+          actionBtn = `
+            <button class="btn btn-secondary btn-sm" onclick="openViewSubmissionModal({ id: ${as.id}, title: '${escapeHtml(as.title)}', class_name: '${escapeHtml(subject.name)}' }, state.mySubmissions[${as.id}])">
+              View Work
+            </button>
+          `;
+        }
 
         return `
           <tr>
             <td style="color: #64748b; font-weight: 500;">${idx + 1}</td>
             <td style="font-weight: 600; color: #1e293b;">
-              <span style="cursor: pointer;" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">${escapeHtml(as.title)}</span>
+              <span style="cursor: pointer;" onclick="${mySub ? `openViewSubmissionModal({ id: ${as.id}, title: '${escapeHtml(as.title)}', class_name: '${escapeHtml(subject.name)}' }, state.mySubmissions[${as.id}])` : `openSubmitWorkModal({ id: ${as.id}, title: '${escapeHtml(as.title)}', class_name: '${escapeHtml(subject.name)}' })`}">${escapeHtml(as.title)}</span>
             </td>
             <td><span class="type-pill">${escapeHtml(typeLabel)}</span></td>
             <td style="color: #475569; font-weight: 500;">${dueDateFormatted}</td>
-            <td style="font-weight: 600; color: #1e293b;">${submissionDisplay}</td>
+            <td>${myStatusBadge}</td>
             <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
-            <td>
-              <button class="academic-menu-btn" title="Assignment options" onclick="openTeacherSubmissionsModal(${as.id}, '${escapeHtml(as.title)}')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
-              </button>
-            </td>
+            <td>${actionBtn}</td>
           </tr>
         `;
       }).join("");
@@ -10111,9 +11944,9 @@ async function renderSubjectDetailView() {
                 <th>Assignment Title</th>
                 <th>Type</th>
                 <th>Due Date</th>
-                <th>Submissions</th>
+                <th>${isTeacher ? "Submissions" : "My Submission"}</th>
                 <th>Status</th>
-                <th style="width: 60px;">Actions</th>
+                <th style="${isTeacher ? 'width: 60px;' : 'width: 140px;'}">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -10132,7 +11965,7 @@ function exitSubjectDetail() {
   state.activeSubjectId = null;
   state.activeSubject = null;
   state.activeSubjectTab = null;
-  loadClassesPageView();
+  navigateToView("classes", true);
 }
 
 function openCreateAssignmentForSubject(subjectId = null, subjectName = null, semesterId = null) {
@@ -10199,6 +12032,7 @@ async function renderSemesterReport(semesterId) {
   const semId = semesterId || state.activeSemesterId;
   if (!semId) return;
 
+  const epoch = state.authEpoch;
   try {
     const res = await fetch(`${API_ENDPOINTS.semesters}/${semId}/report`, {
       method: "GET",
@@ -10437,7 +12271,7 @@ function renderAnalyticsOverview(ov) {
         </div>
       </div>
       <div class="dash-metric-card">
-        <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
         <div class="dash-metric-data">
           <span class="dash-metric-val">${ov.total_students}</span>
           <span class="dash-metric-label">Enrolled Students</span>
@@ -10451,7 +12285,7 @@ function renderAnalyticsOverview(ov) {
         </div>
       </div>
       <div class="dash-metric-card">
-        <div class="dash-metric-icon icon-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="dash-metric-icon icon-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
         <div class="dash-metric-data">
           <span class="dash-metric-val">${subRateVal !== null && subRateVal !== undefined ? subRateVal + "%" : "0%"}</span>
           <span class="dash-metric-label">Submission Rate</span>
@@ -10472,12 +12306,12 @@ function renderAnalyticsOverview(ov) {
             const unitAvg = (u.average_percentage ?? u.average_score);
             const gradedCount = u.graded_count ?? u.released_count ?? 0;
             return `
-              <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                  <span style="font-weight: 600; font-size: 0.875rem;">Unit ${u.unit}: ${escapeHtml(unitTitle)}</span>
-                  <span style="font-size: 0.8rem; font-weight: 700; color: #2563eb;">${unitAvg !== null && unitAvg !== undefined ? unitAvg + "% Avg" : "Ungraded"}</span>
+              <div class="analytics-unit-item">
+                <div class="analytics-unit-item-header">
+                  <span class="analytics-unit-item-title">Unit ${u.unit}: ${escapeHtml(unitTitle)}</span>
+                  <span class="analytics-unit-item-score">${unitAvg !== null && unitAvg !== undefined ? unitAvg + "% Avg" : "Ungraded"}</span>
                 </div>
-                <div style="font-size: 0.75rem; color: #64748b; display: flex; gap: 1rem;">
+                <div class="analytics-unit-item-meta">
                   <span>Submissions: <strong>${u.submission_count ?? 0}</strong></span>
                   <span>Graded: <strong>${gradedCount}</strong></span>
                 </div>
@@ -10499,22 +12333,22 @@ function renderAnalyticsOverview(ov) {
       "F (<40%)": ov.distribution.grade_f,
     } : {});
     const grades = [
-      { label: "A (85-100%)", count: dist["A (85-100%)"] ?? dist["A (90-100%)"] ?? dist.grade_a ?? 0, color: "#10b981" },
-      { label: "B (70-84%)", count: dist["B (70-84%)"] ?? dist["B (80-89%)"] ?? dist.grade_b ?? 0, color: "#3b82f6" },
-      { label: "C (55-69%)", count: dist["C (55-69%)"] ?? dist["C (70-79%)"] ?? dist.grade_c ?? 0, color: "#f59e0b" },
-      { label: "D (40-54%)", count: dist["D (40-54%)"] ?? dist["D (60-69%)"] ?? dist.grade_d ?? 0, color: "#f97316" },
-      { label: "F (<40%)", count: dist["F (<40%)"] ?? dist["F (<60%)"] ?? dist.grade_f ?? 0, color: "#ef4444" },
+      { label: "A (85-100%)", count: dist["A (85-100%)"] ?? dist["A (90-100%)"] ?? dist.grade_a ?? 0, color: "var(--success)" },
+      { label: "B (70-84%)", count: dist["B (70-84%)"] ?? dist["B (80-89%)"] ?? dist.grade_b ?? 0, color: "var(--primary)" },
+      { label: "C (55-69%)", count: dist["C (55-69%)"] ?? dist["C (70-79%)"] ?? dist.grade_c ?? 0, color: "var(--warning)" },
+      { label: "D (40-54%)", count: dist["D (40-54%)"] ?? dist["D (60-69%)"] ?? dist.grade_d ?? 0, color: "#c27803" },
+      { label: "F (<40%)", count: dist["F (<40%)"] ?? dist["F (<60%)"] ?? dist.grade_f ?? 0, color: "var(--danger)" },
     ];
     elements.analyticsRightCardBody.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+      <div class="analytics-dist-row">
         ${grades.map(g => `
-          <div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.2rem;">
+          <div class="analytics-dist-item">
+            <div class="analytics-dist-item-header">
               <span>${g.label}</span>
-              <span style="font-weight: 600;">${g.count} students</span>
+              <span style="font-weight: 600; color: var(--text-main);">${g.count} students</span>
             </div>
-            <div style="height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
-              <div style="width: ${ov.total_students > 0 ? (g.count / ov.total_students) * 100 : 0}%; height: 100%; background: ${g.color};"></div>
+            <div class="analytics-dist-bar-track">
+              <div class="analytics-dist-bar-fill" style="width: ${ov.total_students > 0 ? (g.count / ov.total_students) * 100 : 0}%; background: ${g.color};"></div>
             </div>
           </div>
         `).join("")}
@@ -10560,7 +12394,7 @@ function renderAnalyticsRankings(rk) {
 
       const finalDisplay = (isComplete && s.final_percentage !== null && s.final_percentage !== undefined)
         ? s.final_percentage + "%"
-        : `<span style="color:#94a3b8; font-style:italic;">Pending</span>`;
+        : `<span style="color:var(--text-muted); font-style:italic;">Pending</span>`;
 
       const unitCols = units.map(u => {
         let m = null;
@@ -10575,12 +12409,15 @@ function renderAnalyticsRankings(rk) {
         return "<td>" + (m !== null && m !== undefined ? m : "—") + "</td>";
       }).join("");
 
+      const isTeacher = state.currentUser?.role === "teacher";
+      const displayName = (isTeacher || isYou) ? s.student_name : `Student #${idx + 1}`;
+
       return `
-        <tr style="${isYou ? 'background: #eff6ff; font-weight: 600;' : ''}">
+        <tr ${isYou ? 'class="rankings-current-user-row"' : ''}>
           <td><strong>#${rankVal}</strong></td>
-          <td>${escapeHtml(s.student_name)}${isYou ? ' <span class="badge" style="background:#2563eb; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:4px;">You</span>' : ''}</td>
+          <td>${escapeHtml(displayName)}${isYou ? ' <span class="rankings-you-badge">You</span>' : ''}</td>
           ${unitCols}
-          <td><strong style="color: #2563eb;">${provDisplay}</strong></td>
+          <td><strong style="color: var(--primary);">${provDisplay}</strong></td>
           <td>${finalDisplay}</td>
           <td>${statusPill}</td>
         </tr>
@@ -10594,8 +12431,10 @@ function renderTeacherAlerts(alerts) {
 
   const atRisk = alerts.at_risk_students || [];
   const backlog = alerts.grading_backlog || [];
+  const ungraded = alerts.ungraded_count || 0;
+  const unreleased = alerts.unreleased_count || 0;
 
-  if (!atRisk.length && !backlog.length) {
+  if (!atRisk.length && !backlog.length && !ungraded && !unreleased) {
     elements.analyticsAlertsContainer.style.display = "none";
     return;
   }
@@ -10604,15 +12443,15 @@ function renderTeacherAlerts(alerts) {
 
   if (atRisk.length > 0) {
     html += `
-      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div class="analytics-alert-card danger">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div style="flex: 1;">
-          <h4 style="margin: 0; font-size: 0.9rem; color: #9f1239; font-weight: 600;">Students Requiring Academic Support (${atRisk.length})</h4>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+          <h4 class="analytics-alert-title">Students Requiring Academic Support (${atRisk.length})</h4>
+          <div class="analytics-alert-tags">
             ${atRisk.map(s => {
               const scoreVal = (s.provisional_percentage ?? s.provisional_score);
               const scoreDisplay = scoreVal !== null && scoreVal !== undefined ? scoreVal + '%' : '0%';
-              return `<span style="background: #ffe4e6; color: #9f1239; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.student_name)} (${scoreDisplay})</span>`;
+              return `<span class="analytics-alert-tag danger">${escapeHtml(s.student_name)} (${scoreDisplay}${s.reason ? ` - ${escapeHtml(s.reason)}` : ''})</span>`;
             }).join("")}
           </div>
         </div>
@@ -10621,12 +12460,25 @@ function renderTeacherAlerts(alerts) {
   }
   if (backlog.length > 0) {
     html += `
-      <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="analytics-alert-card warning">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <div style="flex: 1;">
-          <h4 style="margin: 0; font-size: 0.9rem; color: #854d0e; font-weight: 600;">Ungraded Assessment Backlog (${backlog.length} Units)</h4>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
-            ${backlog.map(b => `<span style="background: #fef9c3; color: #854d0e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(b.title)}: ${b.pending_count} pending</span>`).join("")}
+          <h4 class="analytics-alert-title">Ungraded Assessment Backlog (${backlog.length} Units)</h4>
+          <div class="analytics-alert-tags">
+            ${backlog.map(b => `<span class="analytics-alert-tag warning">${escapeHtml(b.title)}: ${b.pending_count} pending</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (ungraded > 0 || unreleased > 0) {
+    html += `
+      <div class="analytics-alert-card warning">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="flex: 1;">
+          <h4 class="analytics-alert-title">Assessment Grading & Release Backlog</h4>
+          <div class="analytics-alert-tags">
+            ${ungraded > 0 ? `<span class="analytics-alert-tag warning">${ungraded} Pending Submissions to Grade</span>` : ''}
+            ${unreleased > 0 ? `<span class="analytics-alert-tag warning">${unreleased} Graded Assessments Awaiting Release</span>` : ''}
           </div>
         </div>
       </div>

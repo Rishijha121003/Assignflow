@@ -1,3 +1,4 @@
+from typing import Optional
 from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,14 +14,17 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     DATABASE_URL: str = "postgresql+psycopg2://support_app:rishi12@127.0.0.1:5432/ai_support_platform?options=-csearch_path%3Dassignflow,public"
     ALLOWED_ORIGINS: str = "*"
+    CANONICAL_URL: Optional[str] = None
 
     # Authentication configuration
     SECRET_KEY: str = "assignflow-super-secret-jwt-key-2026-production-ready"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     COOKIE_NAME: str = "access_token"
+    COOKIE_SECURE: Optional[bool] = None
 
-    # Upload configuration
+    # Persistent Storage configuration
+    STORAGE_DIR: Optional[Path] = None
     UPLOAD_DIR: Path = BASE_DIR / "backend" / "app" / "uploads" / "assignments"
     SUBMISSIONS_UPLOAD_DIR: Path = BASE_DIR / "backend" / "app" / "uploads" / "submissions"
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -46,13 +50,27 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
-        if self.ENVIRONMENT.lower() == "production":
+        # Resolve persistent storage directory if configured
+        if self.STORAGE_DIR:
+            storage_path = Path(self.STORAGE_DIR).resolve()
+            default_asgn = BASE_DIR / "backend" / "app" / "uploads" / "assignments"
+            default_sub = BASE_DIR / "backend" / "app" / "uploads" / "submissions"
+            if self.UPLOAD_DIR == default_asgn:
+                self.UPLOAD_DIR = storage_path / "assignments"
+            if self.SUBMISSIONS_UPLOAD_DIR == default_sub:
+                self.SUBMISSIONS_UPLOAD_DIR = storage_path / "submissions"
+
+        self.UPLOAD_DIR = Path(self.UPLOAD_DIR).resolve()
+        self.SUBMISSIONS_UPLOAD_DIR = Path(self.SUBMISSIONS_UPLOAD_DIR).resolve()
+
+        env = self.ENVIRONMENT.lower()
+        if env in ("production", "staging"):
             if self.SECRET_KEY == "assignflow-super-secret-jwt-key-2026-production-ready":
-                raise ValueError("Insecure SECRET_KEY: A custom secret key must be set in production.")
+                raise ValueError(f"Insecure SECRET_KEY: A custom secret key must be set in {env}.")
             if self.DEBUG:
-                raise ValueError("Insecure DEBUG mode: DEBUG must be set to False in production.")
+                raise ValueError(f"Insecure DEBUG mode: DEBUG must be set to False in {env}.")
             if self.ALLOWED_ORIGINS == "*" or not self.ALLOWED_ORIGINS.strip():
-                raise ValueError("Insecure ALLOWED_ORIGINS: Wildcard origins ('*') are prohibited in production.")
+                raise ValueError(f"Insecure ALLOWED_ORIGINS: Wildcard origins ('*') are prohibited in {env}.")
         return self
 
 

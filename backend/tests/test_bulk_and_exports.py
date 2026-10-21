@@ -803,6 +803,15 @@ def test_settings_production_validation():
             ALLOWED_ORIGINS="*",
         )
 
+    # Empty ALLOWED_ORIGINS in production -> should raise ValueError
+    with pytest.raises(ValueError, match="Insecure ALLOWED_ORIGINS"):
+        Settings(
+            ENVIRONMENT="production",
+            DEBUG=False,
+            SECRET_KEY="a-very-secure-random-custom-production-key-9999",
+            ALLOWED_ORIGINS="   ",
+        )
+
     # Valid production settings -> should pass
     valid_prod = Settings(
         ENVIRONMENT="production",
@@ -813,6 +822,75 @@ def test_settings_production_validation():
     assert valid_prod.ENVIRONMENT == "production"
     assert valid_prod.DEBUG is False
     assert valid_prod.ALLOWED_ORIGINS == "https://assignflow.college.edu"
+
+
+def test_settings_staging_validation():
+    """Verify Settings raises ValueError in staging if default secret, debug mode, or wildcard origins are used."""
+    from app.core.config import Settings
+    import pytest
+
+    # Default secret in staging -> should raise ValueError
+    with pytest.raises(ValueError, match=r"Insecure SECRET_KEY.*staging"):
+        Settings(
+            ENVIRONMENT="staging",
+            DEBUG=False,
+            SECRET_KEY="assignflow-super-secret-jwt-key-2026-production-ready",
+            ALLOWED_ORIGINS="https://staging.assignflow.example.edu",
+        )
+
+    # DEBUG=True in staging -> should raise ValueError
+    with pytest.raises(ValueError, match=r"Insecure DEBUG mode.*staging"):
+        Settings(
+            ENVIRONMENT="staging",
+            DEBUG=True,
+            SECRET_KEY="a-very-secure-random-custom-staging-key-9999",
+            ALLOWED_ORIGINS="https://staging.assignflow.example.edu",
+        )
+
+    # Wildcard ALLOWED_ORIGINS in staging -> should raise ValueError
+    with pytest.raises(ValueError, match=r"Insecure ALLOWED_ORIGINS.*staging"):
+        Settings(
+            ENVIRONMENT="staging",
+            DEBUG=False,
+            SECRET_KEY="a-very-secure-random-custom-staging-key-9999",
+            ALLOWED_ORIGINS="*",
+        )
+
+    # Empty ALLOWED_ORIGINS in staging -> should raise ValueError
+    with pytest.raises(ValueError, match=r"Insecure ALLOWED_ORIGINS.*staging"):
+        Settings(
+            ENVIRONMENT="staging",
+            DEBUG=False,
+            SECRET_KEY="a-very-secure-random-custom-staging-key-9999",
+            ALLOWED_ORIGINS="",
+        )
+
+    # Valid staging settings -> should pass
+    valid_staging = Settings(
+        ENVIRONMENT="staging",
+        DEBUG=False,
+        SECRET_KEY="a-very-secure-random-custom-staging-key-9999",
+        ALLOWED_ORIGINS="https://staging.assignflow.example.edu",
+    )
+    assert valid_staging.ENVIRONMENT == "staging"
+    assert valid_staging.DEBUG is False
+    assert valid_staging.ALLOWED_ORIGINS == "https://staging.assignflow.example.edu"
+
+
+def test_settings_development_behavior():
+    """Verify Settings retains development mode defaults and allows debug/default secret."""
+    from app.core.config import Settings
+
+    # Development mode accepts default secret and DEBUG=True without raising ValueError
+    dev_settings = Settings(
+        ENVIRONMENT="development",
+        DEBUG=True,
+        SECRET_KEY="assignflow-super-secret-jwt-key-2026-production-ready",
+        ALLOWED_ORIGINS="*",
+    )
+    assert dev_settings.ENVIRONMENT == "development"
+    assert dev_settings.DEBUG is True
+    assert dev_settings.ALLOWED_ORIGINS == "*"
 
 
 def test_bulk_release_concurrency_and_timestamp_preservation(client, db_engine, export_test_env):

@@ -106,7 +106,18 @@ if FRONTEND_DIR.exists():
     if js_dir.exists():
         app.mount("/js", StaticFiles(directory=str(js_dir)), name="js")
 
+    @app.get("/favicon.svg", include_in_schema=False)
+    @app.get("/favicon.ico", include_in_schema=False)
+    def serve_favicon():
+        """Serves the branded SVG favicon."""
+        favicon_file = FRONTEND_DIR / "favicon.svg"
+        if favicon_file.exists():
+            return FileResponse(favicon_file, media_type="image/svg+xml")
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Favicon not found"})
+
     @app.get("/", include_in_schema=False)
+    @app.get("/privacy", include_in_schema=False)
+    @app.get("/terms", include_in_schema=False)
     def serve_frontend_root():
         """Serves the frontend entry point index.html."""
         index_file = FRONTEND_DIR / "index.html"

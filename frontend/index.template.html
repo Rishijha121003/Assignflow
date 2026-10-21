@@ -3,9 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AssignFlow - Assignment Management Dashboard</title>
+  <title>AssignFlow - Academic Workflow &amp; Assignment Platform</title>
   <meta name="description" content="Assignment Management Platform for College Teachers and Students.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+  <meta name="theme-color" content="#285747">
+  <meta name="apple-mobile-web-app-title" content="AssignFlow">
+  <meta name="application-name" content="AssignFlow">
+  <meta property="og:title" content="AssignFlow - Academic Workflow &amp; Assignment Platform">
+  <meta property="og:description" content="Assignment Management Platform for College Teachers and Students.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="canonical" href="" id="canonicalLink" style="display: none;">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,11 +50,22 @@
         <!-- @include pages/analytics.html -->
 
         <!-- @include pages/settings.html -->
+
+        <!-- @include pages/privacy.html -->
+
+        <!-- @include pages/terms.html -->
       </main>
 
       <!-- Footer -->
       <footer class="app-footer">
-        <p>AssignFlow • College Assignment Management System</p>
+        <div class="footer-content">
+          <p class="footer-copy">AssignFlow &bull; Academic Workflow &amp; Assignment Platform</p>
+          <div class="footer-links">
+            <a href="#privacy" class="footer-link" data-nav="privacy" id="footerPrivacyLink">Privacy Policy</a>
+            <span class="footer-divider">&bull;</span>
+            <a href="#terms" class="footer-link" data-nav="terms" id="footerTermsLink">Terms &amp; Conditions</a>
+          </div>
+        </div>
       </footer>
     </div>
   </div>

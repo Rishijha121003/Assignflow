@@ -30,6 +30,7 @@ env/
 .env
 .env.*
 !.env.example
+!.env.staging.example
 
 # Testing & Coverage
 .pytest_cache/

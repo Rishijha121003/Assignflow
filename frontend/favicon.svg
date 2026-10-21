@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="af-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#285747"/>
+      <stop offset="100%" stop-color="#1b3f33"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded squircle -->
+  <rect width="32" height="32" rx="7" fill="url(#af-grad)"/>
+  <!-- Subtle inner border -->
+  <rect width="31" height="31" x="0.5" y="0.5" rx="6.5" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1"/>
+  <!-- AssignFlow Brand Mark (Book with lined pages) -->
+  <g transform="translate(4, 4)" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+    <path d="M6 6h10"/>
+    <path d="M6 10h10"/>
+    <path d="M6 14h6"/>
+  </g>
+</svg>

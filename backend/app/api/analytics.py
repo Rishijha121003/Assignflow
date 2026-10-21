@@ -1,6 +1,6 @@
 import csv
 import io
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
@@ -27,6 +27,19 @@ from app.schemas.analytics import (
 )
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+def sanitize_csv_value(value: Any) -> str:
+    """
+    Prevents CSV formula injection (DDE attacks) for spreadsheet viewers.
+    Prepends a single quote if the string begins with =, +, -, @, \\t, or \\r.
+    """
+    if value is None:
+        return ""
+    str_val = str(value)
+    if str_val and str_val[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{str_val}"
+    return str_val
 
 
 def verify_class_access(cls: Class, user: User, db: Session):
@@ -354,6 +367,12 @@ def compute_class_rankings(
                 r.rank = idx + 1
         else:
             r.rank = 1
+
+    # Privacy wall: when viewer is a student, anonymize all peer names
+    if viewer.role == "student":
+        for idx, r in enumerate(student_records):
+            if not r.is_self:
+                r.student_name = f"Student #{idx + 1}"
 
     completed_count = sum(1 for r in student_records if r.is_complete)
     provisional_count = sum(1 for r in student_records if r.provisional_percentage is not None)
@@ -745,8 +764,8 @@ def download_summary_report_csv(
     ])
     writer.writerow([
         overview.class_id,
-        overview.class_name,
-        overview.subject,
+        sanitize_csv_value(overview.class_name),
+        sanitize_csv_value(overview.subject),
         overview.total_students,
         overview.total_assignments,
         overview.class_average_percentage if overview.class_average_percentage is not None else "N/A",
@@ -823,8 +842,8 @@ def download_detailed_report_csv(
         status_str = "Finalized" if r.is_complete else "Provisional"
         row = [
             r.student_id,
-            r.student_name,
-            r.student_email or "",
+            sanitize_csv_value(r.student_name),
+            sanitize_csv_value(r.student_email or ""),
             *unit_row,
             r.provisional_score if r.provisional_score is not None else "N/A",
             r.provisional_max if r.provisional_max is not None else "N/A",

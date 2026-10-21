@@ -2,76 +2,76 @@
         <!-- ANALYTICS VIEW (Role-Scoped Academic Performance & Results)      -->
         <!-- ================================================================ -->
         <div id="analyticsView" class="page-view analytics-view-content" style="display: none;">
-          <div class="page-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div class="page-header-row analytics-header-row">
             <div>
               <h1 class="page-title" id="analyticsPageTitle">Analytics & Results</h1>
               <p class="page-subtitle" id="analyticsPageSubtitle">Detailed academic insights, unit-wise rankings, and finalized performance metrics.</p>
             </div>
 
             <!-- Controls & Actions Toolbar -->
-            <div class="analytics-actions-toolbar" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-              <div class="select-wrapper" style="min-width: 180px;">
-                <select id="analyticsClassSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+            <div class="analytics-actions-toolbar">
+              <div class="select-wrapper analytics-select-wrapper">
+                <select id="analyticsClassSelect" class="form-input" aria-label="Select Class">
                   <option value="">Select Class...</option>
                 </select>
                 <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
               </div>
 
-              <div class="select-wrapper" style="min-width: 160px;">
-                <select id="analyticsSubjectSelect" class="form-input" style="padding: 0.45rem 2rem 0.45rem 0.75rem; font-size: 0.875rem;">
+              <div class="select-wrapper analytics-select-wrapper">
+                <select id="analyticsSubjectSelect" class="form-input" aria-label="Select Subject">
                   <option value="">All Subjects</option>
                 </select>
                 <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
               </div>
 
               <!-- Teacher Actions -->
-              <button class="btn btn-primary" id="btnFinalizeResults" style="display: none; padding: 0.45rem 0.9rem; font-size: 0.85rem;" title="Finalize combined results for this subject">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Finalize Subject
+              <button class="btn btn-primary btn-sm" id="btnFinalizeResults" style="display: none;" title="Finalize combined results for this subject">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Finalize Subject</span>
               </button>
 
-              <button class="btn btn-secondary" id="btnExportSummaryCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Class Summary CSV">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Summary CSV
+              <button class="btn btn-secondary btn-sm" id="btnExportSummaryCsv" style="display: none;" title="Download Class Summary CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Summary CSV</span>
               </button>
 
-              <button class="btn btn-secondary" id="btnExportDetailedCsv" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;" title="Download Detailed Student-Wise CSV">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Detailed CSV
+              <button class="btn btn-secondary btn-sm" id="btnExportDetailedCsv" style="display: none;" title="Download Detailed Student-Wise CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Detailed CSV</span>
               </button>
 
               <!-- Student Actions -->
-              <button class="btn btn-secondary" id="btnToggleLeaderboard" style="display: none; padding: 0.45rem 0.75rem; font-size: 0.85rem;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                Class Leaderboard
+              <button class="btn btn-secondary btn-sm" id="btnToggleLeaderboard" style="display: none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                <span>Class Leaderboard</span>
               </button>
             </div>
           </div>
 
           <!-- Academic Alerts Container (Teacher & Student) -->
-          <div id="analyticsAlertsContainer" style="margin-top: 1rem; display: none;"></div>
+          <div id="analyticsAlertsContainer" class="analytics-alerts-wrap" style="display: none;"></div>
 
           <!-- Summary KPI Cards -->
-          <section class="dash-metrics-row" id="analyticsKpiRow" style="margin-top: 1.25rem;">
+          <section class="dash-metrics-row analytics-kpi-row" id="analyticsKpiRow" aria-label="Academic Performance Metrics">
             <!-- Dynamically populated -->
           </section>
 
           <!-- Main Analytics View Tabs / Cards -->
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="analytics-cards-container">
 
             <!-- Rankings & Overall Performance Table Card -->
             <div class="dash-box-card" id="analyticsRankingsCard">
-              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color, #e2e8f0);">
+              <div class="dash-card-header analytics-card-header">
                 <div>
                   <h3 class="dash-card-title" id="analyticsRankingsTitle">Unit Rankings & Results</h3>
                   <p class="dash-card-subtitle" id="analyticsRankingsSubtitle">Official provisional and finalized score calculations (Never treats unreleased work as zero).</p>
                 </div>
                 <div id="analyticsFinalizedBadge" style="display: none;">
-                  <span class="badge badge-success" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">Subject Finalized</span>
+                  <span class="badge badge-success" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; font-weight: 600; border-radius: var(--radius-sm);">Subject Finalized</span>
                 </div>
               </div>
-              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
-                <table class="data-table" id="analyticsRankingsTable" style="width: 100%; border-collapse: collapse;">
+              <div class="table-responsive">
+                <table class="data-table" id="analyticsRankingsTable">
                   <thead>
                     <tr id="analyticsRankingsHead">
                       <th>Rank</th>
@@ -82,21 +82,21 @@
                     </tr>
                   </thead>
                   <tbody id="analyticsRankingsBody">
-                    <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a class and subject to view performance rankings.</td></tr>
+                    <tr><td colspan="5" class="table-empty-cell">Select a class and subject to view performance rankings.</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
             <!-- Two-Column Unit Comparisons & Backlog Section -->
-            <div class="dash-cards-grid dash-mid-row" style="margin-top: 0;">
+            <div class="dash-cards-grid dash-mid-row analytics-mid-grid">
               <!-- Unit Comparisons Card -->
               <div class="dash-box-card" id="analyticsLeftCard">
                 <div class="dash-card-header">
                   <h3 class="dash-card-title">Curriculum Unit Comparisons</h3>
                   <p class="dash-card-subtitle">Assessment performance metrics and submission compliance across units.</p>
                 </div>
-                <div id="analyticsUnitComparisonsBody" style="margin-top: 1rem;">
+                <div id="analyticsUnitComparisonsBody" class="analytics-panel-body">
                   <!-- Dynamically populated -->
                 </div>
               </div>
@@ -107,7 +107,7 @@
                   <h3 class="dash-card-title" id="analyticsRightCardTitle">Grade Distribution & Compliance</h3>
                   <p class="dash-card-subtitle" id="analyticsRightCardSubtitle">Aggregated academic standing across enrolled students.</p>
                 </div>
-                <div id="analyticsRightCardBody" style="margin-top: 1rem;">
+                <div id="analyticsRightCardBody" class="analytics-panel-body">
                   <!-- Dynamically populated -->
                 </div>
               </div>
@@ -119,22 +119,22 @@
                 <h3 class="dash-card-title">Your Assessment Feedback & Progress</h3>
                 <p class="dash-card-subtitle">Private instructor evaluation, feedback notes, and recommendations for improvement.</p>
               </div>
-              <div id="analyticsStudentFeedbackBody" style="margin-top: 1rem;">
+              <div id="analyticsStudentFeedbackBody" class="analytics-panel-body">
                 <!-- Dynamically populated -->
               </div>
             </div>
 
             <!-- Privacy-Safe Class Leaderboard Section -->
             <div class="dash-box-card" id="analyticsLeaderboardCard" style="display: none;">
-              <div class="dash-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="dash-card-header analytics-card-header">
                 <div>
                   <h3 class="dash-card-title">Class Leaderboard</h3>
                   <p class="dash-card-subtitle">Anonymous peer ranking protecting individual student privacy.</p>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="btnCloseLeaderboard">Close</button>
               </div>
-              <div class="table-responsive" style="overflow-x: auto; margin-top: 1rem;">
-                <table class="data-table" id="analyticsLeaderboardTable" style="width: 100%;">
+              <div class="table-responsive">
+                <table class="data-table" id="analyticsLeaderboardTable">
                   <thead>
                     <tr>
                       <th>Rank</th>

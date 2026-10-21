@@ -770,3 +770,145 @@ def test_rankings_distinct_and_tied_ranks_with_duplicate_submissions(client, db_
                            ov["distribution"]["grade_f"])
     # Total MUST be exactly 4 (matching enrolled students), NEVER 7 (counting submissions across units)
     assert total_dist_students == 4
+
+
+def test_analytics_authorization_boundaries(client, db_engine, analytics_setup):
+    """
+    Test role authorization and access boundaries on analytics endpoints:
+    - Teacher access to class overview, rankings, alerts, and CSV reports.
+    - Student access to class overview, rankings, leaderboard, and feedback.
+    - Student forbidden (403) from teacher alerts and CSV exports.
+    - Unenrolled student forbidden (403) from class analytics.
+    - Unauthenticated user rejected (401) across all analytics endpoints.
+    """
+    class_id = analytics_setup["class_id"]
+    teacher_headers = analytics_setup["teacher_headers"]
+    s1_headers = analytics_setup["s1_headers"]
+
+    # 1. Unauthenticated access
+    assert client.get(f"/api/analytics/classes/{class_id}/overview").status_code == 401
+    assert client.get(f"/api/analytics/classes/{class_id}/subjects/Computer Science/rankings").status_code == 401
+    assert client.get(f"/api/analytics/classes/{class_id}/alerts").status_code == 401
+    assert client.get(f"/api/analytics/classes/{class_id}/reports/summary.csv").status_code == 401
+    assert client.get(f"/api/analytics/student/feedback?class_id={class_id}").status_code == 401
+
+    # 2. Student forbidden from teacher-only endpoints
+    alerts_resp = client.get(f"/api/analytics/classes/{class_id}/alerts", headers=s1_headers)
+    assert alerts_resp.status_code == 403
+
+    summary_csv_resp = client.get(f"/api/analytics/classes/{class_id}/reports/summary.csv", headers=s1_headers)
+    assert summary_csv_resp.status_code == 403
+
+    detailed_csv_resp = client.get(f"/api/analytics/classes/{class_id}/reports/detailed.csv?subject=Computer%20Science", headers=s1_headers)
+    assert detailed_csv_resp.status_code == 403
+
+    # 3. Student permitted on authorized endpoints
+    ov_resp = client.get(f"/api/analytics/classes/{class_id}/overview", headers=s1_headers)
+    assert ov_resp.status_code == 200
+
+    rk_resp = client.get(f"/api/analytics/classes/{class_id}/subjects/Computer Science/rankings", headers=s1_headers)
+    assert rk_resp.status_code == 200
+
+    fb_resp = client.get(f"/api/analytics/student/feedback?class_id={class_id}", headers=s1_headers)
+    assert fb_resp.status_code == 200
+
+    # 4. Unenrolled student forbidden from class analytics
+    import uuid
+    from app.core.security import create_access_token, hash_password
+    unique_id = uuid.uuid4().hex[:8]
+    with Session(db_engine) as session:
+        stranger = User(
+            email=f"stranger_{unique_id}@example.com",
+            full_name="Stranger Student",
+            hashed_password=hash_password("Pass123!"),
+            role="student",
+            is_active=True,
+        )
+        session.add(stranger)
+        session.commit()
+        session.refresh(stranger)
+        stranger_token = create_access_token({"sub": str(stranger.id), "role": "student", "email": stranger.email})
+        stranger_headers = {"Authorization": f"Bearer {stranger_token}"}
+
+    unenrolled_ov = client.get(f"/api/analytics/classes/{class_id}/overview", headers=stranger_headers)
+    assert unenrolled_ov.status_code == 403
+
+    unenrolled_rk = client.get(f"/api/analytics/classes/{class_id}/subjects/Computer Science/rankings", headers=stranger_headers)
+    assert unenrolled_rk.status_code == 403
+
+
+def test_student_rankings_anonymizes_peers_in_raw_backend_response(
+    client, db_engine, analytics_setup
+):
+    """
+    Regression Test:
+    Ensures that when a student calls the backend rankings endpoint, peer identities
+    are anonymized at the API response level ('Student #N') rather than relying exclusively
+    on frontend masking, while preserving the requesting student's own name and allowing
+    teachers to see full names.
+    """
+    class_id = analytics_setup["class_id"]
+    u1_id = analytics_setup["u1_id"]
+    s1_id = analytics_setup["s1_id"]
+    s2_id = analytics_setup["s2_id"]
+    s1_headers = analytics_setup["s1_headers"]
+    teacher_headers = analytics_setup["teacher_headers"]
+
+    now_utc = datetime.now(timezone.utc)
+
+    # Seed released submissions for both students
+    with Session(db_engine) as session:
+        sub1 = Submission(
+            assignment_id=u1_id,
+            student_id=s1_id,
+            file_path="/tmp/sub_s1.pdf",
+            file_name="sub_s1.pdf",
+            file_size=100,
+            grade=85.0,
+            status="released",
+            released_at=now_utc,
+            submitted_at=now_utc,
+        )
+        sub2 = Submission(
+            assignment_id=u1_id,
+            student_id=s2_id,
+            file_path="/tmp/sub_s2.pdf",
+            file_name="sub_s2.pdf",
+            file_size=100,
+            grade=90.0,
+            status="released",
+            released_at=now_utc,
+            submitted_at=now_utc,
+        )
+        session.add_all([sub1, sub2])
+        session.commit()
+
+    # 1. Student 1 requests rankings
+    st_res = client.get(
+        f"/api/analytics/classes/{class_id}/subjects/Computer%20Science/rankings",
+        headers=s1_headers,
+    )
+    assert st_res.status_code == 200
+    st_rankings = st_res.json()["rankings"]
+    assert len(st_rankings) >= 2
+
+    # Check self record: full name must be preserved
+    self_record = next(r for r in st_rankings if r["student_id"] == s1_id)
+    assert self_record["is_self"] is True
+    assert self_record["student_name"] == analytics_setup["s1_name"]
+
+    # Check peer record: name MUST be anonymized in the raw backend response!
+    peer_record = next(r for r in st_rankings if r["student_id"] == s2_id)
+    assert peer_record["is_self"] is False
+    assert peer_record["student_name"] != analytics_setup["s2_name"]
+    assert peer_record["student_name"].startswith("Student #")
+
+    # 2. Teacher requests rankings: full names visible for all students
+    t_res = client.get(
+        f"/api/analytics/classes/{class_id}/subjects/Computer%20Science/rankings",
+        headers=teacher_headers,
+    )
+    assert t_res.status_code == 200
+    t_rankings = t_res.json()["rankings"]
+    assert any(r["student_id"] == s1_id and r["student_name"] == analytics_setup["s1_name"] for r in t_rankings)
+    assert any(r["student_id"] == s2_id and r["student_name"] == analytics_setup["s2_name"] for r in t_rankings)
